@@ -165,6 +165,14 @@ target_link_libraries(TFmini
   ${catkin_LIBRARIES}
 )
 
+add_executable(square
+  src/square.cpp
+)
+target_link_libraries(square
+  ${catkin_LIBRARIES}
+)
+
+
 
 
 ## Rename C++ executable without prefix
