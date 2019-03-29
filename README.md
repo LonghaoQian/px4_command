@@ -34,11 +34,16 @@ Send command to PX4 using Mavros package
     
     `catkin_make`
     
+# Coordinate frames
+
+   Here we are using **ENU** frames.
+
+  >  MAVROS does translate Aerospace NED frames, used in FCUs to ROS ENU frames and vice-versa. For translate airframe related data we simply apply rotation 180° about ROLL (X) axis. For local we apply 180° about ROLL (X) and 90° about YAW (Z) axes
 
 # Branch
 
-    fsc_lab branch is used for fsc_lab quadrotor experiment.
+fsc_lab branch is used for fsc_lab quadrotor experiment.
     
-    Use this command to switch to fsc_lab branch
+Use this command to switch to fsc_lab branch
 
-       git checkout fsc_lab
+`git checkout fsc_lab`
