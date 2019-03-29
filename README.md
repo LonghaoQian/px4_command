@@ -12,27 +12,27 @@ Send command to PX4 using Mavros package
    
 2. Create a new ros space called "px4_ws" in your home folder
   
-    mkdir -p ~/px4_ws/src
+    `mkdir -p ~/px4_ws/src`
   
-    cd ~/px4_ws/src
+    `cd ~/px4_ws/src`
   
-    catkin_init_workspace
+    `catkin_init_workspace`
   
-    catkin_make
+    `catkin_make`
   
-    source devel/setup.bash
+    `source devel/setup.bash`
   
-    echo $ROS_PACKAGE_PATH
+    `echo $ROS_PACKAGE_PATH`
 
 3. Git clone the px4_command package
     
-    cd ~/px4_ws/src
+    `cd ~/px4_ws/src`
     
-    git clone https://github.com/potato77/px4_command
+    `git clone https://github.com/potato77/px4_command`
     
-    cd ..
+    `cd ..`
     
-    catkin_make
+    `catkin_make`
     
 
 # Branch
