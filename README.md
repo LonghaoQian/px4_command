@@ -7,6 +7,8 @@ Send command to PX4 using Mavros package
 1. Install the mavros packgae by Binary installation
    
     Please ref to: https://github.com/mavlink/mavros
+    
+    If you has install the mavros package by source code. Plaese deleat it firstly.
    
 2. Create a new ros space called "px4_ws" in your home folder
   
