@@ -40,5 +40,5 @@ Send command to PX4 using Mavros package
     fsc_lab branch is used for fsc_lab quadrotor experiment.
     
     Use this command to switch to fsc_lab branch
-    
-    `git checkout fsc_lab`
+
+       git checkout fsc_lab
