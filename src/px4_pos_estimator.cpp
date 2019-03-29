@@ -155,6 +155,8 @@ void optitrack_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
     // Transform the Quaternion to Euler Angles
     Euler_mocap = quaternion_to_euler(q_mocap);
 
+    //there might be a small change for fsc lab optitrack system
+
 }
 
 void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
