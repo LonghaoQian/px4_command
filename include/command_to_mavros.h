@@ -46,6 +46,7 @@ class command_to_mavros
         vel_drone_fcu           = Eigen::Vector3d(0.0,0.0,0.0);
         q_fcu                   = Eigen::Quaterniond(0.0,0.0,0.0,0.0);
         Euler_fcu               = Eigen::Vector3d(0.0,0.0,0.0);
+        rates_fcu               = Eigen::Vector3d(0.0,0.0,0.0);
         pos_drone_fcu_target    = Eigen::Vector3d(0.0,0.0,0.0);
         vel_drone_fcu_target    = Eigen::Vector3d(0.0,0.0,0.0);
         pos_drone_fcu_target    = Eigen::Vector3d(0.0,0.0,0.0);
@@ -102,6 +103,7 @@ class command_to_mavros
     //Current att of the drone
     Eigen::Quaterniond q_fcu;
     Eigen::Vector3d Euler_fcu;
+    Eigen::Vector3d rates_fcu;
 
     //Target typemask [from fcu]
     int type_mask_target;
@@ -212,6 +214,9 @@ class command_to_mavros
 
             //Transform the Quaternion to Euler Angles
             Euler_fcu = quaternion_to_euler(q_fcu);
+
+            rates_fcu = Eigen::Vector3d(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
+
         }
 
         void att_target_cb(const mavros_msgs::AttitudeTarget::ConstPtr& msg)
@@ -386,9 +391,20 @@ void command_to_mavros::prinft_drone_state(float current_time)
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Drone State<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
+    //固定的浮点显示
     cout.setf(ios::fixed);
+    //setprecision(n) 设显示小数精度为n位
+    cout<<setprecision(2);
+    //左对齐
+    cout.setf(ios::left);
+    // 强制显示小数点
+    cout.setf(ios::showpoint);
+    // 强制显示符号
+    cout.setf(ios::showpos);
 
-    cout << "Time: " << fixed <<setprecision(1)<< current_time <<" [s] ";
+    cout<<setprecision(1);
+
+    cout << "Time: " << current_time <<" [s] ";
 
     //是否和飞控建立起连接
     if (current_state.connected == true)
@@ -412,7 +428,9 @@ void command_to_mavros::prinft_drone_state(float current_time)
 
     cout << " [ " << current_state.mode<<" ]   " <<endl;
 
-    cout << "Position [X Y Z] : " << fixed <<setprecision(2)<< pos_drone_fcu[0] << " [ m ] "<< pos_drone_fcu[1]<<" [ m ] "<<pos_drone_fcu[2]<<" [ m ] "<<endl;
+    cout<<setprecision(2);
+
+    cout << "Position [X Y Z] : " << pos_drone_fcu[0] << " [ m ] "<< pos_drone_fcu[1]<<" [ m ] "<<pos_drone_fcu[2]<<" [ m ] "<<endl;
     cout << "Velocity [X Y Z] : " << vel_drone_fcu[0] << " [m/s] "<< vel_drone_fcu[1]<<" [m/s] "<<vel_drone_fcu[2]<<" [m/s] "<<endl;
 
     cout << "Attitude [R P Y] : " << Euler_fcu[0] * 180/M_PI <<" [deg] "<<Euler_fcu[1] * 180/M_PI << " [deg] "<< Euler_fcu[2] * 180/M_PI<<" [deg] "<<endl;
@@ -423,11 +441,10 @@ void command_to_mavros::prinft_drone_state(float current_time)
 
     cout << "Thr_target [0 - 1] : " << Thrust_target <<endl;
 
-    cout << "actuator_target.group_mix : " << actuator_target.group_mix <<endl;
+    //ned to enu
+    cout << "actuator_target [0 1 2 3] : " << actuator_target.controls[0] << " [ ] "<< -actuator_target.controls[1] <<" [ ] "<<-actuator_target.controls[2]<<" [ ] "<<actuator_target.controls[3] <<" [ ] "<<endl;
 
-    cout << "actuator_target [0 1 2 3] : " << fixed <<setprecision(3)<< actuator_target.controls[0] << " [ m ] "<< actuator_target.controls[1] <<" [ m ] "<<actuator_target.controls[2]<<" [ m ] "<<actuator_target.controls[3] <<" [ m ] "<<endl;
-
-    cout << "actuator_target [4 5 6 7] : " << fixed <<setprecision(3)<< actuator_target.controls[4] << " [ m ] "<< actuator_target.controls[5] <<" [ m ] "<<actuator_target.controls[6]<<" [ m ] "<<actuator_target.controls[7] <<" [ m ] "<<endl;
+    cout << "actuator_target [4 5 6 7] : " << actuator_target.controls[4] << " [ ] "<< actuator_target.controls[5] <<" [ ] "<<actuator_target.controls[6]<<" [ ] "<<actuator_target.controls[7] <<" [ ] "<<endl;
 
 }
 
@@ -435,7 +452,16 @@ void command_to_mavros::prinft_drone_state2(float current_time)
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Drone State<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
+    //固定的浮点显示
     cout.setf(ios::fixed);
+    //setprecision(n) 设显示小数精度为n位
+    cout<<setprecision(2);
+    //左对齐
+    cout.setf(ios::left);
+    // 强制显示小数点
+    cout.setf(ios::showpoint);
+    // 强制显示符号
+    cout.setf(ios::showpos);
 
     cout << "Time: " << fixed <<setprecision(1)<< current_time <<" [s] ";
 

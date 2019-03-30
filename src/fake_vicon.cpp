@@ -37,9 +37,9 @@ int main(int argc, char **argv)
     // 频率
     ros::Rate rate(100.0);
 
-    Eigen::Vector3d pos_vicon_enu(0,0,1);
+    Eigen::Vector3d pos_vicon_enu(0,0,0);
 
-    Eigen::Vector3d Euler_vicon(0,0,10.0/180*M_PI);
+    Eigen::Vector3d Euler_vicon(0,0,0.0/180*M_PI);
 
     Eigen::Quaterniond q_vicon = quaternion_from_rpy(Euler_vicon);
 
@@ -63,8 +63,8 @@ int main(int argc, char **argv)
 
         cout.setf(ios::fixed);
 
-        cout << "Position: [X Y Z][ENU] : " << " " << fixed <<setprecision(5)<< pos_vicon_enu[0] << " [m] "<< pos_vicon_enu[1]<<" [m] "<<pos_vicon_enu[2]<<" [m] "<<endl;
-        cout << "Attitude: [Yaw]  [ENU] : " << " " << Euler_vicon[2]/M_PI*180<<" [deg] "<<endl;
+        cout << "Position: " << " " << fixed <<setprecision(5)<< pos_vicon_enu[0] << " [ m ] "<< pos_vicon_enu[1]<<" [ m ] "<<pos_vicon_enu[2]<<" [ m ] "<<endl;
+        cout << "Attitude: " << " " << Euler_vicon[2]/M_PI*180<<" [deg] "<<endl;
 
         optitrack_pub.publish(mocap);
         rate.sleep();

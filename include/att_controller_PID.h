@@ -66,7 +66,7 @@ class att_controller_PID
 
             Euler_fcu       = Eigen::Vector3d(0.0,0.0,0.0);
             q_fcu           = Eigen::Quaterniond(0.0,0.0,0.0,0.0);
-            rates       = Eigen::Vector3d(0.0,0.0,0.0);
+            rates_fcu       = Eigen::Vector3d(0.0,0.0,0.0);
             rates_P_output       = Eigen::Vector3d(0.0,0.0,0.0);
             rates_int       = Eigen::Vector3d(0.0,0.0,0.0);
             rates_D_output       = Eigen::Vector3d(0.0,0.0,0.0);
@@ -80,9 +80,6 @@ class att_controller_PID
             flag_offboard   = 0;
 
             state_sub = att_pid_nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &att_controller_PID::state_cb,this);
-            attitude_sub = att_pid_nh.subscribe<sensor_msgs::Imu>("/mavros/imu/data", 10, &att_controller_PID::att_cb,this);
-
-
         }
 
         //PID parameter for the control law
@@ -114,7 +111,7 @@ class att_controller_PID
         //Current att of the drone
         Eigen::Quaterniond q_fcu;
         Eigen::Vector3d Euler_fcu;
-        Eigen::Vector3d rates;
+        Eigen::Vector3d rates_fcu;
 
         //Output of the rates loop in PID [rates_int is the I]
         Eigen::Vector3d rates_P_output;
@@ -160,7 +157,7 @@ class att_controller_PID
         void printf_result();
 
         //attition control main function [Input: desired state, time_now; Output: actuator_setpoint;]
-        Eigen::Vector4d att_controller(Eigen::Vector3d accel_sp, float yaw_sp, float curtime);
+        Eigen::Vector4d att_controller(Eigen::Vector3d att, Eigen::Vector3d rates, Eigen::Vector3d accel_sp, float yaw_sp, float curtime);
 
         //thrustToAttitude [Input: desired thrust,desired yaw angle; Output: desired euler angle]
         void thrustToAttitude(float yaw_sp);
@@ -178,7 +175,6 @@ class att_controller_PID
         ros::NodeHandle att_pid_nh;
 
         ros::Subscriber state_sub;
-        ros::Subscriber attitude_sub;
 
         void state_cb(const mavros_msgs::State::ConstPtr &msg)
         {
@@ -194,34 +190,25 @@ class att_controller_PID
 
         }
 
-        void att_cb(const sensor_msgs::Imu::ConstPtr& msg)
-        {
-            q_fcu = Eigen::Quaterniond(msg->orientation.w, msg->orientation.x, msg->orientation.y, msg->orientation.z);
-
-            //Transform the Quaternion to Euler Angles
-            Euler_fcu = quaternion_to_euler(q_fcu);
-
-            rates = Eigen::Vector3d(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
-
-        }
-
-
 };
 
 
-Eigen::Vector4d att_controller_PID::att_controller(Eigen::Vector3d accel_sp, float yaw_sp, float curtime)
+//attition control main function [Input: desired state, time_now; Output: actuator_setpoint;]
+Eigen::Vector4d att_controller_PID::att_controller(Eigen::Vector3d att, Eigen::Vector3d rates, Eigen::Vector3d accel_sp, float yaw_sp, float curtime)
 {
     delta_time = curtime - last_time;
 
     thrust_sp = accel_sp;
+
+    Euler_fcu = att;
+
+    rates_fcu = rates;
 
     thrustToAttitude(yaw_sp);
 
     _attController();
 
     _attrateController();
-
-    printf_result();
 
     last_time = curtime;
 }
@@ -293,43 +280,43 @@ void att_controller_PID::thrustToAttitude(float yaw_sp)
 
 void att_controller_PID::_attController()
 {
-    rates_setpoint(0) = MC_ROLL_P * (euler_setpoint(0) - Euler_fcu(0));
+    rates_setpoint(0) = MC_ROLL_P  * (euler_setpoint(0) - Euler_fcu(0));
     rates_setpoint(1) = MC_PITCH_P * (euler_setpoint(1) - Euler_fcu(1));
-    rates_setpoint(2) = MC_YAW_P  * (euler_setpoint(2) - Euler_fcu(2));
+    rates_setpoint(2) = MC_YAW_P   * (euler_setpoint(2) - Euler_fcu(2));
 
     // Limit the ratesocity setpoint
-    rates_setpoint(0) = constrain_function2(rates_setpoint(0), -MC_ROLLRATE_MAX, MC_ROLLRATE_MAX);
+    rates_setpoint(0) = constrain_function2(rates_setpoint(0), -MC_ROLLRATE_MAX,  MC_ROLLRATE_MAX);
     rates_setpoint(1) = constrain_function2(rates_setpoint(1), -MC_PITCHRATE_MAX, MC_PITCHRATE_MAX);
-    rates_setpoint(2) = constrain_function2(rates_setpoint(2), -MC_YAWRATE_MAX, MC_YAWRATE_MAX);
+    rates_setpoint(2) = constrain_function2(rates_setpoint(2), -MC_YAWRATE_MAX,   MC_YAWRATE_MAX);
 }
 
 Eigen::Vector4d att_controller_PID::_attrateController()
 {
-    Eigen::Vector3d error_rates = rates_setpoint - rates;
+    Eigen::Vector3d error_rates = rates_setpoint - rates_fcu;
 
-    rates_P_output(0) = MC_ROLLRATE_P * error_rates(0);
+    rates_P_output(0) = MC_ROLLRATE_P  * error_rates(0);
     rates_P_output(1) = MC_PITCHRATE_P * error_rates(1);
-    rates_P_output(2) = MC_YAWRATE_P  * error_rates(2);
+    rates_P_output(2) = MC_YAWRATE_P   * error_rates(2);
 
     Eigen::Vector3d rates_error_deriv = cal_rates_error_deriv(error_rates);
 
-    rates_D_output(0) = MC_ROLLRATE_D * rates_error_deriv(0);
+    rates_D_output(0) = MC_ROLLRATE_D  * rates_error_deriv(0);
     rates_D_output(1) = MC_PITCHRATE_D * rates_error_deriv(1);
-    rates_D_output(2) = MC_YAWRATE_D  * rates_error_deriv(2);
+    rates_D_output(2) = MC_YAWRATE_D   * rates_error_deriv(2);
 
     // Update integral
-    rates_int(0) += MC_ROLLRATE_I * error_rates(0) * delta_time;
+    rates_int(0) += MC_ROLLRATE_I  * error_rates(0) * delta_time;
     rates_int(1) += MC_PITCHRATE_I * error_rates(1) * delta_time;
-    rates_int(2) += MC_YAWRATE_I * error_rates(1) * delta_time;
+    rates_int(2) += MC_YAWRATE_I   * error_rates(2) * delta_time;
 
     rates_int(0) = constrain_function2(rates_int(0), -MC_RR_INT_LIM, MC_RR_INT_LIM);
     rates_int(1) = constrain_function2(rates_int(1), -MC_PR_INT_LIM, MC_PR_INT_LIM);
     rates_int(2) = constrain_function2(rates_int(2), -MC_YR_INT_LIM, MC_YR_INT_LIM);
 
     //
-    actuator_setpoint(0)  = rates_P_output(0) + rates_int(0) + rates_D_output(0);
-    actuator_setpoint(1)  = rates_P_output(1) + rates_int(1) + rates_D_output(1);
-    actuator_setpoint(2)  = rates_P_output(2) + rates_int(2) + rates_D_output(2);
+    actuator_setpoint(0) = rates_P_output(0) + rates_int(0) + rates_D_output(0);
+    actuator_setpoint(1) = rates_P_output(1) + rates_int(1) + rates_D_output(1);
+    actuator_setpoint(2) = rates_P_output(2) + rates_int(2) + rates_D_output(2);
     actuator_setpoint(3) = thrust_body_sp;
 
     //If not in OFFBOARD mode, set all intergral to zero.
@@ -364,13 +351,22 @@ void att_controller_PID::printf_result()
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>attition Controller<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
+    //固定的浮点显示
     cout.setf(ios::fixed);
+    //左对齐
+    cout.setf(ios::left);
+    // 强制显示小数点
+    cout.setf(ios::showpoint);
+    // 强制显示符号
+    cout.setf(ios::showpos);
 
-    cout << "delta_time : " << fixed <<setprecision(3)<< delta_time<< " [s] " <<endl;
+    cout<<setprecision(2);
 
-    cout << "euler_setpoint    [X Y Z] : " << euler_setpoint[0] / M_PI *180 << " [deg] "<< euler_setpoint[1] / M_PI *180 <<" [deg] "<<euler_setpoint[2]/ M_PI *180 <<" [deg] "<<endl;
+    cout << "delta_time : " << delta_time<< " [s] " <<endl;
 
-    cout << "rates_setpoint    [X Y Z] : " << rates_setpoint[0] / M_PI *180 << " [deg/s] "<< rates_setpoint[1] / M_PI *180 <<" [deg/s] "<<rates_setpoint[2]/ M_PI *180 <<" [deg/s] "<<endl;
+    cout << "euler_setpoint [X Y Z] : " << euler_setpoint[0] / M_PI *180 << " [deg] "<< euler_setpoint[1] / M_PI *180 <<" [deg] "<<euler_setpoint[2]/ M_PI *180 <<" [deg] "<<endl;
+
+    cout << "rates_setpoint [X Y Z] : " << rates_setpoint[0] / M_PI *180 << " [deg/s] "<< rates_setpoint[1] / M_PI *180 <<" [deg/s] "<<rates_setpoint[2]/ M_PI *180 <<" [deg/s] "<<endl;
 
     cout << "rates_P_output [X Y Z] : " << rates_P_output[0] << " [m/s] "<< rates_P_output[1]<<" [m/s] "<<rates_P_output[2]<<" [m/s] "<<endl;
 
@@ -378,9 +374,7 @@ void att_controller_PID::printf_result()
 
     cout << "rates_D_output [X Y Z] : " << rates_D_output[0] << " [m/s] "<< rates_D_output[1]<<" [m/s] "<<rates_D_output[2]<<" [m/s] "<<endl;
 
-    cout << "actuator_setpoint [0 1 2] : " << actuator_setpoint(0) << " [m/s^2] "<< actuator_setpoint(1) <<" [m/s^2] "<< actuator_setpoint(2) <<" [m/s^2] "<<endl;
-
-    cout << "actuator_setpoint    [3] : " << actuator_setpoint(3) <<endl;
+    cout << "actuator_setpoint [0 1 2 3] : " << actuator_setpoint(0) << " [ ] "<< actuator_setpoint(1) <<" [ ] "<< actuator_setpoint(2) <<" [ ] "<< actuator_setpoint(3)<<" [ ] "<<endl;
 }
 
 // 【打印参数函数】

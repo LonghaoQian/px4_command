@@ -66,7 +66,7 @@ int main(int argc, char **argv)
     ros::Subscriber Command_sub = nh.subscribe<px4_command::command>("/px4/command", 10, Command_cb);
 
 
-    ros::Rate rate(300.0);
+    ros::Rate rate(200.0);
 
     Eigen::Vector3d pos_sp(0,0,0);
     Eigen::Vector3d vel_sp(0,0,0);
@@ -156,7 +156,9 @@ int main(int argc, char **argv)
         prinft_command_state();
 
         //Printf the pid controller result
-        pos_controller_fsc.printf_result();
+        //pos_controller_fsc.printf_result();
+
+        att_controller_fsc.printf_result();
 
         //无人机一旦接受到Land指令，则会屏蔽其他指令
         if(Command_Last.command == Land)
@@ -173,7 +175,12 @@ int main(int argc, char **argv)
 
             accel_sp = pos_controller_fsc.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, cur_time);
 
-            actuator_sp = att_controller_fsc.att_controller(accel_sp, Command_Now.yaw_sp, cur_time);
+            actuator_sp = att_controller_fsc.att_controller(command_fsc.Euler_fcu, command_fsc.rates_fcu, accel_sp, Command_Now.yaw_sp, cur_time);
+
+
+            //for test
+            //command_fsc.send_accel_setpoint(accel_sp, Command_Now.yaw_sp );
+
 
             command_fsc.send_actuator_setpoint(actuator_sp);
 
@@ -217,7 +224,7 @@ int main(int argc, char **argv)
 
             accel_sp = pos_controller_fsc.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, cur_time);
 
-            actuator_sp = att_controller_fsc.att_controller(accel_sp, Command_Now.yaw_sp, cur_time);
+            actuator_sp = att_controller_fsc.att_controller(command_fsc.Euler_fcu, command_fsc.rates_fcu, accel_sp, Command_Now.yaw_sp, cur_time);
 
             command_fsc.send_actuator_setpoint(actuator_sp);
 
@@ -231,7 +238,7 @@ int main(int argc, char **argv)
 
             accel_sp = pos_controller_fsc.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, cur_time);
 
-            actuator_sp = att_controller_fsc.att_controller(accel_sp, Command_Now.yaw_sp, cur_time);
+            actuator_sp = att_controller_fsc.att_controller(command_fsc.Euler_fcu, command_fsc.rates_fcu, accel_sp, Command_Now.yaw_sp, cur_time);
 
             command_fsc.send_actuator_setpoint(actuator_sp);
 
@@ -268,7 +275,7 @@ int main(int argc, char **argv)
             {
                 accel_sp = pos_controller_fsc.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, cur_time);
 
-                actuator_sp = att_controller_fsc.att_controller(accel_sp, Command_Now.yaw_sp, cur_time);
+                actuator_sp = att_controller_fsc.att_controller(command_fsc.Euler_fcu, command_fsc.rates_fcu, accel_sp, Command_Now.yaw_sp, cur_time);
 
                 command_fsc.send_actuator_setpoint(actuator_sp);
             }

@@ -339,11 +339,20 @@ void pos_controller_PID::printf_result()
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Position Controller<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
+    //固定的浮点显示
     cout.setf(ios::fixed);
+    //左对齐
+    cout.setf(ios::left);
+    // 强制显示小数点
+    cout.setf(ios::showpoint);
+    // 强制显示符号
+    cout.setf(ios::showpos);
 
-    cout << "delta_time : " << fixed <<setprecision(3)<< delta_time<< " [s] " <<endl;
+    cout<<setprecision(3);
 
-    cout << "Velocity_sp  [X Y Z] : " << fixed <<setprecision(3) << vel_setpoint[0] << " [m/s] "<< vel_setpoint[1]<<" [m/s] "<<vel_setpoint[2]<<" [m/s] "<<endl;
+    cout << "delta_time : " << delta_time<< " [s] " <<endl;
+
+    cout << "Velocity_sp  [X Y Z] : " << vel_setpoint[0] << " [m/s] "<< vel_setpoint[1]<<" [m/s] "<<vel_setpoint[2]<<" [m/s] "<<endl;
 
     cout << "Vel_P_output [X Y Z] : " << vel_P_output[0] << " [m/s] "<< vel_P_output[1]<<" [m/s] "<<vel_P_output[2]<<" [m/s] "<<endl;
 
