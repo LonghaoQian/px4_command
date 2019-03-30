@@ -108,6 +108,15 @@ target_link_libraries(px4_pos_controller
   ${catkin_LIBRARIES}
 )
 
+add_executable(px4_pos_att_controller
+  src/px4_pos_att_controller.cpp
+)
+
+target_link_libraries(px4_pos_att_controller
+  ${catkin_LIBRARIES}
+)
+
+
 ##
 add_executable(px4_pos_estimator
   src/px4_pos_estimator.cpp

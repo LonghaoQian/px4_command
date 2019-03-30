@@ -167,7 +167,7 @@ class command_to_mavros
     void send_accel_setpoint(Eigen::Vector3d accel_sp, float yaw_sp);
 
     //Send actuator_setpoint to PX4
-    void send_actuator_setpoint(mavros_msgs::ActuatorControl actuator_sp);
+    void send_actuator_setpoint(Eigen::Vector4d actuator_sp);
 
     //Printf the parameters
     void printf_param();
@@ -358,10 +358,17 @@ void command_to_mavros::send_accel_setpoint(Eigen::Vector3d accel_sp, float yaw_
 }
 
 
-void command_to_mavros::send_actuator_setpoint(mavros_msgs::ActuatorControl actuator_sp)
+void command_to_mavros::send_actuator_setpoint(Eigen::Vector4d actuator_sp)
 {
-    actuator_setpoint = actuator_sp;
-
+    actuator_setpoint.group_mix = 0;
+    actuator_setpoint.controls[0] = actuator_sp[0];
+    actuator_setpoint.controls[1] = actuator_sp[1];
+    actuator_setpoint.controls[2] = actuator_sp[2];
+    actuator_setpoint.controls[3] = actuator_sp[3];
+    actuator_setpoint.controls[4] = 0.0;
+    actuator_setpoint.controls[5] = 0.0;
+    actuator_setpoint.controls[6] = 0.0;
+    actuator_setpoint.controls[7] = 0.0;
 
     actuator_setpoint_pub.publish(actuator_setpoint);
 }

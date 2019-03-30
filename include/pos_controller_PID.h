@@ -35,23 +35,23 @@ class pos_controller_PID
 
         //构造函数
         pos_controller_PID(void):
-            pid_nh("~")
+            pos_pid_nh("~")
         {
-            pid_nh.param<float>("MPC_XY_P", MPC_XY_P, 1.0);
-            pid_nh.param<float>("MPC_Z_P", MPC_Z_P, 1.0);
-            pid_nh.param<float>("MPC_XY_VEL_P", MPC_XY_VEL_P, 0.1);
-            pid_nh.param<float>("MPC_Z_VEL_P", MPC_Z_VEL_P, 0.1);
-            pid_nh.param<float>("MPC_XY_VEL_I", MPC_XY_VEL_I, 0.02);
-            pid_nh.param<float>("MPC_Z_VEL_I", MPC_Z_VEL_I, 0.02);
-            pid_nh.param<float>("MPC_XY_VEL_D", MPC_XY_VEL_D, 0.01);
-            pid_nh.param<float>("MPC_Z_VEL_D", MPC_Z_VEL_D, 0.01);
-            pid_nh.param<float>("MPC_XY_VEL_MAX", MPC_XY_VEL_MAX, 1.0);
-            pid_nh.param<float>("MPC_Z_VEL_MAX", MPC_Z_VEL_MAX, 0.5);
-            pid_nh.param<float>("MPC_THRUST_HOVER", MPC_THRUST_HOVER, 0.4);
-            pid_nh.param<float>("MPC_THR_MIN", MPC_THR_MIN, 0.1);
-            pid_nh.param<float>("MPC_THR_MAX", MPC_THR_MAX, 0.9);
-            pid_nh.param<float>("tilt_max", tilt_max, 5.0);
-            pid_nh.param<float>("MPC_VELD_LP", MPC_VELD_LP, 5.0);
+            pos_pid_nh.param<float>("MPC_XY_P", MPC_XY_P, 1.0);
+            pos_pid_nh.param<float>("MPC_Z_P", MPC_Z_P, 1.0);
+            pos_pid_nh.param<float>("MPC_XY_VEL_P", MPC_XY_VEL_P, 0.1);
+            pos_pid_nh.param<float>("MPC_Z_VEL_P", MPC_Z_VEL_P, 0.1);
+            pos_pid_nh.param<float>("MPC_XY_VEL_I", MPC_XY_VEL_I, 0.02);
+            pos_pid_nh.param<float>("MPC_Z_VEL_I", MPC_Z_VEL_I, 0.02);
+            pos_pid_nh.param<float>("MPC_XY_VEL_D", MPC_XY_VEL_D, 0.01);
+            pos_pid_nh.param<float>("MPC_Z_VEL_D", MPC_Z_VEL_D, 0.01);
+            pos_pid_nh.param<float>("MPC_XY_VEL_MAX", MPC_XY_VEL_MAX, 1.0);
+            pos_pid_nh.param<float>("MPC_Z_VEL_MAX", MPC_Z_VEL_MAX, 0.5);
+            pos_pid_nh.param<float>("MPC_THRUST_HOVER", MPC_THRUST_HOVER, 0.4);
+            pos_pid_nh.param<float>("MPC_THR_MIN", MPC_THR_MIN, 0.1);
+            pos_pid_nh.param<float>("MPC_THR_MAX", MPC_THR_MAX, 0.9);
+            pos_pid_nh.param<float>("tilt_max", tilt_max, 5.0);
+            pos_pid_nh.param<float>("MPC_VELD_LP", MPC_VELD_LP, 5.0);
 
             pos_drone       = Eigen::Vector3d(0.0,0.0,0.0);
             vel_drone       = Eigen::Vector3d(0.0,0.0,0.0);
@@ -66,7 +66,7 @@ class pos_controller_PID
             delta_time      = 0.0;
             flag_offboard   = 0;
 
-            state_sub = pid_nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &pos_controller_PID::state_cb,this);
+            state_sub = pos_pid_nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &pos_controller_PID::state_cb,this);
 
         }
 
@@ -126,6 +126,7 @@ class pos_controller_PID
         //Flag of the offboard mode [1 for OFFBOARD mode , 0 for non-OFFBOARD mode]
         int flag_offboard;
 
+        // Output of thrustToAttitude
         Eigen::Vector3d euler_sp;
 
         //Printf the PID parameter
@@ -145,12 +146,9 @@ class pos_controller_PID
 
         Eigen::Vector3d cal_vel_error_deriv(Eigen::Vector3d error_now);
 
-        //thrustToAttitude [Input: desired thrust,desired yaw angle; Output: desired euler angle]
-        void thrustToAttitude(float yaw_sp);
-
     private:
 
-        ros::NodeHandle pid_nh;
+        ros::NodeHandle pos_pid_nh;
 
         ros::Subscriber state_sub;
 
@@ -181,8 +179,6 @@ Eigen::Vector3d pos_controller_PID::pos_controller(Eigen::Vector3d pos, Eigen::V
     _positionController(pos_sp, vel_sp, sub_mode);
 
     _velocityController();
-
-    thrustToAttitude(0.0);
 
     last_time = curtime;
 
@@ -223,9 +219,6 @@ void pos_controller_PID::_positionController(Eigen::Vector3d pos_sp, Eigen::Vect
     vel_setpoint(1) = constrain_function2(vel_setpoint(1), -MPC_XY_VEL_MAX, MPC_XY_VEL_MAX);
     vel_setpoint(2) = constrain_function2(vel_setpoint(2), -MPC_Z_VEL_MAX, MPC_Z_VEL_MAX);
 }
-
-
-
 
 void pos_controller_PID::_velocityController()
 {
@@ -342,82 +335,6 @@ Eigen::Vector3d pos_controller_PID::cal_vel_error_deriv(Eigen::Vector3d error_no
 }
 
 
-void pos_controller_PID::thrustToAttitude(float yaw_sp)
-{
-
-    // desired body_z axis = -normalize(thrust_vector)
-    Eigen::Vector3d body_x,body_y,body_z;
-
-    euler_sp(2) = yaw_sp;
-
-    //thrust_sp(2) = -thrust_sp(2);
-
-    //float thrust_sp_length = sqrt(thrust_sp(0) * thrust_sp(0) + thrust_sp(1) * thrust_sp(1) + thrust_sp(2) * thrust_sp(2));
-
-
-    float thrust_sp_length = thrust_sp.norm();
-
-
-
-    if (thrust_sp_length > 0.00001f) {
-
-        //ENU or NED is different
-            //body_z = -thrust_sp.normalized();
-        body_z = thrust_sp.normalized();
-
-    } else {
-            // no thrust, set Z axis to safe value
-            body_z(0) = 0.0f;
-            body_z(1) = 0.0f;
-            body_z(2) = 1.0f;
-    }
-
-    // vector of desired yaw direction in XY plane, rotated by PI/2
-    Eigen::Vector3d y_C(-sin(euler_sp(2)), cos(euler_sp(2)), 0.0f);
-
-    if (fabs(body_z(2)) > 0.000001f) {
-            // desired body_x axis, orthogonal to body_z
-            body_x = y_C.cross( body_z);
-
-            // keep nose to front while inverted upside down
-            if (body_z(2) < 0.0f) {
-                    body_x = -body_x;
-            }
-
-            body_x.normalize();
-
-    } else {
-            // desired thrust is in XY plane, set X downside to construct correct matrix,
-            // but yaw component will not be used actually
-            body_x(0) = 0.0f;
-            body_x(1) = 0.0f;
-            body_x(2) = 1.0f;
-    }
-
-        // desired body_y axis
-        body_y = body_z .cross( body_x );
-
-        Eigen::Matrix3d R_sp;
-
-        // fill rotation matrix
-        for (int i = 0; i < 3; i++) {
-                R_sp(i, 0) = body_x(i);
-                R_sp(i, 1) = body_y(i);
-                R_sp(i, 2) = body_z(i);
-        }
-
-        //这里，由于NED与ENU的关系 ，导致结算出来的欧拉角度有相差
-        euler_sp = rotation_to_euler(R_sp);
-
-
-   //     cout << R_sp<<endl;
-
-//        att_sp.thrust_body[2] = -thrust_sp.length();
-
-}
-
-
-
 void pos_controller_PID::printf_result()
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Position Controller<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
@@ -435,8 +352,6 @@ void pos_controller_PID::printf_result()
     cout << "Vel_D_output [X Y Z] : " << vel_D_output[0] << " [m/s] "<< vel_D_output[1]<<" [m/s] "<<vel_D_output[2]<<" [m/s] "<<endl;
 
     cout << "thrust_sp    [X Y Z] : " << thrust_sp[0] << " [m/s^2] "<< thrust_sp[1]<<" [m/s^2] "<<thrust_sp[2]<<" [m/s^2] "<<endl;
-
-    cout << "euler_sp    [X Y Z] : " << euler_sp[0] / M_PI *180 << " [deg] "<< euler_sp[1] / M_PI *180 <<" [deg] "<<euler_sp[2]/ M_PI *180 <<" [deg] "<<endl;
 }
 
 // 【打印参数函数】

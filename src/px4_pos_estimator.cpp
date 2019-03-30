@@ -142,21 +142,23 @@ void tfmini_cb(const sensor_msgs::Range::ConstPtr& msg)
 void optitrack_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
     //位置 -- optitrack系 到 ENU系
-	int optitrack_frame = 1; //Frame convention 0: Z-up -- 1: Y-up
+    int optitrack_frame = 1; //Frame convention 0: Z-up -- 1: Y-up
     // Read the Drone Position from the Vrpn Package [Frame: Vicon]  (Vicon to ENU frame)
     Eigen::Vector3d pos_drone_mocap_enu(-msg->pose.position.x,msg->pose.position.z,msg->pose.position.y);
 
     pos_drone_mocap = pos_drone_mocap_enu;
 
-	if(optitrack_frame == 0){
-    // Read the Quaternion from the Vrpn Package [Frame: Vicon[ENU]]
-    Eigen::Quaterniond q_mocap_enu(msg->pose.orientation.w, msg->pose.orientation.x, msg->pose.orientation.y, msg->pose.orientation.z);
-    q_mocap = q_mocap_enu;
-}else{
-    // Read the Quaternion from the Vrpn Package [Frame: Vicon[ENU]]
-    Eigen::Quaterniond q_mocap_enu(msg->pose.orientation.w, msg->pose.orientation.x, msg->pose.orientation.z, msg->pose.orientation.y); //Y-up convention, switch the q2 & q3
-    q_mocap = q_mocap_enu;
-}
+    if(optitrack_frame == 0){
+        // Read the Quaternion from the Vrpn Package [Frame: Vicon[ENU]]
+        Eigen::Quaterniond q_mocap_enu(msg->pose.orientation.w, msg->pose.orientation.x, msg->pose.orientation.y, msg->pose.orientation.z);
+        q_mocap = q_mocap_enu;
+    }
+    else
+    {
+        // Read the Quaternion from the Vrpn Package [Frame: Vicon[ENU]]
+        Eigen::Quaterniond q_mocap_enu(msg->pose.orientation.w, msg->pose.orientation.x, msg->pose.orientation.z, msg->pose.orientation.y); //Y-up convention, switch the q2 & q3
+        q_mocap = q_mocap_enu;
+    }
 
     // Transform the Quaternion to Euler Angles
     Euler_mocap = quaternion_to_euler(q_mocap);
