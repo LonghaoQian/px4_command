@@ -166,7 +166,7 @@ class att_controller_PID
         void _attController();
 
         //ratesocity control loop [Input: rates_setpoint; Output: actuator_setpoint]
-        Eigen::Vector4d _attrateController();
+        void _attrateController();
 
         Eigen::Vector3d cal_rates_error_deriv(Eigen::Vector3d error_now);
 
@@ -211,6 +211,8 @@ Eigen::Vector4d att_controller_PID::att_controller(Eigen::Vector3d att, Eigen::V
     _attrateController();
 
     last_time = curtime;
+
+    return actuator_setpoint;
 }
 
 void att_controller_PID::thrustToAttitude(float yaw_sp)
@@ -290,7 +292,7 @@ void att_controller_PID::_attController()
     rates_setpoint(2) = constrain_function2(rates_setpoint(2), -MC_YAWRATE_MAX,   MC_YAWRATE_MAX);
 }
 
-Eigen::Vector4d att_controller_PID::_attrateController()
+void att_controller_PID::_attrateController()
 {
     Eigen::Vector3d error_rates = rates_setpoint - rates_fcu;
 
@@ -325,7 +327,6 @@ Eigen::Vector4d att_controller_PID::_attrateController()
         rates_int = Eigen::Vector3d(0.0,0.0,0.0);
     }
 
-    return actuator_setpoint;
 }
 
 Eigen::Vector3d att_controller_PID::cal_rates_error_deriv(Eigen::Vector3d error_now)

@@ -366,10 +366,10 @@ void command_to_mavros::send_accel_setpoint(Eigen::Vector3d accel_sp, float yaw_
 void command_to_mavros::send_actuator_setpoint(Eigen::Vector4d actuator_sp)
 {
     actuator_setpoint.group_mix = 0;
-    actuator_setpoint.controls[0] = actuator_sp[0];
-    actuator_setpoint.controls[1] = actuator_sp[1];
-    actuator_setpoint.controls[2] = actuator_sp[2];
-    actuator_setpoint.controls[3] = actuator_sp[3];
+    actuator_setpoint.controls[0] = actuator_sp(0);
+    actuator_setpoint.controls[1] = actuator_sp(1);
+    actuator_setpoint.controls[2] = actuator_sp(2);
+    actuator_setpoint.controls[3] = actuator_sp(3);
     actuator_setpoint.controls[4] = 0.0;
     actuator_setpoint.controls[5] = 0.0;
     actuator_setpoint.controls[6] = 0.0;
@@ -490,15 +490,6 @@ void command_to_mavros::prinft_drone_state2(float current_time)
     cout << "Position [X Y Z] : " << fixed <<setprecision(2)<< pos_drone_fcu[0] << " [ m ] "<< pos_drone_fcu[1]<<" [ m ] "<<pos_drone_fcu[2]<<" [ m ] "<<endl;
     cout << "Velocity [X Y Z] : " << vel_drone_fcu[0] << " [m/s] "<< vel_drone_fcu[1]<<" [m/s] "<<vel_drone_fcu[2]<<" [m/s] "<<endl;
     cout << "Attitude [R P Y] : " << Euler_fcu[0] * 180/M_PI <<" [deg] "<<Euler_fcu[1] * 180/M_PI << " [deg] "<< Euler_fcu[2] * 180/M_PI<<" [deg] "<<endl;
-
-    cout << "Pos_target [X Y Z] : "  << pos_drone_fcu_target[0] << " [ m ] "<< pos_drone_fcu_target[1]<<" [ m ] "<<pos_drone_fcu_target[2]<<" [ m ] "<<endl;
-    cout << "Vel_target [X Y Z] : "  << vel_drone_fcu_target[0] << " [m/s] "<< vel_drone_fcu_target[1]<<" [m/s] "<<vel_drone_fcu_target[2]<<" [m/s] "<<endl;
-    cout << "Acc_target [X Y Z] : "  << accel_drone_fcu_target[0] << " [m/s^2] "<< accel_drone_fcu_target[1]<<" [m/s^2] "<<accel_drone_fcu_target[2]<<" [m/s^2] "<<endl;
-
-    cout << "Att_target [R P Y] : " << Euler_fcu_target[0] * 180/M_PI <<" [deg] "<<Euler_fcu_target[1] * 180/M_PI << " [deg] "<< Euler_fcu_target[2] * 180/M_PI<<" [deg] "<<endl;
-
-    cout << "Thr_target [0 - 1] : " << Thrust_target <<endl;
-
 }
 
 }

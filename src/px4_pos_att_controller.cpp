@@ -150,7 +150,7 @@ int main(int argc, char **argv)
         float cur_time = get_ros_time(begin_time);
 
         //Printf the drone state
-        command_fsc.prinft_drone_state(cur_time);
+        command_fsc.prinft_drone_state2(cur_time);
 
         //Printf the command state
         prinft_command_state();
