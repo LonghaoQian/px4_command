@@ -39,7 +39,7 @@ int main(int argc, char **argv)
 
     Eigen::Vector3d pos_vicon_enu(0,0,0);
 
-    Eigen::Vector3d Euler_vicon(0,0,0.0/180*M_PI);
+    Eigen::Vector3d Euler_vicon(0,10.0/180*M_PI,10.0/180*M_PI);
 
     Eigen::Quaterniond q_vicon = quaternion_from_rpy(Euler_vicon);
 
