@@ -75,9 +75,7 @@ generate_messages(
 
 catkin_package(
   INCLUDE_DIRS include
-  # LIBRARIES px4_command
   CATKIN_DEPENDS  message_runtime
-  # DEPENDS EIGEN3 GeographicLib
 )
 
 
@@ -103,7 +101,7 @@ include_directories(
 add_executable(px4_pos_controller
   src/px4_pos_controller.cpp
 )
-
+add_dependencies(px4_pos_controller px4_command_gencpp)
 target_link_libraries(px4_pos_controller
   ${catkin_LIBRARIES}
 )
@@ -112,6 +110,7 @@ target_link_libraries(px4_pos_controller
 add_executable(px4_pos_estimator
   src/px4_pos_estimator.cpp
 )
+add_dependencies(px4_pos_estimator px4_command_gencpp)
 target_link_libraries(px4_pos_estimator
   ${catkin_LIBRARIES}
 )
@@ -121,6 +120,7 @@ target_link_libraries(px4_pos_estimator
 add_executable(fake_vicon
   src/fake_vicon.cpp
 )
+add_dependencies(fake_vicon px4_command_gencpp)
 target_link_libraries(fake_vicon
   ${catkin_LIBRARIES}
 )
@@ -131,6 +131,7 @@ target_link_libraries(fake_vicon
 add_executable(move
   src/move.cpp
 )
+add_dependencies(move px4_command_gencpp)
 target_link_libraries(move
   ${catkin_LIBRARIES}
 )
@@ -139,6 +140,7 @@ target_link_libraries(move
 add_executable(set_mode
   src/set_mode.cpp
 )
+add_dependencies(set_mode px4_command_gencpp)
 target_link_libraries(set_mode
   ${catkin_LIBRARIES}
 )
@@ -146,6 +148,7 @@ target_link_libraries(set_mode
 add_executable(px4_sender
   src/px4_sender.cpp
 )
+add_dependencies(px4_sender px4_command_gencpp)
 target_link_libraries(px4_sender
   ${catkin_LIBRARIES}
 )
@@ -153,6 +156,7 @@ target_link_libraries(px4_sender
 add_executable(eigen_test
   src/eigen_test.cpp
 )
+add_dependencies(eigen_test px4_command_gencpp)
 target_link_libraries(eigen_test
   ${catkin_LIBRARIES}
 )
@@ -161,6 +165,7 @@ target_link_libraries(eigen_test
 add_executable(TFmini
   src/TFmini.cpp
 )
+add_dependencies(TFmini px4_command_gencpp)
 target_link_libraries(TFmini
   ${catkin_LIBRARIES}
 )
@@ -168,6 +173,7 @@ target_link_libraries(TFmini
 add_executable(square
   src/square.cpp
 )
+add_dependencies(square px4_command_gencpp)
 target_link_libraries(square
   ${catkin_LIBRARIES}
 )
