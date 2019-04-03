@@ -22,7 +22,13 @@ Send command to PX4 using Mavros package
   
     `source devel/setup.bash`
   
-    `echo $ROS_PACKAGE_PATH`
+    `echo $ROS_PACKAGE_PATH`  
+    
+    If failed, please source manually.
+    
+    `gedit .bashrc`  
+    
+    Add the path in the end of the .txt file
 
 3. Git clone the px4_command package
     
