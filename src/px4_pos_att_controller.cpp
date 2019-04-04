@@ -66,7 +66,7 @@ int main(int argc, char **argv)
     ros::Subscriber Command_sub = nh.subscribe<px4_command::command>("/px4/command", 10, Command_cb);
 
 
-    ros::Rate rate(200.0);
+    ros::Rate rate(250.0);
 
     Eigen::Vector3d pos_sp(0,0,0);
     Eigen::Vector3d vel_sp(0,0,0);
@@ -85,6 +85,8 @@ int main(int argc, char **argv)
     pos_controller_fsc.printf_pid_param();
 
     att_controller_fsc.printf_pid_param();
+
+    command_fsc.show_geo_fence();
 
     int check_flag;
     // 这一步是为了程序运行前检查一下参数是否正确
@@ -154,6 +156,8 @@ int main(int argc, char **argv)
 
         //Printf the command state
         prinft_command_state();
+
+        command_fsc.failsafe();
 
         //Printf the pid controller result
         //pos_controller_fsc.printf_result();

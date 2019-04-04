@@ -79,6 +79,8 @@ int main(int argc, char **argv)
 
     pos_controller_fsc.printf_pid_param();
 
+    command_fsc.show_geo_fence();
+
     int check_flag;
     // 这一步是为了程序运行前检查一下参数是否正确
     // 输入1,继续，其他，退出程序
@@ -109,7 +111,6 @@ int main(int argc, char **argv)
         rate.sleep();
 
     }
-
 
     command_fsc.set_takeoff_position();
 
@@ -143,13 +144,15 @@ int main(int argc, char **argv)
         float cur_time = get_ros_time(begin_time);
 
         //Printf the drone state
-        command_fsc.prinft_drone_state(cur_time);
+        command_fsc.prinft_drone_state2(cur_time);
 
         //Printf the command state
         prinft_command_state();
 
         //Printf the pid controller result
         pos_controller_fsc.printf_result();
+
+        command_fsc.failsafe();
 
         //无人机一旦接受到Land指令，则会屏蔽其他指令
         if(Command_Last.command == Land)
