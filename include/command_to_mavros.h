@@ -67,6 +67,11 @@ class command_to_mavros
         type_mask_target        = 0;
         frame_target            = 0;
 
+
+        Land_position           = Eigen::Vector3d(0.0,0.0,0.0);
+        Land_yaw                = 0.0;
+        flag_set_land_position  = 0;
+
         state_sub = command_nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &command_to_mavros::state_cb,this);
 
         position_sub = command_nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 100, &command_to_mavros::pos_cb,this);
@@ -103,6 +108,11 @@ class command_to_mavros
 
     //Hold Position of the Drone (For hold mode in command.msg)
     Eigen::Vector3d Hold_position;
+
+    //Land Position of the Drone
+    Eigen::Vector3d Land_position;
+    double Land_yaw;
+    int flag_set_land_position;
 
     //Current state of the drone
     mavros_msgs::State current_state;
@@ -158,7 +168,7 @@ class command_to_mavros
     //Takeoff to the default altitude, pls change the param in PX4: MIS_TAKEOFF_ALT
     void takeoff();
 
-    //Land in current position in default velocity. Pls change the param in PX4 : MPC_LAND_SPEED
+    //Land to current position
     void land();
 
     //Idle. Do nothing.
@@ -279,11 +289,55 @@ void command_to_mavros::takeoff()
 
 void command_to_mavros::land()
 {
+    //If the land_position is not set, set current position of the drone as the land_position
+    if(flag_set_land_position == 0)
+    {
+        Land_position[0] = pos_drone_fcu[0];
+        Land_position[1] = pos_drone_fcu[1];
+        Land_position[2] = Takeoff_position[2];
+        Land_yaw = Euler_fcu[2];
+        flag_set_land_position = 1;
+    }
+
     mavros_msgs::PositionTarget pos_setpoint;
 
-    pos_setpoint.type_mask = 0x2000;
+    pos_setpoint.type_mask = 0b100111111000;  // 100 111 111 000  xyz + yaw
 
-    setpoint_raw_local_pub.publish(pos_setpoint);
+    pos_setpoint.coordinate_frame = 1;
+
+    pos_setpoint.position.x = Land_position[0];
+    pos_setpoint.position.y = Land_position[1];
+    pos_setpoint.position.z = Land_position[2];
+
+    pos_setpoint.yaw = Land_yaw;
+
+    //如果距离起飞高度小于20厘米，则直接上锁并切换为手动模式；
+    if(abs(pos_drone_fcu[2] - Takeoff_position[2]) < (0.2))
+    {
+        if(current_state.mode == "OFFBOARD")
+        {
+            mode_cmd.request.custom_mode = "MANUAL";
+            set_mode_client.call(mode_cmd);
+        }
+
+        if(current_state.armed)
+        {
+            arm_cmd.request.value = false;
+            arming_client.call(arm_cmd);
+
+        }
+
+        if (arm_cmd.response.success)
+        {
+            cout<<"Disarm successfully!"<<endl;
+        }
+    }
+    else
+    {
+        setpoint_raw_local_pub.publish(pos_setpoint);
+        cout << "The drone is landing "<< endl;
+    }
+
 }
 
 void command_to_mavros::loiter()
