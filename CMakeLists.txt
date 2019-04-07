@@ -75,9 +75,7 @@ generate_messages(
 
 catkin_package(
   INCLUDE_DIRS include
-  # LIBRARIES px4_command
   CATKIN_DEPENDS  message_runtime
-  # DEPENDS EIGEN3 GeographicLib
 )
 
 
