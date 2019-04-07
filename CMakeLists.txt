@@ -96,7 +96,13 @@ include_directories(
 ##      声明可执行cpp文件     ##
 ###############################
 
-
+add_executable(px4_pos_att_controller
+  src/px4_pos_att_controller.cpp
+)
+add_dependencies(px4_pos_att_controller px4_command_gencpp)
+target_link_libraries(px4_pos_att_controller
+  ${catkin_LIBRARIES}
+)
 
 add_executable(px4_pos_controller
   src/px4_pos_controller.cpp
@@ -177,7 +183,6 @@ add_dependencies(square px4_command_gencpp)
 target_link_libraries(square
   ${catkin_LIBRARIES}
 )
-
 
 
 

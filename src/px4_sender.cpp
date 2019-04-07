@@ -72,6 +72,8 @@ int main(int argc, char **argv)
 
     command_fsc.printf_param();
 
+    command_fsc.show_geo_fence();
+
     int check_flag;
     // 这一步是为了程序运行前检查一下参数是否正确
     // 输入1,继续，其他，退出程序
@@ -122,6 +124,7 @@ int main(int argc, char **argv)
 
         command_fsc.prinft_drone_state2(cur_time);
         prinft_command_state();
+        command_fsc.failsafe();
 
         //无人机一旦接受到Land指令，则会屏蔽其他指令
         if(Command_Last.command == Land)

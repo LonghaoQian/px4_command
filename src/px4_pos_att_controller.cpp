@@ -1,11 +1,11 @@
 /***************************************************************************************************************************
-* px4_pos_controller.cpp
+* px4_pos_att_controller.cpp
 *
 * Author: Qyp
 *
 * Update Time: 2019.3.16
 *
-* Introduction:  PX4 Position Controller using own control mehthod (but it is pid now)
+* Introduction:  PX4 Position & Attitude Controller using own control mehthod (but it is pid now)
 *         1. Subscribe command.msg from upper nodes
 *         2. Calculate the accel_sp using pos_controller_PID.h
 *         3. Send command using command_to_mavros.h
@@ -15,6 +15,7 @@
 
 #include <command_to_mavros.h>
 #include <pos_controller_PID.h>
+#include <att_controller_PID.h>
 #include <px4_command/command.h>
 
 
@@ -56,7 +57,7 @@ void Command_cb(const px4_command::command::ConstPtr& msg)
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "px4_pos_controller");
+    ros::init(argc, argv, "px4_pos_att_controller");
     ros::NodeHandle nh("~");
 
     //flag of using our own pid control law or not: 0 for not use, 1 for use
@@ -65,19 +66,25 @@ int main(int argc, char **argv)
     ros::Subscriber Command_sub = nh.subscribe<px4_command::command>("/px4/command", 10, Command_cb);
 
 
-    ros::Rate rate(50.0);
+    ros::Rate rate(250.0);
 
     Eigen::Vector3d pos_sp(0,0,0);
     Eigen::Vector3d vel_sp(0,0,0);
     Eigen::Vector3d accel_sp(0,0,0);
 
+    Eigen::Vector4d actuator_sp(0,0,0,0);
+
     command_to_mavros command_fsc;
 
     pos_controller_PID pos_controller_fsc;
 
+    att_controller_PID att_controller_fsc;
+
     command_fsc.printf_param();
 
     pos_controller_fsc.printf_pid_param();
+
+    att_controller_fsc.printf_pid_param();
 
     command_fsc.show_geo_fence();
 
@@ -111,6 +118,7 @@ int main(int argc, char **argv)
         rate.sleep();
 
     }
+
 
     command_fsc.set_takeoff_position();
 
@@ -149,10 +157,12 @@ int main(int argc, char **argv)
         //Printf the command state
         prinft_command_state();
 
-        //Printf the pid controller result
-        pos_controller_fsc.printf_result();
-
         command_fsc.failsafe();
+
+        //Printf the pid controller result
+        //pos_controller_fsc.printf_result();
+
+        att_controller_fsc.printf_result();
 
         //无人机一旦接受到Land指令，则会屏蔽其他指令
         if(Command_Last.command == Land)
@@ -162,13 +172,21 @@ int main(int argc, char **argv)
 
         switch (Command_Now.command)
         {
+
         case Move_ENU:
             pos_sp = Eigen::Vector3d(Command_Now.pos_sp[0],Command_Now.pos_sp[1],Command_Now.pos_sp[2]);
             vel_sp = Eigen::Vector3d(Command_Now.vel_sp[0],Command_Now.vel_sp[1],Command_Now.vel_sp[2]);
 
             accel_sp = pos_controller_fsc.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, cur_time);
 
-            command_fsc.send_accel_setpoint(accel_sp, Command_Now.yaw_sp );
+            actuator_sp = att_controller_fsc.att_controller(command_fsc.Euler_fcu, command_fsc.rates_fcu, accel_sp, Command_Now.yaw_sp, cur_time);
+
+
+            //for test
+            //command_fsc.send_accel_setpoint(accel_sp, Command_Now.yaw_sp );
+
+
+            command_fsc.send_actuator_setpoint(actuator_sp);
 
             break;
 
@@ -210,7 +228,9 @@ int main(int argc, char **argv)
 
             accel_sp = pos_controller_fsc.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, cur_time);
 
-            command_fsc.send_accel_setpoint(accel_sp, Command_Now.yaw_sp );
+            actuator_sp = att_controller_fsc.att_controller(command_fsc.Euler_fcu, command_fsc.rates_fcu, accel_sp, Command_Now.yaw_sp, cur_time);
+
+            command_fsc.send_actuator_setpoint(actuator_sp);
 
             break;
 
@@ -220,9 +240,11 @@ int main(int argc, char **argv)
                 command_fsc.Hold_position = Eigen::Vector3d(Command_Now.pos_sp[0],Command_Now.pos_sp[1],Command_Now.pos_sp[2]);
             }
 
-            accel_sp = pos_controller_fsc.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, command_fsc.Hold_position, vel_sp, 0b00, cur_time);
+            accel_sp = pos_controller_fsc.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, cur_time);
 
-            command_fsc.send_accel_setpoint(accel_sp, Command_Now.yaw_sp );
+            actuator_sp = att_controller_fsc.att_controller(command_fsc.Euler_fcu, command_fsc.rates_fcu, accel_sp, Command_Now.yaw_sp, cur_time);
+
+            command_fsc.send_actuator_setpoint(actuator_sp);
 
             break;
 
@@ -255,9 +277,11 @@ int main(int argc, char **argv)
                 }
             }else
             {
-                accel_sp = pos_controller_fsc.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, 0b00, cur_time);
+                accel_sp = pos_controller_fsc.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, cur_time);
 
-                command_fsc.send_accel_setpoint(accel_sp, Command_Now.yaw_sp );
+                actuator_sp = att_controller_fsc.att_controller(command_fsc.Euler_fcu, command_fsc.rates_fcu, accel_sp, Command_Now.yaw_sp, cur_time);
+
+                command_fsc.send_actuator_setpoint(actuator_sp);
             }
 
             break;

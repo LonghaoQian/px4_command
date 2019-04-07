@@ -42,6 +42,13 @@ class command_to_mavros
     {
         command_nh.param<float>("Takeoff_height", Takeoff_height, 1.0);
 
+        command_nh.param("geo_fence/x_min", geo_fence_x[0], -100.0);
+        command_nh.param("geo_fence/x_max", geo_fence_x[1], 100.0);
+        command_nh.param("geo_fence/y_min", geo_fence_y[0], -100.0);
+        command_nh.param("geo_fence/y_max", geo_fence_y[1], 100.0);
+        command_nh.param("geo_fence/z_min", geo_fence_z[0], -100.0);
+        command_nh.param("geo_fence/z_max", geo_fence_z[1], 100.0);
+
         pos_drone_fcu           = Eigen::Vector3d(0.0,0.0,0.0);
         vel_drone_fcu           = Eigen::Vector3d(0.0,0.0,0.0);
         q_fcu                   = Eigen::Quaterniond(0.0,0.0,0.0,0.0);
@@ -57,7 +64,6 @@ class command_to_mavros
 
         Takeoff_position        = Eigen::Vector3d(0.0,0.0,0.0);
         Hold_position           = Eigen::Vector3d(0.0,0.0,0.0);
-
         type_mask_target        = 0;
         frame_target            = 0;
 
@@ -83,6 +89,12 @@ class command_to_mavros
 
         set_mode_client = command_nh.serviceClient<mavros_msgs::SetMode>("/mavros/set_mode");
     }
+
+    //Geigraphical fence
+    Eigen::Vector2d geo_fence_x;
+    Eigen::Vector2d geo_fence_y;
+    Eigen::Vector2d geo_fence_z;
+
 
     float Takeoff_height;
 
@@ -179,6 +191,12 @@ class command_to_mavros
 
     //Pringt the drone state2
     void prinft_drone_state2(float current_time);
+
+
+    //failsafe
+    void failsafe();
+
+    void show_geo_fence();
 
     private:
 
@@ -377,6 +395,28 @@ void command_to_mavros::send_actuator_setpoint(Eigen::Vector4d actuator_sp)
 
     actuator_setpoint_pub.publish(actuator_setpoint);
 }
+
+void command_to_mavros::show_geo_fence()
+{
+    cout << "geo_fence_x : "<< geo_fence_x[0] << " [m]  to  "<<geo_fence_x[1] << " [m]"<< endl;
+    cout << "geo_fence_y : "<< geo_fence_y[0] << " [m]  to  "<<geo_fence_y[1] << " [m]"<< endl;
+    cout << "geo_fence_z : "<< geo_fence_z[0] << " [m]  to  "<<geo_fence_z[1] << " [m]"<< endl;
+}
+
+void command_to_mavros::failsafe()
+{
+    if (pos_drone_fcu[0] < geo_fence_x[0] || pos_drone_fcu[0] > geo_fence_x[1] ||
+        pos_drone_fcu[1] < geo_fence_y[0] || pos_drone_fcu[1] > geo_fence_y[1] ||
+        pos_drone_fcu[2] < geo_fence_z[0] || pos_drone_fcu[2] > geo_fence_z[1])
+    {
+        while(ros::ok())
+        {
+            land();
+            cout << "Out of the geo fence, the drone is landing... "<< endl;
+        }
+    }
+}
+
 
 // 【打印参数函数】
 void command_to_mavros::printf_param()
