@@ -43,7 +43,7 @@ px4_command::command Command_Now;                      //无人机当前执行�
 //Command Last [from upper node]
 px4_command::command Command_Last;                     //无人机上一条执行命令
 
-int flag_using_pid;
+int Flag_UDE_PID;
 
 float get_ros_time(ros::Time begin);
 void prinft_command_state();
@@ -59,11 +59,10 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "px4_pos_controller");
     ros::NodeHandle nh("~");
 
-    //flag of using our own pid control law or not: 0 for not use, 1 for use
-    nh.param<int>("flag_using_pid", flag_using_pid, 0);
+    //0 for PID, 1 for UDE
+    nh.param<int>("Flag_UDE_PID", Flag_UDE_PID, 0);
 
     ros::Subscriber Command_sub = nh.subscribe<px4_command::command>("/px4/command", 10, Command_cb);
-
 
     ros::Rate rate(50.0);
 
@@ -75,9 +74,10 @@ int main(int argc, char **argv)
 
     pos_controller_PID pos_controller_fsc;
 
+
     command_fsc.printf_param();
 
-    pos_controller_fsc.printf_pid_param();
+    pos_controller_fsc.printf_param();
 
     command_fsc.show_geo_fence();
 

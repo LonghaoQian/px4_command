@@ -35,6 +35,7 @@ add_message_files(
   DIRECTORY msg
   FILES
   command.msg
+  ude_log.msg
 )
 
 ## Generate added messages and services with any dependencies listed here
@@ -95,12 +96,18 @@ include_directories(
 ###############################
 ##      声明可执行cpp文件     ##
 ###############################
-
-add_executable(px4_pos_att_controller
-  src/px4_pos_att_controller.cpp
+add_executable(Data_log
+  src/Data_log.cpp
 )
-add_dependencies(px4_pos_att_controller px4_command_gencpp)
-target_link_libraries(px4_pos_att_controller
+add_dependencies(Data_log px4_command_gencpp)
+target_link_libraries(Data_log
+  ${catkin_LIBRARIES}
+)
+add_executable(px4_pos_controller_UDE
+  src/px4_pos_controller_UDE.cpp
+)
+add_dependencies(px4_pos_controller_UDE px4_command_gencpp)
+target_link_libraries(px4_pos_controller_UDE
   ${catkin_LIBRARIES}
 )
 

@@ -4,7 +4,7 @@
 	<node pkg="px4_command" type="px4_pos_controller" name="px4_pos_controller" output="screen">
 
 		<!-- load blacklist, config -->
-		<rosparam command="load" file="$(find px4_command)/launch/PID_param.yaml" />
+		<rosparam command="load" file="$(find px4_command)/launch/Parameter_for_control.yaml" />
 
 
 	</node>
