@@ -9,13 +9,12 @@
 *         1. Similiar to the position controller in PX4 (1.8.2)
 *         2. Ref to : https://github.com/PX4/Firmware/blob/master/src/modules/mc_pos_control/PositionControl.cpp
 *         3. Here we didn't consider the mass of the drone, we treat accel_sp is the thrust_sp.
-*         4. We didn't use filter to get the derivation of the velocity [It must be considered.]
-*         5. thrustToAttitude ref to https://github.com/PX4/Firmware/blob/master/src/modules/mc_pos_control/Utility/ControlMath.cpp
-*         6. For the derrive of the velocity error, we use a low-pass filter as same in PX4.
+*         4. thrustToAttitude ref to https://github.com/PX4/Firmware/blob/master/src/modules/mc_pos_control/Utility/ControlMath.cpp
+*         5. For the derrive of the velocity error, we use a low-pass filter as same in PX4.
 *                   Ref to: https://github.com/PX4/Firmware/blob/master/src/lib/controllib/BlockDerivative.cpp
 *                           https://github.com/PX4/Firmware/blob/master/src/lib/controllib/BlockLowPass.cpp
-*         7. 没有考虑积分器清零的情况，在降落时 或者突然换方向机动时，积分器需要清0
-*         8. 推力到欧拉角基本与PX4吻合，但是在极端情况下不吻合。如：z轴期望值为-100时。
+*         6. 没有考虑积分器清零的情况，在降落时 或者突然换方向机动时，积分器需要清0
+*         7. 推力到欧拉角基本与PX4吻合，但是在极端情况下不吻合。如：z轴期望值为-100时。
 ***************************************************************************************************************************/
 #ifndef POS_CONTROLLER_PID_H
 #define POS_CONTROLLER_PID_H
@@ -130,7 +129,7 @@ class pos_controller_PID
         Eigen::Vector3d euler_sp;
 
         //Printf the PID parameter
-        void printf_pid_param();
+        void printf_param();
 
         //Printf the control result
         void printf_result();
@@ -364,7 +363,7 @@ void pos_controller_PID::printf_result()
 }
 
 // 【打印参数函数】
-void pos_controller_PID::printf_pid_param()
+void pos_controller_PID::printf_param()
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>PID Parameter <<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 

@@ -584,6 +584,8 @@ void command_to_mavros::prinft_drone_state2(float current_time)
     cout << "Position [X Y Z] : " << fixed <<setprecision(2)<< pos_drone_fcu[0] << " [ m ] "<< pos_drone_fcu[1]<<" [ m ] "<<pos_drone_fcu[2]<<" [ m ] "<<endl;
     cout << "Velocity [X Y Z] : " << vel_drone_fcu[0] << " [m/s] "<< vel_drone_fcu[1]<<" [m/s] "<<vel_drone_fcu[2]<<" [m/s] "<<endl;
     cout << "Attitude [R P Y] : " << Euler_fcu[0] * 180/M_PI <<" [deg] "<<Euler_fcu[1] * 180/M_PI << " [deg] "<< Euler_fcu[2] * 180/M_PI<<" [deg] "<<endl;
+    cout << "Att_target [R P Y] : " << Euler_fcu_target[0] * 180/M_PI <<" [deg] "<<Euler_fcu_target[1] * 180/M_PI << " [deg] "<< Euler_fcu_target[2] * 180/M_PI<<" [deg] "<<endl;
+
 }
 
 }
