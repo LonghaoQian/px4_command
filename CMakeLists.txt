@@ -195,6 +195,14 @@ target_link_libraries(square
   ${catkin_LIBRARIES}
 )
 
+add_executable(autonomous_landing
+  src/Application/autonomous_landing.cpp
+)
+add_dependencies(autonomous_landing px4_command_gencpp)
+target_link_libraries(autonomous_landing
+  ${catkin_LIBRARIES}
+)
+
 
 add_executable(target_tracking
   src/Application/target_tracking.cpp
