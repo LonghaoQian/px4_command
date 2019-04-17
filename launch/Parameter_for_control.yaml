@@ -20,13 +20,15 @@ MPC_VELD_LP: 5.0
 
 # 位置环参数 for ude
 UDE_MASS : 1.0
-UDE_K_X : 1.0
-UDE_K_Y : 1.0
-UDE_K_Z : 1.0
+UDE_Kp_X : 1.0
+UDE_Kp_Y : 1.0
+UDE_Kp_Z : 1.0
+UDE_Kd_X : 1.0
+UDE_Kd_Y : 1.0
+UDE_Kd_Z : 1.0
 UDE_T_X : 1.0
 UDE_T_Y : 1.0
 UDE_T_Z : 1.0
-UDE_LAMDA : 1.0
 UDE_INT_LIM_X : 5.0
 UDE_INT_LIM_Y : 5.0
 UDE_INT_LIM_Z : 5.0

@@ -38,6 +38,18 @@ int main(int argc, char **argv)
     // 频率
     ros::Rate rate(50.0);
 
+
+    int check_flag;
+    // 这一步是为了程序运行前检查一下参数是否正确
+    // 输入1,继续，其他，退出程序
+    cout << "1 for data log， else for quit: "<<endl;
+    cin >> check_flag;
+
+    if(check_flag != 1)
+    {
+        return -1;
+    }
+
     //储存数据
 
     time_t tt = time(NULL);
@@ -57,11 +69,10 @@ int main(int argc, char **argv)
         out_data_file <<" Time "<< " pos_drone.x " << " pos_drone.y " << " pos_drone.z " \
                                 << " vel_drone.x " << " vel_drone.y " << " vel_drone.z " \
                                 << " error_pos.x " << " error_pos.y " << " error_pos.z " \
-                                << " error_total.x " << " error_total.y " << " error_total.z " \
+                                << " error_vel.x " << " error_vel.y " << " error_vel.z " \
                                 << " u_l.x " << " u_l.y " << " u_l.z " \
                                 << " u_d.x " << " u_d.y " << " u_d.z " \
                                 << " u_total.x " << " u_total.y " << " u_total.z " \
-                                << " integral_ude.x " << " integral_ude.y " << " integral_ude.z " \
                                 << " thrust_sp.x " << " thrust_sp.y " << " thrust_sp.z " \
                                 <<std::endl;
     }
@@ -94,11 +105,10 @@ void save_flight_data(std::ofstream& out_file, float timenow)
     out_file << timenow <<"  "<< ude_log.pos[0] <<"  "<< ude_log.pos[1] <<"  "<< ude_log.pos[2] <<"  "\
                               << ude_log.vel[0] <<"  "<< ude_log.vel[1] <<"  "<< ude_log.vel[2] <<"  "\
                               << ude_log.error_pos[0] <<"  "<< ude_log.error_pos[1] <<"  "<< ude_log.error_pos[2] <<"  "\
-                              << ude_log.error_total[0] <<"  "<< ude_log.error_total[1] <<"  "<< ude_log.error_total[2] <<"  "\
+                              << ude_log.error_vel[0] <<"  "<< ude_log.error_vel[1] <<"  "<< ude_log.error_vel[2] <<"  "\
                               << ude_log.u_l[0] <<"  "<< ude_log.u_l[1] <<"  "<< ude_log.u_l[2] <<"  "\
                               << ude_log.u_d[0] <<"  "<< ude_log.u_d[1] <<"  "<< ude_log.u_d[2] <<"  "\
                               << ude_log.u_total[0] <<"  "<< ude_log.u_total[1] <<"  "<< ude_log.u_total[2] <<"  "\
-                              << ude_log.integral_ude[0] <<"  "<< ude_log.integral_ude[1] <<"  "<< ude_log.integral_ude[2] <<"  "\
                               << ude_log.thrust_sp[0] <<"  "<< ude_log.thrust_sp[1] <<"  "<< ude_log.thrust_sp[2] <<"  "\
                               << std::endl;
 }

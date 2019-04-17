@@ -35,21 +35,25 @@ class pos_controller_UDE
             pos_UDE_nh("~")
         {
             pos_UDE_nh.param<float>("UDE_MASS", UDE_MASS, 1.0);
-            pos_UDE_nh.param<float>("UDE_K_X", UDE_K_X, 1.0);
-            pos_UDE_nh.param<float>("UDE_K_Y", UDE_K_Y, 1.0);
-            pos_UDE_nh.param<float>("UDE_K_Z", UDE_K_Z, 1.0);
+            pos_UDE_nh.param<float>("UDE_Kp_X", UDE_Kp_X, 1.0);
+            pos_UDE_nh.param<float>("UDE_Kp_Y", UDE_Kp_Y, 1.0);
+            pos_UDE_nh.param<float>("UDE_Kp_Z", UDE_Kp_Z, 1.0);
+            pos_UDE_nh.param<float>("UDE_Kd_X", UDE_Kd_X, 1.0);
+            pos_UDE_nh.param<float>("UDE_Kd_Y", UDE_Kd_Y, 1.0);
+            pos_UDE_nh.param<float>("UDE_Kd_Z", UDE_Kd_Z, 1.0);
             pos_UDE_nh.param<float>("UDE_T_X", UDE_T_X, 1.0);
             pos_UDE_nh.param<float>("UDE_T_Y", UDE_T_Y, 1.0);
             pos_UDE_nh.param<float>("UDE_T_Z", UDE_T_Z, 1.0);
-            pos_UDE_nh.param<float>("UDE_LAMDA", UDE_LAMDA, 1.0);
-            pos_UDE_nh.param<float>("UDE_INT_LIM_X", UDE_INT_LIM_X, 5.0);
-            pos_UDE_nh.param<float>("UDE_INT_LIM_Y", UDE_INT_LIM_Y, 5.0);
-            pos_UDE_nh.param<float>("UDE_INT_LIM_Z", UDE_INT_LIM_Z, 5.0);
+            pos_UDE_nh.param<float>("UDE_INT_LIM_X", UDE_INT_LIM(0), 5.0);
+            pos_UDE_nh.param<float>("UDE_INT_LIM_Y", UDE_INT_LIM(1), 5.0);
+            pos_UDE_nh.param<float>("UDE_INT_LIM_Z", UDE_INT_LIM(2), 5.0);
+
             pos_UDE_nh.param<float>("UDE_XY_VEL_MAX", UDE_XY_VEL_MAX, 1.0);
             pos_UDE_nh.param<float>("UDE_Z_VEL_MAX", UDE_Z_VEL_MAX, 1.0);
 
             pos_UDE_nh.param<float>("UDE_THR_MIN", UDE_THR_MIN, 0.1);
             pos_UDE_nh.param<float>("UDE_THR_MAX", UDE_THR_MAX, 0.9);
+
             pos_UDE_nh.param<float>("UDE_tilt_max", UDE_tilt_max, 5.0);
 
             pos_UDE_nh.param<float>("UDE_a", UDE_a, 20.0);
@@ -62,7 +66,6 @@ class pos_controller_UDE
             integral_ude    = Eigen::Vector3d(0.0,0.0,0.0);
             error_pos       = Eigen::Vector3d(0.0,0.0,0.0);
             error_vel       = Eigen::Vector3d(0.0,0.0,0.0);
-            error_total     = Eigen::Vector3d(0.0,0.0,0.0);
 
             last_time       = 0.0;
             delta_time      = 0.0;
@@ -78,20 +81,20 @@ class pos_controller_UDE
         float UDE_MASS;
 
         //UDE control parameter
-        float UDE_K_X;
-        float UDE_K_Y;
-        float UDE_K_Z;
+        float UDE_Kp_X;
+        float UDE_Kp_Y;
+        float UDE_Kp_Z;
+
+        float UDE_Kd_X;
+        float UDE_Kd_Y;
+        float UDE_Kd_Z;
 
         float UDE_T_X;
         float UDE_T_Y;
         float UDE_T_Z;
 
-        float UDE_LAMDA;
-
         //Limitation of UDE integral
-        float UDE_INT_LIM_X;
-        float UDE_INT_LIM_Y;
-        float UDE_INT_LIM_Z;
+        Eigen::Vector3f UDE_INT_LIM;
 
         //Limitation of the velocity
         float UDE_XY_VEL_MAX;
@@ -107,10 +110,11 @@ class pos_controller_UDE
         float UDE_a;
         float UDE_b;
 
-        Eigen::Vector3d error_pos,error_vel,error_total;
+        Eigen::Vector3d error_pos,error_vel;
 
+        //u_l for nominal contorol(PD), u_d for ude control(disturbance estimator)
         Eigen::Vector3d u_l,u_d,u_total;
-        //
+
         Eigen::Vector3d integral_ude;
 
         //Desired thurst of the drone[the output of this class]
@@ -124,6 +128,7 @@ class pos_controller_UDE
         //Current state of the drone
         mavros_msgs::State current_state;
 
+        //for log the control state
         px4_command::ude_log ude_log;
 
         //Flag of the offboard mode [1 for OFFBOARD mode , 0 for non-OFFBOARD mode]
@@ -168,29 +173,34 @@ Eigen::Vector3d pos_controller_UDE::pos_controller(Eigen::Vector3d pos, Eigen::V
     last_time = curtime;
 
     error_pos = pos_sp - pos;
-    error_vel = - vel;
-    error_total = UDE_LAMDA * error_pos + error_vel;
+    error_vel =  - vel;
 
-    u_l(0) = UDE_MASS * (UDE_K_X * error_total(0) + UDE_LAMDA * error_vel(0));
-    u_l(1) = UDE_MASS * (UDE_K_Y * error_total(1) + UDE_LAMDA * error_vel(1));
-    u_l(2) = UDE_MASS * (UDE_K_Z * error_total(2) + UDE_LAMDA * error_vel(2));
+    u_l(0) = UDE_MASS * (UDE_Kp_X * error_pos(0) + UDE_Kd_X * error_vel(0));
+    u_l(1) = UDE_MASS * (UDE_Kp_Y * error_pos(1) + UDE_Kd_Y * error_vel(1));
+    u_l(2) = UDE_MASS * (UDE_Kp_Z * error_pos(2) + UDE_Kd_Y * error_vel(2));
 
-    u_d(0) = UDE_MASS / UDE_T_X * (error_pos(0) + UDE_K_X * integral_ude(0));
-    u_d(1) = UDE_MASS / UDE_T_Y * (error_pos(1) + UDE_K_Y * integral_ude(1));
-    u_d(2) = UDE_MASS / UDE_T_Z * (error_pos(2) + UDE_K_Z * integral_ude(2));
+    u_d(0) = UDE_MASS / UDE_T_X * (UDE_Kd_X * error_pos(0) + error_vel(0) + UDE_Kp_X * integral_ude(0));
+    u_d(1) = UDE_MASS / UDE_T_Y * (UDE_Kd_Y * error_pos(1) + error_vel(1) + UDE_Kp_Y * integral_ude(1));
+    u_d(2) = UDE_MASS / UDE_T_Z * (UDE_Kd_Z * error_pos(2) + error_vel(2) + UDE_Kp_Z * integral_ude(2));
 
+    /* explicitly limit the integrator state */
+    for (int i = 0; i < 3; i++)
+    {
+        // Perform the integration using a first order method and do not propagate the result if out of range or invalid
+        float integral = integral_ude(i) +  error_pos(i) * delta_time;
+
+        if (u_d(i) > -UDE_INT_LIM(i) && u_d[i] < UDE_INT_LIM(i))
+        {
+                integral_ude(i) = integral;
+        }
+
+        u_d(i) = constrain_function2(u_d(i), -UDE_INT_LIM(i), UDE_INT_LIM(i));
+    }
+
+    //ENU frame
     u_total(0) = u_l(0) + u_d(0);
     u_total(1) = u_l(1) + u_d(1);
     u_total(2) = u_l(2) + u_d(2) + UDE_MASS * 9.8;
-
-    //Update the integral
-    integral_ude(0) +=  error_total(0) * delta_time;
-    integral_ude(1) +=  error_total(1) * delta_time;
-    integral_ude(2) +=  error_total(2) * delta_time;
-
-    integral_ude(0) = constrain_function2(integral_ude(0), -UDE_INT_LIM_X, UDE_INT_LIM_X);
-    integral_ude(1) = constrain_function2(integral_ude(1), -UDE_INT_LIM_Y, UDE_INT_LIM_Y);
-    integral_ude(2) = constrain_function2(integral_ude(2), -UDE_INT_LIM_Z, UDE_INT_LIM_Z);
 
     //Thrust to scale thrust[0,1]
     Eigen::Vector3d thrust_sp_scale;
@@ -238,10 +248,6 @@ Eigen::Vector3d pos_controller_UDE::pos_controller(Eigen::Vector3d pos, Eigen::V
     ude_log.error_vel[1] = error_vel(1);
     ude_log.error_vel[2] = error_vel(2);
 
-    ude_log.error_total[0] = error_total(0);
-    ude_log.error_total[1] = error_total(1);
-    ude_log.error_total[2] = error_total(2);
-
     ude_log.u_l[0] = u_l(0);
     ude_log.u_l[1] = u_l(1);
     ude_log.u_l[2] = u_l(2);
@@ -254,11 +260,6 @@ Eigen::Vector3d pos_controller_UDE::pos_controller(Eigen::Vector3d pos, Eigen::V
     ude_log.u_total[1] = u_total(1);
     ude_log.u_total[2] = u_total(2);
 
-    ude_log.integral_ude[0] = integral_ude(0);
-    ude_log.integral_ude[1] = integral_ude(1);
-    ude_log.integral_ude[2] = integral_ude(2);
-
-
     ude_log.thrust_sp[0] = thrust_sp(0);
     ude_log.thrust_sp[1] = thrust_sp(1);
     ude_log.thrust_sp[2] = thrust_sp(2);
@@ -270,7 +271,7 @@ Eigen::Vector3d pos_controller_UDE::pos_controller(Eigen::Vector3d pos, Eigen::V
 
 void pos_controller_UDE::printf_result()
 {
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Position Controller<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>PD+UDE Position Controller<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
     //固定的浮点显示
     cout.setf(ios::fixed);
@@ -289,8 +290,6 @@ void pos_controller_UDE::printf_result()
 
     cout << "u_d [X Y Z] : " << u_d[0] << " [N] "<< u_d[1]<<" [N] "<<u_d[2]<<" [N] "<<endl;
 
-    cout << "integral_ude [X Y Z] : " << integral_ude[0] << " [N] "<< integral_ude[1]<<" [N] "<<integral_ude[2]<<" [N] "<<endl;
-
     cout << "u_total [X Y Z] : " << u_total[0] << " [N] "<< u_total[1]<<" [N] "<<u_total[2]<<" [N] "<<endl;
 
     cout << "thrust_sp [X Y Z] : " << thrust_sp[0] << " [m/s^2] "<< thrust_sp[1]<<" [m/s^2] "<<thrust_sp[2]<<" [m/s^2] "<<endl;
@@ -303,22 +302,24 @@ void pos_controller_UDE::printf_param()
 
     cout <<"UDE_MASS : "<< UDE_MASS << endl;
 
-    cout <<"UDE_K_X : "<< UDE_K_X << endl;
-    cout <<"UDE_K_Y : "<< UDE_K_Y << endl;
-    cout <<"UDE_K_Z : "<< UDE_K_Z << endl;
+    cout <<"UDE_Kp_X : "<< UDE_Kp_X << endl;
+    cout <<"UDE_Kp_Y : "<< UDE_Kp_Y << endl;
+    cout <<"UDE_Kp_Z : "<< UDE_Kp_Z << endl;
+
+    cout <<"UDE_Kd_X : "<< UDE_Kd_X << endl;
+    cout <<"UDE_Kd_Y : "<< UDE_Kd_Y << endl;
+    cout <<"UDE_Kd_Z : "<< UDE_Kd_Z << endl;
 
     cout <<"UDE_T_X : "<< UDE_T_X << endl;
     cout <<"UDE_T_Y : "<< UDE_T_Y << endl;
     cout <<"UDE_T_Z : "<< UDE_T_Z << endl;
 
-    cout <<"UDE_LAMDA : "<< UDE_LAMDA << endl;
-
     cout <<"UDE_XY_VEL_MAX : "<< UDE_XY_VEL_MAX << endl;
     cout <<"UDE_Z_VEL_MAX : "<< UDE_Z_VEL_MAX << endl;
 
-    cout <<"UDE_INT_LIM_X : "<< UDE_INT_LIM_X << endl;
-    cout <<"UDE_INT_LIM_Y : "<< UDE_INT_LIM_Y << endl;
-    cout <<"UDE_INT_LIM_Z : "<< UDE_INT_LIM_Z << endl;
+    cout <<"UDE_INT_LIM_X : "<< UDE_INT_LIM(0) << endl;
+    cout <<"UDE_INT_LIM_Y : "<< UDE_INT_LIM(1) << endl;
+    cout <<"UDE_INT_LIM_Z : "<< UDE_INT_LIM(2) << endl;
 
     cout <<"UDE_THR_MIN : "<< UDE_THR_MIN << endl;
     cout <<"UDE_THR_MAX : "<< UDE_THR_MAX << endl;
