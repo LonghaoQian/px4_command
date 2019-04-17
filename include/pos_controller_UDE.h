@@ -38,14 +38,14 @@ class pos_controller_UDE
             pos_UDE_nh.param<float>("UDE_Kp_X", UDE_Kp_X, 1.0);
             pos_UDE_nh.param<float>("UDE_Kp_Y", UDE_Kp_Y, 1.0);
             pos_UDE_nh.param<float>("UDE_Kp_Z", UDE_Kp_Z, 1.0);
-            pos_UDE_nh.param<float>("UDE_Kd_X", UDE_Kd_X, 1.0);
-            pos_UDE_nh.param<float>("UDE_Kd_Y", UDE_Kd_Y, 1.0);
-            pos_UDE_nh.param<float>("UDE_Kd_Z", UDE_Kd_Z, 1.0);
+            pos_UDE_nh.param<float>("UDE_Kd_X", UDE_Kd_X, 2.0);
+            pos_UDE_nh.param<float>("UDE_Kd_Y", UDE_Kd_Y, 2.0);
+            pos_UDE_nh.param<float>("UDE_Kd_Z", UDE_Kd_Z, 2.0);
             pos_UDE_nh.param<float>("UDE_T_X", UDE_T_X, 1.0);
             pos_UDE_nh.param<float>("UDE_T_Y", UDE_T_Y, 1.0);
             pos_UDE_nh.param<float>("UDE_T_Z", UDE_T_Z, 1.0);
-            pos_UDE_nh.param<float>("UDE_INT_LIM_X", UDE_INT_LIM(0), 5.0);
-            pos_UDE_nh.param<float>("UDE_INT_LIM_Y", UDE_INT_LIM(1), 5.0);
+            pos_UDE_nh.param<float>("UDE_INT_LIM_X", UDE_INT_LIM(0), 1.0);
+            pos_UDE_nh.param<float>("UDE_INT_LIM_Y", UDE_INT_LIM(1), 1.0);
             pos_UDE_nh.param<float>("UDE_INT_LIM_Z", UDE_INT_LIM(2), 5.0);
 
             pos_UDE_nh.param<float>("UDE_XY_VEL_MAX", UDE_XY_VEL_MAX, 1.0);
@@ -54,7 +54,7 @@ class pos_controller_UDE
             pos_UDE_nh.param<float>("UDE_THR_MIN", UDE_THR_MIN, 0.1);
             pos_UDE_nh.param<float>("UDE_THR_MAX", UDE_THR_MAX, 0.9);
 
-            pos_UDE_nh.param<float>("UDE_tilt_max", UDE_tilt_max, 5.0);
+            pos_UDE_nh.param<float>("UDE_tilt_max", UDE_tilt_max, 20.0);
 
             pos_UDE_nh.param<float>("UDE_a", UDE_a, 20.0);
             pos_UDE_nh.param<float>("UDE_b", UDE_b, 0.0);
@@ -271,7 +271,7 @@ Eigen::Vector3d pos_controller_UDE::pos_controller(Eigen::Vector3d pos, Eigen::V
 
 void pos_controller_UDE::printf_result()
 {
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>PD+UDE Position Controller<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    cout <<">>>>>>>>>>>>>>>>>>>>PD+UDE Position Controller<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
     //固定的浮点显示
     cout.setf(ios::fixed);
@@ -298,7 +298,7 @@ void pos_controller_UDE::printf_result()
 // 【打印参数函数】
 void pos_controller_UDE::printf_param()
 {
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>UDE Parameter <<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>UDE Parameter <<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
     cout <<"UDE_MASS : "<< UDE_MASS << endl;
 
