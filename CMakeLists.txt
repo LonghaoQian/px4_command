@@ -96,6 +96,8 @@ include_directories(
 ###############################
 ##      声明可执行cpp文件     ##
 ###############################
+
+
 add_executable(Data_log
   src/Data_log.cpp
 )
@@ -183,14 +185,24 @@ target_link_libraries(TFmini
   ${catkin_LIBRARIES}
 )
 
+
+###### Application File ##########
 add_executable(square
-  src/square.cpp
+  src/Application/square.cpp
 )
 add_dependencies(square px4_command_gencpp)
 target_link_libraries(square
   ${catkin_LIBRARIES}
 )
 
+
+add_executable(target_tracking
+  src/Application/target_tracking.cpp
+)
+add_dependencies(target_tracking px4_command_gencpp)
+target_link_libraries(target_tracking
+  ${catkin_LIBRARIES}
+)
 
 
 ## Rename C++ executable without prefix
