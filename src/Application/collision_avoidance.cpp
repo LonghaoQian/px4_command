@@ -3,7 +3,7 @@
  *
  * Author: Qyp
  *
- * Update Time: 2018.8.17
+ * Update Time: 2019.4.17
  *
  * 说明: 避障程序
  *
@@ -11,39 +11,16 @@
  * 初版，需要遵循固定场景，具体场景设置请参看教程文件
  * 具体功能待完善
 ***************************************************************************************************************************/
-
-//头文件
+//ROS 头文件
 #include <ros/ros.h>
-#include <fstream>
-#include <math.h>
-#include <string>
-#include <time.h>
-#include <queue>
-#include <vector>
-#include <cstdlib>
-#include <stdlib.h>
+
+//topic 头文件
 #include <iostream>
-#include <stdio.h>
-
-
-//话题头文件
-#include <mavros_msgs/Command.h>
-#include <mavros_msgs/CommandBool.h>
-#include <mavros_msgs/SetMode.h>
-#include <mavros_msgs/State.h>
-#include <geometry_msgs/Vector3.h>
-#include <geometry_msgs/TwistStamped.h>
-#include <nav_msgs/Odometry.h>
-#include <sensor_msgs/Imu.h>
+#include <px4_command/command.h>
 #include <std_msgs/Bool.h>
 #include <geometry_msgs/Pose.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <geometry_msgs/Vector3Stamped.h>
-#include <geometry_msgs/Point.h>
-#include <std_msgs/UInt16.h>
-#include <std_msgs/Float64.h>
 #include <sensor_msgs/LaserScan.h>
-#include <geometry_msgs/TransformStamped.h>
+
 
 /*
  * 主要功能:
@@ -54,7 +31,19 @@
  */
 
 using namespace std;
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>全 局 变 量<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+enum Command
+{
+    Move_ENU,
+    Move_Body,
+    Hold,
+    Land,
+    Disarm,
+    Failsafe_land,
+    Idle
+};
+
 #define RAD2DEG(x) ((x)*180./M_PI)
 //--------------------------------------------输入--------------------------------------------------
 sensor_msgs::LaserScan Laser;                                   //激光雷达点云数据
@@ -83,7 +72,7 @@ int flag_land;                                                  //降落标志�
 std_msgs::Bool flag_collision_avoidance;                       //是否进入避障模式标志位
 float vel_sp_body[2];                                           //总速度
 float vel_sp_max;                                               //总速度限幅
-mavros_msgs::Command Command_now;                              //发布的控制命令
+px4_command::command Command_now;                               //发送给position_control.cpp的命令
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>声 明 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void cal_min_distance();
 float satfunc(float data, float Max);
@@ -146,9 +135,8 @@ int main(int argc, char **argv)
     //【订阅】无人机当前位置 坐标系 NED系
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::Pose>("/drone/pos", 100, pos_cb);
 
-    //【发布】发送给position_control.cpp的命令
-    ros::Publisher command_pub = nh.advertise<mavros_msgs::Command>("/mavros/Command", 100);
-
+    // 【发布】发送给position_control.cpp的命令
+    ros::Publisher command_pub = nh.advertise<px4_command::command>("/px4/command", 10);
 
     //读取参数表中的参数
     nh.param<float>("target_x", target_x, 1.0);
@@ -293,12 +281,12 @@ int main(int argc, char **argv)
         }
 
         //5. 发布Command指令给position_controller.cpp
-        Command_now.command = 6;     //机体系下移动
+        Command_now.command = Move_Body;     //机体系下移动
         Command_now.comid = comid;
         comid++;
         Command_now.sub_mode = 2; // xy 速度控制模式 z 位置控制模式
         Command_now.vel_sp[0] =  vel_sp_body[0];
-        Command_now.vel_sp[1] =  vel_sp_body[1];
+        Command_now.vel_sp[1] =  - vel_sp_body[1];  //ENU frame
         Command_now.pos_sp[2] =  0;
         Command_now.yaw_sp = 0 ;
 

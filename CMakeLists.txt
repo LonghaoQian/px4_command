@@ -212,6 +212,14 @@ target_link_libraries(target_tracking
   ${catkin_LIBRARIES}
 )
 
+add_executable(collision_avoidance
+  src/Application/collision_avoidance.cpp
+)
+add_dependencies(collision_avoidance px4_command_gencpp)
+target_link_libraries(collision_avoidance
+  ${catkin_LIBRARIES}
+)
+
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
