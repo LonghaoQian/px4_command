@@ -1,5 +1,3 @@
-# 0 for PID, 1 for UDE
-Flag_UDE_PID: 0
 
 # 位置环参数
 MPC_XY_P : 0.95
@@ -20,16 +18,18 @@ MPC_VELD_LP: 5.0
 
 # 位置环参数 for ude
 UDE_MASS : 1.0
-UDE_K_X : 1.0
-UDE_K_Y : 1.0
-UDE_K_Z : 1.0
+UDE_Kp_X : 1.0
+UDE_Kp_Y : 1.0
+UDE_Kp_Z : 1.0
+UDE_Kd_X : 2.0
+UDE_Kd_Y : 2.0
+UDE_Kd_Z : 2.0
 UDE_T_X : 1.0
 UDE_T_Y : 1.0
 UDE_T_Z : 1.0
-UDE_LAMDA : 1.0
-UDE_INT_LIM_X : 5.0
-UDE_INT_LIM_Y : 5.0
-UDE_INT_LIM_Z : 5.0
+UDE_INT_LIM_X : 2.0
+UDE_INT_LIM_Y : 2.0
+UDE_INT_LIM_Z : 6.0
 UDE_XY_VEL_MAX : 1.0
 UDE_Z_VEL_MAX : 1.0
 UDE_THR_MIN: 0.1
