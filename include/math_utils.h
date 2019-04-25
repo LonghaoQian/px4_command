@@ -5,7 +5,7 @@
 *
 * Update Time: 2019.3.16
 *
-* Introduction:  math utils functions
+* Introduction:  math utils functions 数学工具函数
 *
 *               1、转换 ref to https://github.com/PX4/Matrix/blob/56b069956da141da244926ed7000e89b2ba6c731/matrix/Euler.hpp
 ***************************************************************************************************************************/
@@ -16,15 +16,12 @@
 #include <math.h>
 
 
-
+// 四元数转欧拉角
 Eigen::Vector3d quaternion_to_rpy2(const Eigen::Quaterniond &q)
 {
         // YPR - ZYX
         return q.toRotationMatrix().eulerAngles(2, 1, 0).reverse();
 }
-
-
-
 
 // 从(roll,pitch,yaw)创建四元数  by a 3-2-1 intrinsic Tait-Bryan rotation sequence
 Eigen::Quaterniond quaternion_from_rpy(const Eigen::Vector3d &rpy)
@@ -56,8 +53,7 @@ Eigen::Vector3d quaternion_to_euler(const Eigen::Quaterniond &q)
     return ans;
 }
 
-
-
+//旋转矩阵转欧拉角
 Eigen::Vector3d rotation_to_euler(Eigen::Matrix3d dcm)
 {
     Eigen::Vector3d euler_angle;

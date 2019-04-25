@@ -97,22 +97,7 @@ include_directories(
 ##      声明可执行cpp文件     ##
 ###############################
 
-
-add_executable(Data_log
-  src/Data_log.cpp
-)
-add_dependencies(Data_log px4_command_gencpp)
-target_link_libraries(Data_log
-  ${catkin_LIBRARIES}
-)
-add_executable(px4_pos_controller_UDE
-  src/px4_pos_controller_UDE.cpp
-)
-add_dependencies(px4_pos_controller_UDE px4_command_gencpp)
-target_link_libraries(px4_pos_controller_UDE
-  ${catkin_LIBRARIES}
-)
-
+###### Main File ##########
 add_executable(px4_pos_controller
   src/px4_pos_controller.cpp
 )
@@ -130,36 +115,6 @@ target_link_libraries(px4_pos_estimator
   ${catkin_LIBRARIES}
 )
 
-
-##
-add_executable(fake_vicon
-  src/fake_vicon.cpp
-)
-add_dependencies(fake_vicon px4_command_gencpp)
-target_link_libraries(fake_vicon
-  ${catkin_LIBRARIES}
-)
-
-
-
-##
-add_executable(move
-  src/move.cpp
-)
-add_dependencies(move px4_command_gencpp)
-target_link_libraries(move
-  ${catkin_LIBRARIES}
-)
-
-##
-add_executable(set_mode
-  src/set_mode.cpp
-)
-add_dependencies(set_mode px4_command_gencpp)
-target_link_libraries(set_mode
-  ${catkin_LIBRARIES}
-)
-
 add_executable(px4_sender
   src/px4_sender.cpp
 )
@@ -168,23 +123,63 @@ target_link_libraries(px4_sender
   ${catkin_LIBRARIES}
 )
 
-add_executable(eigen_test
-  src/eigen_test.cpp
+add_executable(px4_pos_controller_UDE
+  src/px4_pos_controller_UDE.cpp
 )
-add_dependencies(eigen_test px4_command_gencpp)
-target_link_libraries(eigen_test
+add_dependencies(px4_pos_controller_UDE px4_command_gencpp)
+target_link_libraries(px4_pos_controller_UDE
   ${catkin_LIBRARIES}
 )
 
-##读取超声波数据节点 tfmini_ros.cpp
+###### Utilities File ##########
 add_executable(TFmini
-  src/TFmini.cpp
+  src/Utilities/TFmini.cpp
 )
 add_dependencies(TFmini px4_command_gencpp)
 target_link_libraries(TFmini
   ${catkin_LIBRARIES}
 )
 
+##
+add_executable(fake_vicon
+  src/Utilities/fake_vicon.cpp
+)
+add_dependencies(fake_vicon px4_command_gencpp)
+target_link_libraries(fake_vicon
+  ${catkin_LIBRARIES}
+)
+
+add_executable(move
+  src/Utilities/move.cpp
+)
+add_dependencies(move px4_command_gencpp)
+target_link_libraries(move
+  ${catkin_LIBRARIES}
+)
+
+##
+add_executable(set_mode
+  src/Utilities/set_mode.cpp
+)
+add_dependencies(set_mode px4_command_gencpp)
+target_link_libraries(set_mode
+  ${catkin_LIBRARIES}
+)
+
+add_executable(eigen_test
+  src/Utilities/eigen_test.cpp
+)
+add_dependencies(eigen_test px4_command_gencpp)
+target_link_libraries(eigen_test
+  ${catkin_LIBRARIES}
+)
+add_executable(Data_log
+  src/Utilities/Data_log.cpp
+)
+add_dependencies(Data_log px4_command_gencpp)
+target_link_libraries(Data_log
+  ${catkin_LIBRARIES}
+)
 
 ###### Application File ##########
 add_executable(square
