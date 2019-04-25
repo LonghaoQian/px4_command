@@ -214,6 +214,13 @@ add_dependencies(collision_avoidance px4_command_gencpp)
 target_link_libraries(collision_avoidance
   ${catkin_LIBRARIES}
 )
+add_executable(collision_avoidance_streo
+  src/Application/collision_avoidance_streo.cpp
+)
+add_dependencies(collision_avoidance_streo px4_command_gencpp)
+target_link_libraries(collision_avoidance_streo
+  ${catkin_LIBRARIES}
+)
 
 
 ## Rename C++ executable without prefix
