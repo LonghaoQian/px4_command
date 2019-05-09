@@ -27,8 +27,7 @@ using namespace std;
 using namespace namespace_command_to_mavros;
 
 //自定义的Command变量
-//相应的命令分别为 待机 起飞 悬停 降落 移动(惯性系ENU) 上锁 移动(机体系)
-//但目前 起飞和待机 并没有正式使用
+//相应的命令分别为 移动(惯性系ENU)，移动(机体系)，悬停，降落，上锁，紧急降落，待机
 enum Command
 {
     Move_ENU,
@@ -68,11 +67,11 @@ int main(int argc, char **argv)
 
     Eigen::Vector3d vel_sp(0,0,0);
 
-    command_to_mavros command_fsc;
+    command_to_mavros pos_sender;
 
-    command_fsc.printf_param();
+    pos_sender.printf_param();
 
-    command_fsc.show_geo_fence();
+    pos_sender.show_geo_fence();
 
     int check_flag;
     // 这一步是为了程序运行前检查一下参数是否正确
@@ -86,7 +85,7 @@ int main(int argc, char **argv)
     }
 
     // 等待和飞控的连接
-    while(ros::ok() && command_fsc.current_state.connected)
+    while(ros::ok() && pos_sender.current_state.connected)
     {
         ros::spinOnce();
         rate.sleep();
@@ -106,7 +105,7 @@ int main(int argc, char **argv)
     }
 
 
-    command_fsc.set_takeoff_position();
+    pos_sender.set_takeoff_position();
 
     Command_Now.comid = 0;
     Command_Now.command = Idle;
@@ -122,9 +121,9 @@ int main(int argc, char **argv)
 
         float cur_time = get_ros_time(begin_time);
 
-        command_fsc.prinft_drone_state2(cur_time);
+        pos_sender.prinft_drone_state2(cur_time);
         prinft_command_state();
-        command_fsc.failsafe();
+        pos_sender.check_failsafe();
 
         //无人机一旦接受到Land指令，则会屏蔽其他指令
         if(Command_Last.command == Land)
@@ -140,13 +139,13 @@ int main(int argc, char **argv)
             {
                 pos_sp = Eigen::Vector3d(Command_Now.pos_sp[0],Command_Now.pos_sp[1],Command_Now.pos_sp[2]);
 
-                command_fsc.send_pos_setpoint(pos_sp, Command_Now.yaw_sp);
+                pos_sender.send_pos_setpoint(pos_sp, Command_Now.yaw_sp);
             }
             else if( Command_Now.sub_mode == 3 )
             {
                 vel_sp = Eigen::Vector3d(Command_Now.vel_sp[0],Command_Now.vel_sp[1],Command_Now.vel_sp[2]);
 
-                command_fsc.send_vel_setpoint(vel_sp, Command_Now.yaw_sp);
+                pos_sender.send_vel_setpoint(vel_sp, Command_Now.yaw_sp);
             }
 
             break;
@@ -155,39 +154,39 @@ int main(int argc, char **argv)
 
             vel_sp = Eigen::Vector3d(Command_Now.vel_sp[0],Command_Now.vel_sp[1],Command_Now.vel_sp[2]);
 
-            command_fsc.send_vel_setpoint_body(vel_sp, Command_Now.yaw_sp);
+            pos_sender.send_vel_setpoint_body(vel_sp, Command_Now.yaw_sp);
 
             break;
 
         case Hold:
 
-            command_fsc.loiter();
+            pos_sender.loiter();
 
             break;
 
 
         case Land:
 
-            command_fsc.land();
+            pos_sender.land();
 
             break;
 
         case Disarm:
 
-            if(command_fsc.current_state.mode == "OFFBOARD")
+            if(pos_sender.current_state.mode == "OFFBOARD")
             {
-                command_fsc.mode_cmd.request.custom_mode = "MANUAL";
-                command_fsc.set_mode_client.call(command_fsc.mode_cmd);
+                pos_sender.mode_cmd.request.custom_mode = "MANUAL";
+                pos_sender.set_mode_client.call(pos_sender.mode_cmd);
             }
 
-            if(command_fsc.current_state.armed)
+            if(pos_sender.current_state.armed)
             {
-                command_fsc.arm_cmd.request.value = false;
-                command_fsc.arming_client.call(command_fsc.arm_cmd);
+                pos_sender.arm_cmd.request.value = false;
+                pos_sender.arming_client.call(pos_sender.arm_cmd);
 
             }
 
-            if (command_fsc.arm_cmd.response.success)
+            if (pos_sender.arm_cmd.response.success)
             {
                 cout<<"Disarm successfully!"<<endl;
             }
@@ -200,7 +199,7 @@ int main(int argc, char **argv)
 
         // 【】
         case Idle:
-            command_fsc.idle();
+            pos_sender.idle();
             break;
         }
 

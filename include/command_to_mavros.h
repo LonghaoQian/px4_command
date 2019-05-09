@@ -3,7 +3,7 @@
 *
 * Author: Qyp
 *
-* Update Time: 2019.3.16
+* Update Time: 2019.5.1
 *
 * Introduction:  Drone control command send class using Mavros package
 *         1. Ref to the Mavros plugins (setpoint_raw, loca_position, imu and etc..)
@@ -100,7 +100,7 @@ class command_to_mavros
     Eigen::Vector2d geo_fence_y;
     Eigen::Vector2d geo_fence_z;
 
-
+    //Takeoff Height
     float Takeoff_height;
 
     //Takeoff Position of the Drone
@@ -190,22 +190,22 @@ class command_to_mavros
     //Send accel_setpoint and yaw_setpoint in ENU frame to PX4
     void send_accel_setpoint(Eigen::Vector3d accel_sp, float yaw_sp);
 
-    //Send actuator_setpoint to PX4
+    //Send actuator_setpoint to PX4[Not recommanded. Because the high delay between the onboard computer and Pixhawk]
     void send_actuator_setpoint(Eigen::Vector4d actuator_sp);
 
     //Printf the parameters
     void printf_param();
 
-    //Pringt the drone state
+    //Pringt the drone state[Full state]
     void prinft_drone_state(float current_time);
 
-    //Pringt the drone state2
+    //Pringt the drone state[Simple state]
     void prinft_drone_state2(float current_time);
 
+    //Check for failsafe
+    void check_failsafe();
 
-    //failsafe
-    void failsafe();
-
+    //printf the geo fence
     void show_geo_fence();
 
     private:
@@ -457,7 +457,7 @@ void command_to_mavros::show_geo_fence()
     cout << "geo_fence_z : "<< geo_fence_z[0] << " [m]  to  "<<geo_fence_z[1] << " [m]"<< endl;
 }
 
-void command_to_mavros::failsafe()
+void command_to_mavros::check_failsafe()
 {
     if (pos_drone_fcu[0] < geo_fence_x[0] || pos_drone_fcu[0] > geo_fence_x[1] ||
         pos_drone_fcu[1] < geo_fence_y[0] || pos_drone_fcu[1] > geo_fence_y[1] ||
@@ -484,7 +484,6 @@ void command_to_mavros::printf_param()
 void command_to_mavros::prinft_drone_state(float current_time)
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Drone State<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-
     //固定的浮点显示
     cout.setf(ios::fixed);
     //setprecision(n) 设显示小数精度为n位
@@ -540,6 +539,7 @@ void command_to_mavros::prinft_drone_state(float current_time)
 
     cout << "actuator_target [4 5 6 7] : " << actuator_target.controls[4] << " [ ] "<< actuator_target.controls[5] <<" [ ] "<<actuator_target.controls[6]<<" [ ] "<<actuator_target.controls[7] <<" [ ] "<<endl;
 
+    //cout << "Thank you for your support!                    ----Amov Lab" <<endl;
 }
 
 void command_to_mavros::prinft_drone_state2(float current_time)

@@ -1,5 +1,5 @@
 /***************************************************************************************************************************
-* px4_pos_controller_UDE.cpp
+* px4_pos_controller_passivity.cpp
 *
 * Author: Qyp
 *
@@ -7,23 +7,23 @@
 *
 * Introduction:  PX4 Position Controller using own control mehthod (but it is pid now)
 *         1. Subscribe command.msg from upper nodes
-*         2. Calculate the accel_sp using pos_controller_UDE.h
+*         2. Calculate the accel_sp using pos_controller_ps.h
 *         3. Send command using command_to_mavros.h
 ***************************************************************************************************************************/
 
 #include <ros/ros.h>
 
 #include <command_to_mavros.h>
-#include <pos_controller_UDE.h>
 #include <px4_command/command.h>
 #include <pos_controller_PID.h>
-
+#include <pos_controller_UDE.h>
+#include <pos_controller_passivity.h>
 #include <Eigen/Eigen>
 
 using namespace std;
 using namespace namespace_command_to_mavros;
 using namespace namespace_UDE;
-using namespace namespace_PID;
+using namespace namespace_passivity;
 //自定义的Command变量
 //相应的命令分别为 待机 起飞 悬停 降落 移动(惯性系ENU) 上锁 移动(机体系)
 //但目前 起飞和待机 并没有正式使用
@@ -43,8 +43,6 @@ px4_command::command Command_Now;                      //无人机当前执行�
 //Command Last [from upper node]
 px4_command::command Command_Last;                     //无人机上一条执行命令
 
-int Flag_UDE_PID;
-
 float get_ros_time(ros::Time begin);
 void prinft_command_state();
 void rotation_yaw(float yaw_angle, float input[2], float output[2]);
@@ -56,11 +54,8 @@ void Command_cb(const px4_command::command::ConstPtr& msg)
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "px4_pos_controller_UDE");
+    ros::init(argc, argv, "px4_pos_controller_ps");
     ros::NodeHandle nh("~");
-
-    //0 for PID, 1 for UDE
-    nh.param<int>("Flag_UDE_PID", Flag_UDE_PID, 0);
 
     ros::Subscriber Command_sub = nh.subscribe<px4_command::command>("/px4/command", 10, Command_cb);
 
@@ -72,14 +67,12 @@ int main(int argc, char **argv)
 
     command_to_mavros command_fsc;
 
-
-    pos_controller_UDE pos_controller_fsc;
-    pos_controller_PID pos_controller_fsc2;
-
+    pos_controller_passivity pos_controller_ps;
+    pos_controller_UDE pos_controller_ude;
 
     command_fsc.printf_param();
 
-    pos_controller_fsc.printf_param();
+    pos_controller_ps.printf_param();
 
     command_fsc.show_geo_fence();
 
@@ -121,16 +114,7 @@ int main(int argc, char **argv)
     // 默认设置：move模式 子模式：位置控制 起飞到当前位置点上方
 
     Command_Now.comid = 0;
-    Command_Now.command = Move_ENU;
-    Command_Now.sub_mode = 0;
-    Command_Now.pos_sp[0] = command_fsc.Takeoff_position[0];          //ENU Frame
-    Command_Now.pos_sp[1] = command_fsc.Takeoff_position[1];          //ENU Frame
-    Command_Now.pos_sp[2] = command_fsc.Takeoff_position[2] + command_fsc.Takeoff_height;         //ENU Frame
-    Command_Now.vel_sp[0] = 0;          //ENU Frame
-    Command_Now.vel_sp[1] = 0;          //ENU Frame
-    Command_Now.vel_sp[2] = 0;          //ENU Frame
-    Command_Now.yaw_sp = 0;
-    Command_Now.yaw_rate_sp = 0;
+    Command_Now.command = Idle;
 
 
     // 记录启控时间
@@ -152,11 +136,11 @@ int main(int argc, char **argv)
         prinft_command_state();
 
         //Printf the pid controller result
-        pos_controller_fsc.printf_result();
+        pos_controller_ps.printf_result();
 
-        //pos_controller_fsc2.printf_result();
+        pos_controller_ude.printf_result();
 
-        command_fsc.failsafe();
+        command_fsc.check_failsafe();
 
         //无人机一旦接受到Land指令，则会屏蔽其他指令
         if(Command_Last.command == Land)
@@ -170,9 +154,9 @@ int main(int argc, char **argv)
             pos_sp = Eigen::Vector3d(Command_Now.pos_sp[0],Command_Now.pos_sp[1],Command_Now.pos_sp[2]);
             vel_sp = Eigen::Vector3d(Command_Now.vel_sp[0],Command_Now.vel_sp[1],Command_Now.vel_sp[2]);
 
-            //accel_sp = pos_controller_fsc2.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, cur_time);
+            accel_sp = pos_controller_ude.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, cur_time);
 
-            accel_sp = pos_controller_fsc.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, cur_time);
+            accel_sp = pos_controller_ps.pos_controller(command_fsc.pos_drone_fcu, pos_sp, cur_time);
 
             command_fsc.send_accel_setpoint(accel_sp, Command_Now.yaw_sp );
 
@@ -214,7 +198,8 @@ int main(int argc, char **argv)
                 }
             }
 
-            accel_sp = pos_controller_fsc.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, cur_time);
+            accel_sp = pos_controller_ps.pos_controller(command_fsc.pos_drone_fcu, pos_sp, cur_time);
+
 
             command_fsc.send_accel_setpoint(accel_sp, Command_Now.yaw_sp );
 
@@ -226,8 +211,7 @@ int main(int argc, char **argv)
                 command_fsc.Hold_position = Eigen::Vector3d(Command_Now.pos_sp[0],Command_Now.pos_sp[1],Command_Now.pos_sp[2]);
             }
 
-            accel_sp = pos_controller_fsc.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, command_fsc.Hold_position, vel_sp, 0b00, cur_time);
-
+            accel_sp = pos_controller_ps.pos_controller(command_fsc.pos_drone_fcu, pos_sp, cur_time);
             command_fsc.send_accel_setpoint(accel_sp, Command_Now.yaw_sp );
 
             break;
@@ -261,7 +245,7 @@ int main(int argc, char **argv)
                 }
             }else
             {
-                accel_sp = pos_controller_fsc.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, 0b00, cur_time);
+                accel_sp = pos_controller_ps.pos_controller(command_fsc.pos_drone_fcu, pos_sp, cur_time);
 
                 command_fsc.send_accel_setpoint(accel_sp, Command_Now.yaw_sp );
             }
@@ -298,7 +282,7 @@ int main(int argc, char **argv)
 
         // 【】
         case Idle:
-
+            command_fsc.idle();
 
             break;
         }

@@ -3,6 +3,6 @@
 
 	<node pkg="px4_command" type="target_tracking" name="target_tracking" output="screen">
 
-                <rosparam command="load" file="$(find px4_command)/launch/target_tracking.yaml" />
+                <rosparam command="load" file="$(find px4_command)/config/target_tracking.yaml" />
 	</node>
 </launch>

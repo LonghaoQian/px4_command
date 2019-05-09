@@ -1,7 +1,7 @@
 <launch>
 	<!-- run the position_control.cpp -->
 
-	<node pkg="px4_command" type="px4_pos_controller" name="px4_pos_controller" output="screen">
+	<node pkg="px4_command" type="px4_pos_controller_passivity" name="px4_pos_controller_passivity" output="screen">
 
 		<!-- load blacklist, config -->
 		<rosparam command="load" file="$(find px4_command)/config/Parameter_for_control.yaml" />

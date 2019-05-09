@@ -1,4 +1,7 @@
 
+## 起飞高度
+Takeoff_height : 0.6
+
 # 位置环参数
 MPC_XY_P : 0.95
 MPC_Z_P : 1.0
@@ -38,8 +41,26 @@ UDE_tilt_max: 20.0
 UDE_a: 20.0
 UDE_b: 0
 
-## 起飞高度
-Takeoff_height : 0.8
+# 位置环参数 for passivity
+passivity_MASS : 1.0
+passivity_Kp_XY : 1.0
+passivity_Kp_Z : 1.0
+passivity_Kd_XY : 2.0
+passivity_Kd_Z : 2.0
+passivity_T_ude_XY : 1.0
+passivity_T_ude_Z : 1.0
+passivity_T1: 2.0
+passivity_T2: 1.0
+passivity_INT_LIM_X : 2.0
+passivity_INT_LIM_Y : 2.0
+passivity_INT_LIM_Z : 6.0
+passivity_XY_VEL_MAX : 1.0
+passivity_Z_VEL_MAX : 1.0
+passivity_THR_MIN: 0.1
+passivity_THR_MAX: 0.9
+passivity_tilt_max: 20.0
+passivity_a: 20.0
+passivity_b: 0
 
 ## 姿态环参数
 MC_ROLL_P: 6.5
