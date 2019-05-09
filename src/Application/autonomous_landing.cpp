@@ -344,7 +344,7 @@ int main(int argc, char **argv)
 
         case 6:
 
-            Command_now.command = Move_Body;
+            Command_now.command = Hold;
             Command_now.sub_mode = 1;  //xy pos z vel
             Command_now.comid = comid;
             Command_now.pos_sp[0] = 0;
