@@ -67,7 +67,6 @@ class pos_controller_UDE
             error_pos       = Eigen::Vector3d(0.0,0.0,0.0);
             error_vel       = Eigen::Vector3d(0.0,0.0,0.0);
 
-            last_time       = 0.0;
             delta_time      = 0.0;
             flag_offboard   = 0;
 
@@ -122,8 +121,6 @@ class pos_controller_UDE
 
         //The delta time between now and the last step
         float delta_time;
-        //Time of the last step
-        float last_time;
 
         //Current state of the drone
         mavros_msgs::State current_state;
@@ -141,7 +138,7 @@ class pos_controller_UDE
         void printf_result();
 
         //Position control main function [Input: current pos, current vel, desired state(pos or vel), sub_mode, time_now; Output: desired thrust;]
-        Eigen::Vector3d pos_controller(Eigen::Vector3d pos, Eigen::Vector3d vel, Eigen::Vector3d pos_sp, Eigen::Vector3d vel_sp, int sub_mode, float curtime);
+        Eigen::Vector3d pos_controller(Eigen::Vector3d pos, Eigen::Vector3d vel, Eigen::Vector3d pos_sp, float curtime);
 
     private:
 
@@ -167,13 +164,16 @@ class pos_controller_UDE
 };
 
 
-Eigen::Vector3d pos_controller_UDE::pos_controller(Eigen::Vector3d pos, Eigen::Vector3d vel, Eigen::Vector3d pos_sp, Eigen::Vector3d vel_sp, int sub_mode, float curtime)
+Eigen::Vector3d pos_controller_UDE::pos_controller(Eigen::Vector3d pos, Eigen::Vector3d vel, Eigen::Vector3d pos_sp, float dt)
 {
-    delta_time = curtime - last_time;
-    last_time = curtime;
+    delta_time = dt;
 
     error_pos = pos_sp - pos;
     error_vel =  - vel;
+    for (int i = 0; i < 3; i++)
+    {
+        error_pos(i) = constrain_function2(error_pos(i), -1.0, 1.0);
+    }
 
     u_l(0) = UDE_MASS * (UDE_Kp_X * error_pos(0) + UDE_Kd_X * error_vel(0));
     u_l(1) = UDE_MASS * (UDE_Kp_Y * error_pos(1) + UDE_Kd_Y * error_vel(1));
@@ -187,12 +187,14 @@ Eigen::Vector3d pos_controller_UDE::pos_controller(Eigen::Vector3d pos, Eigen::V
     for (int i = 0; i < 3; i++)
     {
         // Perform the integration using a first order method and do not propagate the result if out of range or invalid
-        float integral = integral_ude(i) +  error_pos(i) * delta_time;
 
-        if (u_d(i) > -UDE_INT_LIM(i) && u_d[i] < UDE_INT_LIM(i))
+        float integral = 0;
+        if(error_pos(i) < 0.5)
         {
-                integral_ude(i) = integral;
+            integral = integral_ude(i) +  error_pos(i) * delta_time;
         }
+
+        integral_ude(i) = integral;
 
         u_d(i) = constrain_function2(u_d(i), -UDE_INT_LIM(i), UDE_INT_LIM(i));
     }
@@ -285,6 +287,11 @@ void pos_controller_UDE::printf_result()
     cout<<setprecision(2);
 
     cout << "delta_time : " << delta_time<< " [s] " <<endl;
+
+    cout << "e_p [X Y Z] : " << error_pos[0] << " [N] "<< error_pos[1]<<" [N] "<<error_pos[2]<<" [N] "<<endl;
+    cout << "e_v [X Y Z] : " << error_vel[0] << " [N] "<< error_vel[1]<<" [N] "<<error_vel[2]<<" [N] "<<endl;
+    cout << "int [X Y Z] : " << integral_ude[0] << " [N] "<< integral_ude[1]<<" [N] "<<integral_ude[2]<<" [N] "<<endl;
+
 
     cout << "u_l [X Y Z] : " << u_l[0] << " [N] "<< u_l[1]<<" [N] "<<u_l[2]<<" [N] "<<endl;
 

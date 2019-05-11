@@ -2,6 +2,7 @@
 ## 起飞高度
 Takeoff_height : 0.6
 
+
 # 位置环参数
 MPC_XY_P : 0.95
 MPC_Z_P : 1.0
@@ -21,18 +22,18 @@ MPC_VELD_LP: 5.0
 
 # 位置环参数 for ude
 UDE_MASS : 1.0
-UDE_Kp_X : 1.0
-UDE_Kp_Y : 1.0
-UDE_Kp_Z : 1.0
-UDE_Kd_X : 2.0
-UDE_Kd_Y : 2.0
-UDE_Kd_Z : 2.0
-UDE_T_X : 1.0
-UDE_T_Y : 1.0
-UDE_T_Z : 1.0
-UDE_INT_LIM_X : 2.0
-UDE_INT_LIM_Y : 2.0
-UDE_INT_LIM_Z : 6.0
+UDE_Kp_X : 2.0
+UDE_Kp_Y : 2.0
+UDE_Kp_Z : 2.0
+UDE_Kd_X : 4.0
+UDE_Kd_Y : 4.0
+UDE_Kd_Z : 4.0
+UDE_T_X : 0.5
+UDE_T_Y : 0.5
+UDE_T_Z : 0.5
+UDE_INT_LIM_X : 5.0
+UDE_INT_LIM_Y : 5.0
+UDE_INT_LIM_Z : 10.0
 UDE_XY_VEL_MAX : 1.0
 UDE_Z_VEL_MAX : 1.0
 UDE_THR_MIN: 0.1

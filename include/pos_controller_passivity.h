@@ -69,7 +69,6 @@ class pos_controller_passivity
             y2_last       = Eigen::Vector3d(0.0,0.0,0.0);
             y3_last       = Eigen::Vector3d(0.0,0.0,0.0);
 
-            last_time       = 0.0;
             delta_time      = 0.0;
             flag_offboard   = 0;
 
@@ -122,8 +121,6 @@ class pos_controller_passivity
 
         //The delta time between now and the last step
         float delta_time;
-        //Time of the last step
-        float last_time;
 
         //Current state of the drone
         mavros_msgs::State current_state;
@@ -165,10 +162,9 @@ class pos_controller_passivity
 
 
 
-Eigen::Vector3d pos_controller_passivity::pos_controller(Eigen::Vector3d pos, Eigen::Vector3d pos_sp, float curtime)
+Eigen::Vector3d pos_controller_passivity::pos_controller(Eigen::Vector3d pos, Eigen::Vector3d pos_sp, float dt)
 {
-    delta_time = curtime - last_time;
-    last_time = curtime;
+    delta_time = dt;
 
     error_pos = pos_sp - pos;
 

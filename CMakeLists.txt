@@ -124,21 +124,6 @@ target_link_libraries(px4_sender
 )
 
 ###### Test File ##########
-add_executable(px4_pos_controller_UDE
-  src/Test/px4_pos_controller_UDE.cpp
-)
-add_dependencies(px4_pos_controller_UDE px4_command_gencpp)
-target_link_libraries(px4_pos_controller_UDE
-  ${catkin_LIBRARIES}
-)
-
-add_executable(px4_pos_controller_passivity
-  src/Test/px4_pos_controller_passivity.cpp
-)
-add_dependencies(px4_pos_controller_passivity px4_command_gencpp)
-target_link_libraries(px4_pos_controller_passivity
-  ${catkin_LIBRARIES}
-)
 
 
 ###### Utilities File ##########

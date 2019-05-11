@@ -61,8 +61,7 @@ class pos_controller_PID
             vel_D_output    = Eigen::Vector3d(0.0,0.0,0.0);
             error_vel_dot_last  = Eigen::Vector3d(0.0,0.0,0.0);
             error_vel_last      = Eigen::Vector3d(0.0,0.0,0.0);
-            last_time       = 0.0;
-            delta_time      = 0.0;
+            delta_time      = 0.02;
             flag_offboard   = 0;
 
             state_sub = pos_pid_nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &pos_controller_PID::state_cb,this);
@@ -112,8 +111,6 @@ class pos_controller_PID
 
         //The delta time between now and the last step
         float delta_time;
-        //Time of the last step
-        float last_time;
 
         //Derriv of the velocity error in last step [used for the D-output in vel loop]
         Eigen::Vector3d error_vel_dot_last;
@@ -168,18 +165,16 @@ class pos_controller_PID
 };
 
 
-Eigen::Vector3d pos_controller_PID::pos_controller(Eigen::Vector3d pos, Eigen::Vector3d vel, Eigen::Vector3d pos_sp, Eigen::Vector3d vel_sp, int sub_mode, float curtime)
+Eigen::Vector3d pos_controller_PID::pos_controller(Eigen::Vector3d pos, Eigen::Vector3d vel, Eigen::Vector3d pos_sp, Eigen::Vector3d vel_sp, int sub_mode, float dt)
 {
     pos_drone = pos;
     vel_drone = vel;
 
-    delta_time = curtime - last_time;
+    delta_time = dt;
 
     _positionController(pos_sp, vel_sp, sub_mode);
 
     _velocityController();
-
-    last_time = curtime;
 
     return thrust_sp;
 }
@@ -349,15 +344,15 @@ void pos_controller_PID::printf_result()
 
     cout<<setprecision(2);
 
-//    cout << "delta_time : " << delta_time<< " [s] " <<endl;
+    cout << "delta_time : " << delta_time<< " [s] " <<endl;
 
     cout << "Velocity_sp  [X Y Z] : " << vel_setpoint[0] << " [m/s] "<< vel_setpoint[1]<<" [m/s] "<<vel_setpoint[2]<<" [m/s] "<<endl;
 
-//    cout << "Vel_P_output [X Y Z] : " << vel_P_output[0] << " [m/s] "<< vel_P_output[1]<<" [m/s] "<<vel_P_output[2]<<" [m/s] "<<endl;
+    cout << "Vel_P_output [X Y Z] : " << vel_P_output[0] << " [m/s] "<< vel_P_output[1]<<" [m/s] "<<vel_P_output[2]<<" [m/s] "<<endl;
 
-//    cout << "Vel_I_output [X Y Z] : " << thurst_int[0] << " [m/s] "<< thurst_int[1]<<" [m/s] "<<thurst_int[2]<<" [m/s] "<<endl;
+    cout << "Vel_I_output [X Y Z] : " << thurst_int[0] << " [m/s] "<< thurst_int[1]<<" [m/s] "<<thurst_int[2]<<" [m/s] "<<endl;
 
-//    cout << "Vel_D_output [X Y Z] : " << vel_D_output[0] << " [m/s] "<< vel_D_output[1]<<" [m/s] "<<vel_D_output[2]<<" [m/s] "<<endl;
+    cout << "Vel_D_output [X Y Z] : " << vel_D_output[0] << " [m/s] "<< vel_D_output[1]<<" [m/s] "<<vel_D_output[2]<<" [m/s] "<<endl;
 
     cout << "thrust_sp    [X Y Z] : " << thrust_sp[0] << " [m/s^2] "<< thrust_sp[1]<<" [m/s^2] "<<thrust_sp[2]<<" [m/s^2] "<<endl;
 }
