@@ -17,18 +17,12 @@ Send command to PX4 using Mavros package
     `cd ~/px4_ws/src`
   
     `catkin_init_workspace`
-  
-    `catkin_make`
-  
-    `source devel/setup.bash`
-  
-    `echo $ROS_PACKAGE_PATH`  
     
-    If failed, please source manually.
+    Please source manually, open a new terminal
     
     `gedit .bashrc`  
     
-    Add the path in the end of the .txt file
+    Add the path `source /home/$(your computer name)/px4_ws/devel/setup.bash` in the end of the bashrc.txt file
 
 3. Git clone the px4_command package
     
