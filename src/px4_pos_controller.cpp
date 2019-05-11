@@ -62,6 +62,7 @@ int main(int argc, char **argv)
 
     Eigen::Vector3d pos_sp(0,0,0);
     Eigen::Vector3d vel_sp(0,0,0);
+    double yaw_sp = 0;
     Eigen::Vector3d accel_sp(0,0,0);
 
     command_to_mavros pos_controller;
@@ -197,11 +198,14 @@ int main(int argc, char **argv)
                 {
                     pos_sp[2] = pos_controller.pos_drone_fcu[2] + Command_Now.pos_sp[2];
                 }
+
+                yaw_sp = pos_controller.Euler_fcu[2]* 180/M_PI + Command_Now.yaw_sp;
+
             }
 
             accel_sp = pos_controller_pid.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, cur_time);
 
-            pos_controller.send_accel_setpoint(accel_sp, Command_Now.yaw_sp);
+            pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
 
             break;
 
@@ -209,11 +213,12 @@ int main(int argc, char **argv)
             if (Command_Last.command != Hold)
             {
                 pos_controller.Hold_position = Eigen::Vector3d(Command_Now.pos_sp[0],Command_Now.pos_sp[1],Command_Now.pos_sp[2]);
+                pos_controller.Hold_yaw = pos_controller.Euler_fcu[2]* 180/M_PI;
             }
 
             accel_sp = pos_controller_pid.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_controller.Hold_position, vel_sp, 0b00, cur_time);
 
-            pos_controller.send_accel_setpoint(accel_sp, Command_Now.yaw_sp);
+            pos_controller.send_accel_setpoint(accel_sp, pos_controller.Hold_yaw);
 
             break;
 
@@ -222,6 +227,7 @@ int main(int argc, char **argv)
             if (Command_Last.command != Land)
             {
                 pos_sp = Eigen::Vector3d(pos_controller.pos_drone_fcu[0],pos_controller.pos_drone_fcu[1],pos_controller.Takeoff_position[2]);
+                yaw_sp = pos_controller.Euler_fcu[2]* 180/M_PI;
             }
 
             //如果距离起飞高度小于10厘米，则直接上锁并切换为手动模式；
@@ -248,7 +254,7 @@ int main(int argc, char **argv)
             {
                 accel_sp = pos_controller_pid.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, vel_sp, 0b00, cur_time);
 
-                pos_controller.send_accel_setpoint(accel_sp, Command_Now.yaw_sp);
+                pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
             }
 
             break;

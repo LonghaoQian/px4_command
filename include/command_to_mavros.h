@@ -64,6 +64,7 @@ class command_to_mavros
 
         Takeoff_position        = Eigen::Vector3d(0.0,0.0,0.0);
         Hold_position           = Eigen::Vector3d(0.0,0.0,0.0);
+        Hold_yaw                = 0.0;
         type_mask_target        = 0;
         frame_target            = 0;
 
@@ -108,6 +109,7 @@ class command_to_mavros
 
     //Hold Position of the Drone (For hold mode in command.msg)
     Eigen::Vector3d Hold_position;
+    double Hold_yaw;
 
     //Land Position of the Drone
     Eigen::Vector3d Land_position;
