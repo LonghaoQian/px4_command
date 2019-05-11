@@ -27,8 +27,14 @@ Send command to PX4 using Mavros package
 3. Git clone the px4_command package
     
     `cd ~/px4_ws/src`
+	
+    download from gitlab repository
     
-    `http://gitlab.amovauto.com/amovlab/px4_command`
+    `git clone http://gitlab.amovauto.com/amovlab/px4_command`
+    
+    download from github repository
+
+    `git clone https://github.com/potato77/px4_command`
     
     `cd ..`
     
