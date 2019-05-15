@@ -199,7 +199,9 @@ Eigen::Vector3d pos_controller_passivity::pos_controller(Eigen::Vector3d pos, Ei
     Eigen::Vector3d y2_k;
     for (int i = 0; i < 3; i++)
     {
-        y2_k(i) = passivity_Kd(i)/(passivity_T1 + delta_time) * (passivity_T1 * y2_last(i) + delta_time * error_pos(i));
+        y2_k(i) = 1.0f/(passivity_T1 + delta_time) * (passivity_T1 * y2_last(i) + delta_time * error_pos(i));
+        //y2_k(i) =   ( 0.98 * y2_last(i) + 0.0099 * (error_pos(i)+error_last(i)));
+
     }
 
     y2_last = y2_k;
@@ -208,7 +210,7 @@ Eigen::Vector3d pos_controller_passivity::pos_controller(Eigen::Vector3d pos, Ei
     Eigen::Vector3d y3_k;
     for (int i = 0; i < 3; i++)
     {
-        y3_k(i) = 1.0f/(passivity_T_ude(i) + delta_time) * (passivity_T_ude(i) * y3_last(i) + delta_time * (passivity_Kp(i) * integral_passivity(i) + y2_k(i)));
+        y3_k(i) = 1.0f/(passivity_T_ude(i) + delta_time) * (passivity_T_ude(i) * y3_last(i) + delta_time * (passivity_Kp(i) * integral_passivity(i) + passivity_Kd(i)*y2_k(i)));
     }
 
     y3_last = y3_k;
@@ -288,6 +290,7 @@ void pos_controller_passivity::printf_result()
 
     cout << "delta_time : " << delta_time<< " [s] " <<endl;
 
+    cout << "u_l [X Y Z] : " << u_l[0] << " [N] "<< u_l[1]<<" [N] "<<u_l[2]<<" [N] "<<endl;
     cout << "z_k [X Y Z] : " << z_last[0] << " [N] "<< z_last[1]<<" [N] "<<z_last[2]<<" [N] "<<endl;
 
     cout << "y1 [X Y Z] : " << y1_last[0] << " [N] "<< y1_last[1]<<" [N] "<<y1_last[2]<<" [N] "<<endl;
@@ -295,6 +298,8 @@ void pos_controller_passivity::printf_result()
     cout << "y2 [X Y Z] : " << y2_last[0] << " [N] "<< y2_last[1]<<" [N] "<<y2_last[2]<<" [N] "<<endl;
 
     cout << "y3 [X Y Z] : " << y3_last[0] << " [N] "<< y3_last[1]<<" [N] "<<y3_last[2]<<" [N] "<<endl;
+
+    cout << "u_l [X Y Z] : " << u_l[0] << " [N] "<< u_l[1]<<" [N] "<<u_l[2]<<" [N] "<<endl;
 
     cout << "u_d [X Y Z] : " << u_d[0] << " [N] "<< u_d[1]<<" [N] "<<u_d[2]<<" [N] "<<endl;
 

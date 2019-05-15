@@ -44,13 +44,13 @@ UDE_b: 0
 
 # 位置环参数 for passivity
 passivity_MASS : 1.0
-passivity_Kp_XY : 1.0
-passivity_Kp_Z : 1.0
-passivity_Kd_XY : 2.0
-passivity_Kd_Z : 2.0
-passivity_T_ude_XY : 1.0
-passivity_T_ude_Z : 1.0
-passivity_T1: 2.0
+passivity_Kp_XY : 1
+passivity_Kp_Z : 1
+passivity_Kd_XY : 2
+passivity_Kd_Z : 2
+passivity_T_ude_XY : 0.5
+passivity_T_ude_Z : 0.5
+passivity_T1: 0.2
 passivity_T2: 1.0
 passivity_INT_LIM_X : 2.0
 passivity_INT_LIM_Y : 2.0
