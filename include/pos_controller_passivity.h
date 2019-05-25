@@ -168,15 +168,16 @@ Eigen::Vector3d pos_controller_passivity::pos_controller(Eigen::Vector3d pos, Ei
 
     error_pos = pos_sp - pos;
 
-   // error_pos = pos_sp;
     //z_k
     Eigen::Vector3d z_k;
     z_k = 1.0f/(passivity_T1 + delta_time)*(passivity_T1 * z_last + error_pos - error_last);
+
     /* limit rates */
     // for (int i = 0; i < 3; i++)
     // {
     // 	z_k(i) = math::constrain(z_k(i), -0.2f, 0.2f);
     // }
+
     z_last = z_k;
     error_last = error_pos;
 
@@ -224,8 +225,11 @@ Eigen::Vector3d pos_controller_passivity::pos_controller(Eigen::Vector3d pos, Ei
     /* explicitly limit the integrator state */
     for (int i = 0; i < 3; i++)
     {
-        // Perform the integration using a first order method and do not propagate the result if out of range or invalid
-        float integral = integral_passivity(i) +  error_pos(i) * delta_time;
+        float integral = 0;
+        if(error_pos(i) < 2)
+        {
+            integral = integral_passivity(i) +  error_pos(i) * delta_time;
+        }
 
         if (u_d(i) > -passivity_INT_LIM(i) && u_d[i] < passivity_INT_LIM(i))
         {

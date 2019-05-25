@@ -15,7 +15,7 @@
 #include <iostream>
 
 //话题头文件
-
+#include <mavros_msgs/CommandBool.h>
 #include <mavros_msgs/SetMode.h>
 #include <mavros_msgs/State.h>
 
@@ -42,7 +42,12 @@ int main(int argc, char **argv)
     // 【服务】修改系统模式
     ros::ServiceClient set_mode_client = nh.serviceClient<mavros_msgs::SetMode>("/mavros/set_mode");
 
+    ros::ServiceClient arming_client = nh.serviceClient<mavros_msgs::CommandBool>("/mavros/cmd/arming");
+
     mavros_msgs::SetMode mode_cmd;
+
+    mavros_msgs::CommandBool arm_cmd;
+    arm_cmd.request.value = true;
 
     ros::Rate rate(10.0);
 
@@ -57,7 +62,7 @@ int main(int argc, char **argv)
             // input
             case 0:
                 cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>--------<<<<<<<<<<<<<<<<<<<<<<<<<<< "<< endl;
-                cout << "Input the mode:  0 for OFFBOARD,1 for STABILIZED, 2 for POSCTL,3 for ALTCTL "<<endl;
+                cout << "Input the mode:  0 for OFFBOARD,1 for STABILIZED, 2 for POSCTL,3 for ALTCTL, 4 for arm "<<endl;
                 cin >> flag_1;
 
                 //1000 降落 也可以指向其他任务
@@ -78,6 +83,10 @@ int main(int argc, char **argv)
                 else if(flag_1 == 3)
                 {
                     Num_StateMachine = 4;
+                }
+                else if(flag_1 == 4)
+                {
+                    Num_StateMachine = 5;
                 }
 
                 break;
@@ -139,6 +148,22 @@ int main(int argc, char **argv)
             {
                 Num_StateMachine = 0;
                 cout << "Set to ALTCTL Mode Susscess!!!" <<endl;
+            }
+            break;
+
+        //arm
+        case 5:
+            if(!current_state.armed)
+            {
+                arm_cmd.request.value = true;
+                arming_client.call(arm_cmd);
+
+                cout << "Arming..." <<endl;
+
+            }else
+            {
+                Num_StateMachine = 0;
+                cout << "Arm Susscess!!!" <<endl;
             }
             break;
 
