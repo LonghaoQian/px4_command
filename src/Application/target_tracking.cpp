@@ -30,7 +30,8 @@ enum Command
     Land,
     Disarm,
     Failsafe_land,
-    Idle
+    Idle,
+    Takeoff
 };
 //---------------------------------------Vision---------------------------------------------
 geometry_msgs::Pose pos_target;                                 //目标位置[机体系下：前方x为正，右方y为正，下方z为正]

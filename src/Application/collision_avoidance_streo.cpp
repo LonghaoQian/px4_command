@@ -27,9 +27,9 @@ enum Command
     Land,
     Disarm,
     Failsafe_land,
-    Idle
+    Idle,
+    Takeoff
 };
-
 //--------------------------------------------输入--------------------------------------------------
 geometry_msgs::Point Streo_distance;
 geometry_msgs::Pose pos_drone;                                  //无人机当前位置

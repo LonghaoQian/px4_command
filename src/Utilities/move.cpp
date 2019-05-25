@@ -21,8 +21,10 @@ enum Command
     Land,
     Disarm,
     Failsafe_land,
-    Idle
+    Idle,
+    Takeoff
 };
+
 ros::Publisher move_pub;
 int Num_StateMachine;
 px4_command::command Command_now;
@@ -50,7 +52,7 @@ int main(int argc, char **argv)
             // input
             case 0:
                 cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>--------<<<<<<<<<<<<<<<<<<<<<<<<<<< "<< endl;
-                cout << "Input the flag:  0 for Move_ENU，1 for Move_Body，2 for Land,3 for Disarm ,4 for Hold, 5 for Failsafe Land, 6 for Idle"<<endl;
+                cout << "Input the flag:  0 for Move_ENU，1 for Move_Body，2 for Land,3 for Disarm ,4 for Hold, 5 for Failsafe Land, 6 for Idle,7 for Takeoff to default height"<<endl;
                 cin >> flag_1;
 
                 if (flag_1 == 2)
@@ -80,6 +82,12 @@ int main(int argc, char **argv)
                 if (flag_1 == 6)
                 {
                     Num_StateMachine = 7;
+                    break;
+                }
+
+                if (flag_1 == 7)
+                {
+                    Num_StateMachine = 8;
                     break;
                 }
 
@@ -164,6 +172,13 @@ int main(int argc, char **argv)
         //Custom
         case 7:
             Command_now.command = Idle;
+            move_pub.publish(Command_now);
+            Num_StateMachine = 0;
+            break;
+
+        //Custom
+        case 8:
+            Command_now.command = Takeoff;
             move_pub.publish(Command_now);
             Num_StateMachine = 0;
             break;

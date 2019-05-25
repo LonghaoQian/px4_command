@@ -38,8 +38,14 @@ enum Command
     Land,
     Disarm,
     Failsafe_land,
-    Idle
+    Idle,
+    Takeoff
 };
+
+Eigen::Vector3d pos_sp(0,0,0);
+Eigen::Vector3d vel_sp(0,0,0);
+double yaw_sp = 0;
+Eigen::Vector3d accel_sp(0,0,0);
 
 //Command Now [from upper node]
 px4_command::command Command_Now;                      //无人机当前执行命令
@@ -68,11 +74,6 @@ int main(int argc, char **argv)
     nh.param<int>("switch_ude", switch_ude, 0);
 
     ros::Rate rate(50.0);
-
-    Eigen::Vector3d pos_sp(0,0,0);
-    Eigen::Vector3d vel_sp(0,0,0);
-    double yaw_sp = 0;
-    Eigen::Vector3d accel_sp(0,0,0);
 
     command_to_mavros pos_controller;
 
@@ -268,6 +269,8 @@ int main(int argc, char **argv)
             {
                 pos_controller.Hold_position = Eigen::Vector3d(pos_controller.pos_drone_fcu[0],pos_controller.pos_drone_fcu[1],pos_controller.pos_drone_fcu[2]);
                 pos_controller.Hold_yaw = pos_controller.Euler_fcu[2]* 180/M_PI;
+                pos_sp = pos_controller.Hold_position;
+                yaw_sp = pos_controller.Hold_yaw;
             }
 
             if(switch_ude == 0)
@@ -361,6 +364,25 @@ int main(int argc, char **argv)
         case Idle:
             pos_controller.idle();
             break;
+
+        case Takeoff:
+            pos_sp = Eigen::Vector3d(pos_controller.Takeoff_position[0],pos_controller.Takeoff_position[1],pos_controller.Takeoff_position[2]+pos_controller.Takeoff_height);
+            vel_sp = Eigen::Vector3d(0.0,0.0,0.0);
+
+            if(switch_ude == 0)
+            {
+                accel_sp = pos_controller_pid.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, dt);
+            }else if(switch_ude == 1)
+            {
+                accel_sp = pos_controller_ude.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
+            }else if(switch_ude == 2)
+            {
+                accel_sp = pos_controller_ps.pos_controller(pos_controller.pos_drone_fcu, pos_sp, dt);
+            }
+
+            pos_controller.send_accel_setpoint(accel_sp, Command_Now.yaw_sp);
+
+            break;
         }
 
         Command_Last = Command_Now;
@@ -384,56 +406,100 @@ float get_ros_time(ros::Time begin)
 void prinft_command_state()
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Command State<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-    switch(Command_Now.command)
-    {
-    case Move_ENU:
-        cout << "Command: [ Move_ENU ] " <<endl;
-        break;
-    case Move_Body:
-        cout << "Command: [ Move_Body ] " <<endl;
-        break;
-    case Hold:
-        cout << "Command: [ Hold ] " <<endl;
-        break;
-    case Land:
-        cout << "Command: [ Land ] " <<endl;
-        break;
-    case Disarm:
-        cout << "Command: [ Disarm ] " <<endl;
-        break;
-    case Failsafe_land:
-        cout << "Command: [ Failsafe_land ] " <<endl;
-        break;
-    case Idle:
-        cout << "Command: [ Idle ] " <<endl;
-        break;
-    }
 
     int sub_mode;
     sub_mode = Command_Now.sub_mode;
 
-    if((sub_mode & 0b10) == 0) //xy channel
+    switch(Command_Now.command)
     {
-        cout << "Submode: xy position control "<<endl;
-        cout << "X_setpoint   : " << Command_Now.pos_sp[0] << " [ m ]"  << "  Y_setpoint : "<< Command_Now.pos_sp[1] << " [ m ]"<<endl;
-    }
-    else{
-        cout << "Submode: xy velocity control "<<endl;
-        cout << "X_setpoint   : " << Command_Now.vel_sp[0] << " [m/s]" << "  Y_setpoint : "<< Command_Now.vel_sp[1] << " [m/s]" <<endl;
+    case Move_ENU:
+        cout << "Command: [ Move_ENU ] " <<endl;
+
+        if((sub_mode & 0b10) == 0) //xy channel
+        {
+            cout << "Submode: xy position control "<<endl;
+            cout << "X_setpoint   : " << Command_Now.pos_sp[0] << " [ m ]"  << "  Y_setpoint : "<< Command_Now.pos_sp[1] << " [ m ]"<<endl;
+        }
+        else{
+            cout << "Submode: xy velocity control "<<endl;
+            cout << "X_setpoint   : " << Command_Now.vel_sp[0] << " [m/s]" << "  Y_setpoint : "<< Command_Now.vel_sp[1] << " [m/s]" <<endl;
+        }
+
+        if((sub_mode & 0b01) == 0) //z channel
+        {
+            cout << "Submode:  z position control "<<endl;
+            cout << "Z_setpoint   : "<< Command_Now.pos_sp[2] << " [ m ]" << endl;
+        }
+        else
+        {
+            cout << "Submode:  z velocity control "<<endl;
+            cout << "Z_setpoint   : "<< Command_Now.vel_sp[2] << " [m/s]" <<endl;
+        }
+
+        cout << "Yaw_setpoint : "  << Command_Now.yaw_sp << " [deg] " <<endl;
+
+        break;
+    case Move_Body:
+        cout << "Command: [ Move_Body ] " <<endl;
+
+        if((sub_mode & 0b10) == 0) //xy channel
+        {
+            cout << "Submode: xy position control "<<endl;
+            cout << "X_setpoint   : " << Command_Now.pos_sp[0] << " [ m ]"  << "  Y_setpoint : "<< Command_Now.pos_sp[1] << " [ m ]"<<endl;
+        }
+        else{
+            cout << "Submode: xy velocity control "<<endl;
+            cout << "X_setpoint   : " << Command_Now.vel_sp[0] << " [m/s]" << "  Y_setpoint : "<< Command_Now.vel_sp[1] << " [m/s]" <<endl;
+        }
+
+        if((sub_mode & 0b01) == 0) //z channel
+        {
+            cout << "Submode:  z position control "<<endl;
+            cout << "Z_setpoint   : "<< Command_Now.pos_sp[2] << " [ m ]" << endl;
+        }
+        else
+        {
+            cout << "Submode:  z velocity control "<<endl;
+            cout << "Z_setpoint   : "<< Command_Now.vel_sp[2] << " [m/s]" <<endl;
+        }
+
+        cout << "Yaw_setpoint : "  << Command_Now.yaw_sp << " [deg] " <<endl;
+
+        break;
+
+    case Hold:
+        cout << "Command: [ Hold ] " <<endl;
+        cout << "Hold Position [X Y Z] : " << pos_sp[0] << " [ m ] "<< pos_sp[1]<<" [ m ] "<< pos_sp[2]<<" [ m ] "<<endl;
+        cout << "Yaw_setpoint : "  << yaw_sp << " [deg] " <<endl;
+        break;
+
+    case Land:
+        cout << "Command: [ Land ] " <<endl;
+        cout << "Land Position [X Y Z] : " << pos_sp[0] << " [ m ] "<< pos_sp[1]<<" [ m ] "<< pos_sp[2]<<" [ m ] "<<endl;
+        cout << "Yaw_setpoint : "  << Command_Now.yaw_sp << " [deg] " <<endl;
+        break;
+
+    case Disarm:
+        cout << "Command: [ Disarm ] " <<endl;
+        break;
+
+    case Failsafe_land:
+        cout << "Command: [ Failsafe_land ] " <<endl;
+        break;
+
+    case Idle:
+        cout << "Command: [ Idle ] " <<endl;
+        break;
+
+    case Takeoff:
+        cout << "Command: [ Takeoff ] " <<endl;
+        cout << "Takeoff Position [X Y Z] : " << pos_sp[0] << " [ m ] "<< pos_sp[1]<<" [ m ] "<< pos_sp[2]<<" [ m ] "<<endl;
+        cout << "Yaw_setpoint : "  << Command_Now.yaw_sp << " [deg] " <<endl;
+        break;
     }
 
-    if((sub_mode & 0b01) == 0) //z channel
-    {
-        cout << "Submode:  z position control "<<endl;
-        cout << "Z_setpoint   : "<< Command_Now.pos_sp[2] << " [ m ]" << endl;
-    }
-    else
-    {
-        cout << "Submode:  z velocity control "<<endl;
-        cout << "Z_setpoint   : "<< Command_Now.vel_sp[2] << " [m/s]" <<endl;
-    }
 
-    cout << "Yaw_setpoint : "  << Command_Now.yaw_sp << " [deg] " <<endl;
+
 }
 // 【坐标系旋转函数】- 机体系到enu系
 // input是机体系,output是惯性系，yaw_angle是当前偏航角

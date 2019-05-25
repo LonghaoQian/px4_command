@@ -36,7 +36,8 @@ enum Command
     Land,
     Disarm,
     Failsafe_land,
-    Idle
+    Idle,
+    Takeoff
 };
 
 //Command Now [from upper node]
@@ -201,6 +202,13 @@ int main(int argc, char **argv)
         case Idle:
             pos_sender.idle();
             break;
+
+        case Takeoff:
+            pos_sp = Eigen::Vector3d(pos_sender.Takeoff_position[0],pos_sender.Takeoff_position[1],pos_sender.Takeoff_position[2]+pos_sender.Takeoff_height);
+
+            pos_sender.send_pos_setpoint(pos_sp, Command_Now.yaw_sp);
+
+            break;
         }
 
 
@@ -247,6 +255,9 @@ void prinft_command_state()
         break;
     case Idle:
         cout << "Command: [ Idle ] " <<endl;
+        break;
+    case Takeoff:
+        cout << "Command: [ Takeoff ] " <<endl;
         break;
 
     }

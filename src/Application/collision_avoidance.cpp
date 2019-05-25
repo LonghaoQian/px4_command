@@ -41,7 +41,8 @@ enum Command
     Land,
     Disarm,
     Failsafe_land,
-    Idle
+    Idle,
+    Takeoff
 };
 
 #define RAD2DEG(x) ((x)*180./M_PI)

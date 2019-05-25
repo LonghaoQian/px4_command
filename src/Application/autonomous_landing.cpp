@@ -35,7 +35,8 @@ enum Command
     Land,
     Disarm,
     Failsafe_land,
-    Idle
+    Idle,
+    Takeoff
 };
 
 int Num_StateMachine = 0;                                       //状态机编号

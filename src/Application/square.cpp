@@ -37,7 +37,8 @@ enum Command
     Land,
     Disarm,
     Failsafe_land,
-    Idle
+    Idle,
+    Takeoff
 };
 px4_command::command Command_now;
 //---------------------------------------正方形参数---------------------------------------------
