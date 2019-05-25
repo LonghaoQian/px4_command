@@ -53,7 +53,7 @@ int main(int argc, char **argv)
     ros::Rate rate(1.0);
 
     // 【发布】发送给position_control.cpp的命令
-    ros::Publisher move_pub = nh.advertise<px4_command::command>("/px4/Command", 10);
+    ros::Publisher move_pub = nh.advertise<px4_command::command>("/px4/command", 10);
 
     //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>参数读取<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     nh.param<float>("size_square", size_square, 1.5);
@@ -80,6 +80,30 @@ int main(int argc, char **argv)
     int comid = 0;
 
     //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主程序<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    //takeoff
+    i = 0;
+    while (i < sleep_time)
+    {
+
+        Command_now.command = Move_ENU;  //Move模式
+        Command_now.sub_mode = 0;             //子模式：位置控制模式
+        Command_now.pos_sp[0] = 0;
+        Command_now.pos_sp[1] = 0;
+        Command_now.pos_sp[2] = height_square;
+        Command_now.yaw_sp = 0;
+        Command_now.comid = comid;
+        comid++;
+
+        move_pub.publish(Command_now);
+
+        rate.sleep();
+
+        cout << "Point 1"<<endl;
+
+        i++;
+
+    }
+
     //依次发送4个目标点给position_control.cpp
     //第一个目标点，左下角
     i = 0;
