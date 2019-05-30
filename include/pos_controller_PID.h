@@ -132,7 +132,7 @@ class pos_controller_PID
         void printf_result();
 
         //Position control main function [Input: current pos, current vel, desired state(pos or vel), sub_mode, time_now; Output: desired thrust;]
-        Eigen::Vector3d pos_controller(Eigen::Vector3d pos, Eigen::Vector3d vel, Eigen::Vector3d pos_sp, Eigen::Vector3d vel_sp, int sub_mode, float curtime);
+        Eigen::Vector3d pos_controller(Eigen::Vector3d pos, Eigen::Vector3d vel, Eigen::Vector3d pos_sp, Eigen::Vector3d vel_sp, int sub_mode, float dt);
 
         //Position control loop [Input: current pos, desired pos; Output: desired vel]
         void _positionController(Eigen::Vector3d pos_sp, Eigen::Vector3d vel_sp, int sub_mode);

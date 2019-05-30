@@ -18,6 +18,8 @@
 #include <pos_controller_PID.h>
 #include <pos_controller_UDE.h>
 #include <pos_controller_passivity.h>
+#include <pos_controller_ne.h>
+
 
 #include <Eigen/Eigen>
 
@@ -27,6 +29,8 @@ using namespace namespace_command_to_mavros;
 using namespace namespace_PID;
 using namespace namespace_UDE;
 using namespace namespace_passivity;
+using namespace namespace_NE;
+
 
 //自定义的Command变量
 //相应的命令分别为 移动(惯性系ENU)，移动(机体系)，悬停，降落，上锁，紧急降落，待机
@@ -84,6 +88,7 @@ int main(int argc, char **argv)
     pos_controller_PID pos_controller_pid;
     pos_controller_UDE pos_controller_ude;
     pos_controller_passivity pos_controller_ps;
+    pos_controller_NE pos_controller_ne;
 
     if(switch_ude == 0)
     {
@@ -94,6 +99,9 @@ int main(int argc, char **argv)
     }else if(switch_ude == 2)
     {
         pos_controller_ps.printf_param();
+    }else if(switch_ude == 3)
+    {
+        pos_controller_ne.printf_param();
     }
 
 
@@ -129,6 +137,11 @@ int main(int argc, char **argv)
 
     //Set the takeoff position
     pos_controller.set_takeoff_position();
+
+    if(switch_ude == 3)
+    {
+        pos_controller_ne.set_initial_pos(pos_controller.pos_drone_fcu);
+    }
 
     //初始化命令-
     // 默认设置：Idle模式 电机怠速旋转 等待来自上层的控制指令
@@ -180,6 +193,9 @@ int main(int argc, char **argv)
         }else if(switch_ude == 2)
         {
             pos_controller_ps.printf_result();
+        }else if(switch_ude == 3)
+        {
+            pos_controller_ne.printf_result();
         }
 
 
@@ -203,7 +219,10 @@ int main(int argc, char **argv)
                 accel_sp = pos_controller_ude.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
             }else if(switch_ude == 2)
             {
-                accel_sp = pos_controller_ps.pos_controller(pos_controller.pos_drone_fcu, pos_sp, dt);
+                accel_sp = pos_controller_ps.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
+            }else if(switch_ude == 3)
+            {
+                accel_sp = pos_controller_ne.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
             }
 
             pos_controller.send_accel_setpoint(accel_sp, Command_Now.yaw_sp);
@@ -257,7 +276,10 @@ int main(int argc, char **argv)
                 accel_sp = pos_controller_ude.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
             }else if(switch_ude == 2)
             {
-                accel_sp = pos_controller_ps.pos_controller(pos_controller.pos_drone_fcu, pos_sp, dt);
+                accel_sp = pos_controller_ps.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
+            }else if(switch_ude == 3)
+            {
+                accel_sp = pos_controller_ne.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
             }
 
             pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
@@ -281,7 +303,10 @@ int main(int argc, char **argv)
                 accel_sp = pos_controller_ude.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_controller.Hold_position, dt);
             }else if(switch_ude == 2)
             {
-                accel_sp = pos_controller_ps.pos_controller(pos_controller.pos_drone_fcu, pos_controller.Hold_position, dt);
+                accel_sp = pos_controller_ps.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_controller.Hold_position, dt);
+            }else if(switch_ude == 3)
+            {
+                accel_sp = pos_controller_ne.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
             }
 
             pos_controller.send_accel_setpoint(accel_sp, pos_controller.Hold_yaw);
@@ -327,7 +352,10 @@ int main(int argc, char **argv)
                     accel_sp = pos_controller_ude.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
                 }else if(switch_ude == 2)
                 {
-                    accel_sp = pos_controller_ps.pos_controller(pos_controller.pos_drone_fcu, pos_sp, dt);
+                    accel_sp = pos_controller_ps.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
+                }else if(switch_ude == 3)
+                {
+                    accel_sp = pos_controller_ne.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
                 }
 
                 pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
@@ -377,7 +405,10 @@ int main(int argc, char **argv)
                 accel_sp = pos_controller_ude.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
             }else if(switch_ude == 2)
             {
-                accel_sp = pos_controller_ps.pos_controller(pos_controller.pos_drone_fcu, pos_sp, dt);
+                accel_sp = pos_controller_ps.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
+            }else if(switch_ude == 3)
+            {
+                accel_sp = pos_controller_ne.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
             }
 
             pos_controller.send_accel_setpoint(accel_sp, Command_Now.yaw_sp);

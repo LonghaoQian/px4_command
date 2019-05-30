@@ -13,6 +13,8 @@
 #include <Eigen/Eigen>
 #include <math.h>
 #include <math_utils.h>
+#include <px4_command/ude_log.h>
+
 
 using namespace std;
 
@@ -73,6 +75,8 @@ class pos_controller_passivity
             flag_offboard   = 0;
 
             state_sub = pos_passivity_nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &pos_controller_passivity::state_cb,this);
+
+            ude_log_pub = pos_passivity_nh.advertise<px4_command::ude_log>("/px4_command/ude_log", 10);
 
         }
 
@@ -135,13 +139,16 @@ class pos_controller_passivity
         void printf_result();
 
         //Position control main function [Input: current pos, current vel, desired state(pos or vel), sub_mode, time_now; Output: desired thrust;]
-        Eigen::Vector3d pos_controller(Eigen::Vector3d pos, Eigen::Vector3d pos_sp, float curtime);
+        Eigen::Vector3d pos_controller(Eigen::Vector3d pos, Eigen::Vector3d vel, Eigen::Vector3d pos_sp, float dt);
 
     private:
 
         ros::NodeHandle pos_passivity_nh;
 
         ros::Subscriber state_sub;
+        ros::Publisher ude_log_pub;
+        //for log the control state
+        px4_command::ude_log ude_log;
 
         void state_cb(const mavros_msgs::State::ConstPtr &msg)
         {
@@ -162,11 +169,12 @@ class pos_controller_passivity
 
 
 
-Eigen::Vector3d pos_controller_passivity::pos_controller(Eigen::Vector3d pos, Eigen::Vector3d pos_sp, float dt)
+Eigen::Vector3d pos_controller_passivity::pos_controller(Eigen::Vector3d pos, Eigen::Vector3d vel, Eigen::Vector3d pos_sp, float dt)
 {
     delta_time = dt;
 
     error_pos = pos_sp - pos;
+    error_vel = -vel;
 
     //z_k
     Eigen::Vector3d z_k;
@@ -273,6 +281,40 @@ Eigen::Vector3d pos_controller_passivity::pos_controller(Eigen::Vector3d pos, Ei
     {
         integral_passivity = Eigen::Vector3d(0.0,0.0,0.0);
     }
+
+    ude_log.pos[0] = pos(0);
+    ude_log.pos[1] = pos(1);
+    ude_log.pos[2] = pos(2);
+
+    ude_log.vel[0] = vel(0);
+    ude_log.vel[1] = vel(1);
+    ude_log.vel[2] = vel(2);
+
+    ude_log.error_pos[0] = error_pos(0);
+    ude_log.error_pos[1] = error_pos(1);
+    ude_log.error_pos[2] = error_pos(2);
+
+    ude_log.error_vel[0] = error_vel(0);
+    ude_log.error_vel[1] = error_vel(1);
+    ude_log.error_vel[2] = error_vel(2);
+
+    ude_log.u_l[0] = u_l(0);
+    ude_log.u_l[1] = u_l(1);
+    ude_log.u_l[2] = u_l(2);
+
+    ude_log.u_d[0] = u_d(0);
+    ude_log.u_d[1] = u_d(1);
+    ude_log.u_d[2] = u_d(2);
+
+    ude_log.u_total[0] = u_total(0);
+    ude_log.u_total[1] = u_total(1);
+    ude_log.u_total[2] = u_total(2);
+
+    ude_log.thrust_sp[0] = thrust_sp(0);
+    ude_log.thrust_sp[1] = thrust_sp(1);
+    ude_log.thrust_sp[2] = thrust_sp(2);
+
+    ude_log_pub.publish(ude_log);
 
     return thrust_sp;
 }

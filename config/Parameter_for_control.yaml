@@ -63,6 +63,26 @@ passivity_tilt_max: 20.0
 passivity_a: 20.0
 passivity_b: 0
 
+# 位置环参数 for ne
+NE_MASS : 1.0
+NE_Kp_XY : 1
+NE_Kp_Z : 2
+NE_Kd_XY : 2
+NE_Kd_Z : 4
+NE_T_ude_XY : 0.5
+NE_T_ude_Z : 0.5
+NE_Tn: 0.1
+NE_INT_LIM_X : 5.0
+NE_INT_LIM_Y : 5.0
+NE_INT_LIM_Z : 10.0
+NE_XY_VEL_MAX : 1.0
+NE_Z_VEL_MAX : 1.0
+NE_THR_MIN: 0.1
+NE_THR_MAX: 0.9
+NE_tilt_max: 20.0
+NE_a: 20.0
+NE_b: 0
+
 ## 姿态环参数
 MC_ROLL_P: 6.5
 

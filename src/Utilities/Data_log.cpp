@@ -55,7 +55,7 @@ int main(int argc, char **argv)
     time_t tt = time(NULL);
     tm* t = localtime(&tt);
     char iden_path[256];
-    sprintf(iden_path, "/home/nvidia/log/Data-log-%d-%02d-%02d_%02d-%02d.txt", t->tm_year+1900, t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min);
+    sprintf(iden_path, "/home/odroid/log/Data-log-%d-%02d-%02d_%02d-%02d.txt", t->tm_year+1900, t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min);
     std::ofstream out_data_file(iden_path);
 
     if (!out_data_file)

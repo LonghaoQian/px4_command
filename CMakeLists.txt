@@ -127,6 +127,15 @@ target_link_libraries(px4_sender
 
 
 ###### Utilities File ##########
+add_executable(filter_tester
+  src/Utilities/filter_tester.cpp
+)
+add_dependencies(filter_tester px4_command_gencpp)
+target_link_libraries(filter_tester
+  ${catkin_LIBRARIES}
+)
+
+
 add_executable(TFmini
   src/Utilities/TFmini.cpp
 )
