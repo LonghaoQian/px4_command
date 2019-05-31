@@ -5,3 +5,4 @@ mate-terminal --window -e 'bash -c "roscore; exec bash"' \
 --tab -e 'bash -c "sleep 4; roslaunch px4_command px4_pos_estimator.launch; exec bash"' \
 --tab -e 'bash -c "sleep 4; roslaunch px4_command px4_pos_controller_passivity.launch; exec bash"' \
 --tab -e 'bash -c "sleep 4; rosrun px4_command move; exec bash"' \
+--tab -e 'bash -c "sleep 4; rosrun px4_command Data_log; exec bash"' \
