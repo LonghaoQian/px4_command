@@ -67,6 +67,7 @@ class pos_controller_NE
             error_pos       = Eigen::Vector3d(0.0,0.0,0.0);
             error_vel       = Eigen::Vector3d(0.0,0.0,0.0);
             NoiseEstimator  = Eigen::Vector3d(0.0,0.0,0.0);
+            output_LLF= Eigen::Vector3d(0.0,0.0,0.0);
             delta_time      = 0.0;
             flag_offboard   = 0;
 
@@ -138,6 +139,7 @@ class pos_controller_NE
 
         //Flag of the offboard mode [1 for OFFBOARD mode , 0 for non-OFFBOARD mode]
         int flag_offboard;
+         Eigen::Vector3d output_LLF;
 
         //Printf the NE parameter
         void printf_param();
@@ -227,14 +229,19 @@ Eigen::Vector3d pos_controller_NE::pos_controller(Eigen::Vector3d pos, Eigen::Ve
     }
 
 
+    output_LLF(0) = LLF_x.apply(input_LLF(0), delta_time);
+    output_LLF(1) = LLF_y.apply(input_LLF(1), delta_time);
+    output_LLF(2) = LLF_z.apply(input_LLF(2), delta_time);
+
+
     for (int i = 0; i < 3; i++)
     {
         integral_NE(i) = integral_NE(i) +  (NE_Kp(i) * error_pos(i) + NE_Kd(i) * error_vel(i)) * delta_time;
     }
 
-    u_d(0) = NE_MASS /NE_T_ude(0) *( vel(0) - LLF_x.apply(input_LLF(0), delta_time) + integral_NE(0) );
-    u_d(1) = NE_MASS /NE_T_ude(1) *( vel(1) - LLF_y.apply(input_LLF(1), delta_time) + integral_NE(1) );
-    u_d(2) = NE_MASS /NE_T_ude(2) *( vel(2) - LLF_z.apply(input_LLF(2), delta_time) + integral_NE(2) );
+    u_d(0) = NE_MASS /NE_T_ude(0) *( vel(0) - output_LLF(0) - integral_NE(0) );
+    u_d(1) = NE_MASS /NE_T_ude(1) *( vel(1) - output_LLF(1) - integral_NE(1) );
+    u_d(2) = NE_MASS /NE_T_ude(2) *( vel(2) - output_LLF(2) - integral_NE(2) );
 
     /* explicitly limit the integrator state */
     for (int i = 0; i < 3; i++)
@@ -243,9 +250,9 @@ Eigen::Vector3d pos_controller_NE::pos_controller(Eigen::Vector3d pos, Eigen::Ve
     }
 
     //ENU frame
-    u_total(0) = u_l(0) + u_d(0);
-    u_total(1) = u_l(1) + u_d(1);
-    u_total(2) = u_l(2) + u_d(2) + NE_MASS * 9.8;
+    u_total(0) = u_l(0) - u_d(0);
+    u_total(1) = u_l(1) - u_d(1);
+    u_total(2) = u_l(2) - u_d(2) + NE_MASS * 9.8;
 
     //Thrust to scale thrust[0,1]
     Eigen::Vector3d thrust_sp_scale;
@@ -298,6 +305,9 @@ void pos_controller_NE::printf_result()
     cout << "delta_time : " << delta_time<< " [s] " <<endl;
 
     cout << "NoiseEstimator [X Y Z] : " << NoiseEstimator[0] << " [N] "<< NoiseEstimator[1]<<" [N] "<<NoiseEstimator[2]<<" [N] "<<endl;
+
+    cout << "output_LLF [X Y Z] : " << output_LLF[0] << " [N] "<< output_LLF[1]<<" [N] "<<output_LLF[2]<<" [N] "<<endl;
+
     cout << "u_l [X Y Z] : " << u_l[0] << " [N] "<< u_l[1]<<" [N] "<<u_l[2]<<" [N] "<<endl;
 
     cout << "u_d [X Y Z] : " << u_d[0] << " [N] "<< u_d[1]<<" [N] "<<u_d[2]<<" [N] "<<endl;

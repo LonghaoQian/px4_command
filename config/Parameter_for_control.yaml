@@ -21,10 +21,10 @@ tilt_max: 20.0
 MPC_VELD_LP: 5.0
 
 # 位置环参数 for ude
-UDE_MASS : 0.8
+UDE_MASS : 1
 UDE_Kp_X : 2.0
 UDE_Kp_Y : 2.0
-UDE_Kp_Z : 2.0
+UDE_Kp_Z : 4.0
 UDE_Kd_X : 1.0
 UDE_Kd_Y : 1.0
 UDE_Kd_Z : 1.0
@@ -65,14 +65,14 @@ passivity_b: 0
 
 # 位置环参数 for ne
 NE_MASS : 1.0
-NE_Kp_XY : 1
-NE_Kp_Z : 2
-NE_Kd_XY : 2
-NE_Kd_Z : 4
+NE_Kp_XY : 1.0
+NE_Kp_Z : 1.0
+NE_Kd_XY : 1.0
+NE_Kd_Z : 1.0
 NE_T_ude_XY : 0.5
 NE_T_ude_Z : 0.5
-NE_Tn: 0.1
-NE_INT_LIM_X : 5.0
+NE_Tn: 0.5
+E_INT_LIM_X : 5.0
 NE_INT_LIM_Y : 5.0
 NE_INT_LIM_Z : 10.0
 NE_XY_VEL_MAX : 1.0
