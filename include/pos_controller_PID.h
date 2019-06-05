@@ -44,11 +44,11 @@ class pos_controller_PID
             pos_pid_nh.param<float>("MPC_Z_VEL_I", MPC_Z_VEL_I, 0.02);
             pos_pid_nh.param<float>("MPC_XY_VEL_D", MPC_XY_VEL_D, 0.01);
             pos_pid_nh.param<float>("MPC_Z_VEL_D", MPC_Z_VEL_D, 0.01);
-            pos_pid_nh.param<float>("MPC_XY_VEL_MAX", MPC_XY_VEL_MAX, 1.0);
-            pos_pid_nh.param<float>("MPC_Z_VEL_MAX", MPC_Z_VEL_MAX, 0.5);
+            pos_pid_nh.param<float>("XY_VEL_MAX", MPC_XY_VEL_MAX, 1.0);
+            pos_pid_nh.param<float>("Z_VEL_MAX", MPC_Z_VEL_MAX, 0.5);
             pos_pid_nh.param<float>("MPC_THRUST_HOVER", MPC_THRUST_HOVER, 0.4);
-            pos_pid_nh.param<float>("MPC_THR_MIN", MPC_THR_MIN, 0.1);
-            pos_pid_nh.param<float>("MPC_THR_MAX", MPC_THR_MAX, 0.9);
+            pos_pid_nh.param<float>("THR_MIN", MPC_THR_MIN, 0.1);
+            pos_pid_nh.param<float>("THR_MAX", MPC_THR_MAX, 0.9);
             pos_pid_nh.param<float>("tilt_max", tilt_max, 5.0);
             pos_pid_nh.param<float>("MPC_VELD_LP", MPC_VELD_LP, 5.0);
 

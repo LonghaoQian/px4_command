@@ -1,3 +1,13 @@
+## 飞机参数
+Quad_MASS: 0.8
+throttle_a: 20.0
+throttle_b: 0.0
+tilt_max: 20.0
+
+THR_MIN: 0.1
+THR_MAX: 0.9
+XY_VEL_MAX : 0.8
+Z_VEL_MAX : 0.5
 
 ## 起飞高度
 Takeoff_height : 0.8
@@ -12,19 +22,13 @@ MPC_XY_VEL_I : 0.02
 MPC_Z_VEL_I : 0.02
 MPC_XY_VEL_D : 0.01
 MPC_Z_VEL_D : 0.00
-MPC_XY_VEL_MAX : 0.8
-MPC_Z_VEL_MAX : 0.5
 MPC_THRUST_HOVER : 0.5
-MPC_THR_MIN: 0.1
-MPC_THR_MAX: 0.9
-tilt_max: 20.0
 MPC_VELD_LP: 5.0
 
 # 位置环参数 for ude
-UDE_MASS : 1
-UDE_Kp_X : 2.0
-UDE_Kp_Y : 2.0
-UDE_Kp_Z : 4.0
+UDE_Kp_X : 1.0
+UDE_Kp_Y : 1.0
+UDE_Kp_Z : 1.0
 UDE_Kd_X : 1.0
 UDE_Kd_Y : 1.0
 UDE_Kd_Z : 1.0
@@ -34,20 +38,13 @@ UDE_T_Z : 0.5
 UDE_INT_LIM_X : 5.0
 UDE_INT_LIM_Y : 5.0
 UDE_INT_LIM_Z : 10.0
-UDE_XY_VEL_MAX : 0.8
-UDE_Z_VEL_MAX : 0.5
-UDE_THR_MIN: 0.1
-UDE_THR_MAX: 0.9
-UDE_tilt_max: 20.0
-UDE_a: 20.0
-UDE_b: 0
+
 
 # 位置环参数 for passivity
-passivity_MASS : 0.8
-passivity_Kp_XY : 1
-passivity_Kp_Z : 1
-passivity_Kd_XY : 5
-passivity_Kd_Z : 5
+passivity_Kp_XY : 1.0
+passivity_Kp_Z : 1.0
+passivity_Kd_XY : 5.0
+passivity_Kd_Z : 5.0
 passivity_T_ude_XY : 1
 passivity_T_ude_Z : 1
 passivity_T1: 0.2
@@ -55,16 +52,8 @@ passivity_T1: 0.2
 passivity_INT_LIM_X : 5.0
 passivity_INT_LIM_Y : 5.0
 passivity_INT_LIM_Z : 10.0
-passivity_XY_VEL_MAX : 0.8
-passivity_Z_VEL_MAX : 0.5
-passivity_THR_MIN: 0.1
-passivity_THR_MAX: 0.9
-passivity_tilt_max: 20.0
-passivity_a: 20.0
-passivity_b: 0
 
 # 位置环参数 for ne
-NE_MASS : 1.0
 NE_Kp_XY : 1.0
 NE_Kp_Z : 1.0
 NE_Kd_XY : 1.0
@@ -72,16 +61,11 @@ NE_Kd_Z : 1.0
 NE_T_ude_XY : 0.5
 NE_T_ude_Z : 0.5
 NE_Tn: 0.5
-E_INT_LIM_X : 5.0
+NE_INT_LIM_X : 5.0
 NE_INT_LIM_Y : 5.0
 NE_INT_LIM_Z : 10.0
-NE_XY_VEL_MAX : 1.0
-NE_Z_VEL_MAX : 1.0
-NE_THR_MIN: 0.1
-NE_THR_MAX: 0.9
-NE_tilt_max: 20.0
-NE_a: 20.0
-NE_b: 0
+
+
 
 ## 姿态环参数
 MC_ROLL_P: 6.5

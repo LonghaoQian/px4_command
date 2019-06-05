@@ -34,7 +34,15 @@ class pos_controller_UDE
         pos_controller_UDE(void):
             pos_UDE_nh("~")
         {
-            pos_UDE_nh.param<float>("UDE_MASS", UDE_MASS, 1.0);
+            pos_UDE_nh.param<float>("Quad_MASS", Quad_MASS, 1.0);
+            pos_UDE_nh.param<float>("XY_VEL_MAX", XY_VEL_MAX, 1.0);
+            pos_UDE_nh.param<float>("Z_VEL_MAX", Z_VEL_MAX, 1.0);
+            pos_UDE_nh.param<float>("THR_MIN", THR_MIN, 0.1);
+            pos_UDE_nh.param<float>("THR_MAX", THR_MAX, 0.9);
+            pos_UDE_nh.param<float>("tilt_max", tilt_max, 20.0);
+            pos_UDE_nh.param<float>("throttle_a", throttle_a, 20.0);
+            pos_UDE_nh.param<float>("throttle_b", throttle_b, 0.0);
+
             pos_UDE_nh.param<float>("UDE_Kp_X", UDE_Kp_X, 1.0);
             pos_UDE_nh.param<float>("UDE_Kp_Y", UDE_Kp_Y, 1.0);
             pos_UDE_nh.param<float>("UDE_Kp_Z", UDE_Kp_Z, 1.0);
@@ -48,16 +56,7 @@ class pos_controller_UDE
             pos_UDE_nh.param<float>("UDE_INT_LIM_Y", UDE_INT_LIM(1), 1.0);
             pos_UDE_nh.param<float>("UDE_INT_LIM_Z", UDE_INT_LIM(2), 5.0);
 
-            pos_UDE_nh.param<float>("UDE_XY_VEL_MAX", UDE_XY_VEL_MAX, 1.0);
-            pos_UDE_nh.param<float>("UDE_Z_VEL_MAX", UDE_Z_VEL_MAX, 1.0);
 
-            pos_UDE_nh.param<float>("UDE_THR_MIN", UDE_THR_MIN, 0.1);
-            pos_UDE_nh.param<float>("UDE_THR_MAX", UDE_THR_MAX, 0.9);
-
-            pos_UDE_nh.param<float>("UDE_tilt_max", UDE_tilt_max, 20.0);
-
-            pos_UDE_nh.param<float>("UDE_a", UDE_a, 20.0);
-            pos_UDE_nh.param<float>("UDE_b", UDE_b, 0.0);
 
             thrust_sp       = Eigen::Vector3d(0.0,0.0,0.0);
             u_l             = Eigen::Vector3d(0.0,0.0,0.0);
@@ -77,7 +76,7 @@ class pos_controller_UDE
         }
 
         //Mass of the quadrotor
-        float UDE_MASS;
+        float Quad_MASS;
 
         //UDE control parameter
         float UDE_Kp_X;
@@ -96,18 +95,18 @@ class pos_controller_UDE
         Eigen::Vector3f UDE_INT_LIM;
 
         //Limitation of the velocity
-        float UDE_XY_VEL_MAX;
-        float UDE_Z_VEL_MAX;
+        float XY_VEL_MAX;
+        float Z_VEL_MAX;
 
         //Limitation of the thrust
-        float UDE_THR_MIN;
-        float UDE_THR_MAX;
+        float THR_MIN;
+        float THR_MAX;
 
         //Limitation of the tilt angle (roll and pitch)  [degree]
-        float UDE_tilt_max;
+        float tilt_max;
 
-        float UDE_a;
-        float UDE_b;
+        float throttle_a;
+        float throttle_b;
 
         Eigen::Vector3d error_pos,error_vel;
 
@@ -175,13 +174,13 @@ Eigen::Vector3d pos_controller_UDE::pos_controller(Eigen::Vector3d pos, Eigen::V
         error_pos(i) = constrain_function2(error_pos(i), -1.0, 1.0);
     }
 
-    u_l(0) = UDE_MASS * (UDE_Kp_X * error_pos(0) + UDE_Kd_X * error_vel(0));
-    u_l(1) = UDE_MASS * (UDE_Kp_Y * error_pos(1) + UDE_Kd_Y * error_vel(1));
-    u_l(2) = UDE_MASS * (UDE_Kp_Z * error_pos(2) + UDE_Kd_Y * error_vel(2));
+    u_l(0) = Quad_MASS * (UDE_Kp_X * error_pos(0) + UDE_Kd_X * error_vel(0));
+    u_l(1) = Quad_MASS * (UDE_Kp_Y * error_pos(1) + UDE_Kd_Y * error_vel(1));
+    u_l(2) = Quad_MASS * (UDE_Kp_Z * error_pos(2) + UDE_Kd_Y * error_vel(2));
 
-    u_d(0) = UDE_MASS / UDE_T_X * (UDE_Kd_X * error_pos(0) + error_vel(0) + UDE_Kp_X * integral_ude(0));
-    u_d(1) = UDE_MASS / UDE_T_Y * (UDE_Kd_Y * error_pos(1) + error_vel(1) + UDE_Kp_Y * integral_ude(1));
-    u_d(2) = UDE_MASS / UDE_T_Z * (UDE_Kd_Z * error_pos(2) + error_vel(2) + UDE_Kp_Z * integral_ude(2));
+    u_d(0) = Quad_MASS / UDE_T_X * (UDE_Kd_X * error_pos(0) + error_vel(0) + UDE_Kp_X * integral_ude(0));
+    u_d(1) = Quad_MASS / UDE_T_Y * (UDE_Kd_Y * error_pos(1) + error_vel(1) + UDE_Kp_Y * integral_ude(1));
+    u_d(2) = Quad_MASS / UDE_T_Z * (UDE_Kd_Z * error_pos(2) + error_vel(2) + UDE_Kp_Z * integral_ude(2));
 
     /* explicitly limit the integrator state */
     for (int i = 0; i < 3; i++)
@@ -189,7 +188,7 @@ Eigen::Vector3d pos_controller_UDE::pos_controller(Eigen::Vector3d pos, Eigen::V
         // Perform the integration using a first order method and do not propagate the result if out of range or invalid
 
         float integral = 0;
-        if(error_pos(i) < 0.5)
+        if(error_pos(i) < 1.0)
         {
             integral = integral_ude(i) +  error_pos(i) * delta_time;
         }
@@ -202,20 +201,20 @@ Eigen::Vector3d pos_controller_UDE::pos_controller(Eigen::Vector3d pos, Eigen::V
     //ENU frame
     u_total(0) = u_l(0) + u_d(0);
     u_total(1) = u_l(1) + u_d(1);
-    u_total(2) = u_l(2) + u_d(2) + UDE_MASS * 9.8;
+    u_total(2) = u_l(2) + u_d(2) + Quad_MASS * 9.8;
 
     //Thrust to scale thrust[0,1]
     Eigen::Vector3d thrust_sp_scale;
-    thrust_sp_scale(0) = (u_total(0) - UDE_b) / UDE_a;
-    thrust_sp_scale(1) = (u_total(1) - UDE_b) / UDE_a;
-    thrust_sp_scale(2) = (u_total(2) - UDE_b) / UDE_a;
+    thrust_sp_scale(0) = (u_total(0) - throttle_b) / throttle_a;
+    thrust_sp_scale(1) = (u_total(1) - throttle_b) / throttle_a;
+    thrust_sp_scale(2) = (u_total(2) - throttle_b) / throttle_a;
 
     //Limit the Thrust
-    thrust_sp(2) = constrain_function2( thrust_sp_scale(2) , UDE_THR_MIN, UDE_THR_MAX);
+    thrust_sp(2) = constrain_function2( thrust_sp_scale(2) , THR_MIN, THR_MAX);
 
     // Get maximum allowed thrust in XY based on tilt angle and excess thrust.
-    float thrust_max_XY_tilt = fabs(thrust_sp(2)) * tanf(UDE_tilt_max/180.0*M_PI);
-    float thrust_max_XY = sqrtf(UDE_THR_MAX * UDE_THR_MAX - thrust_sp(2) * thrust_sp(2));
+    float thrust_max_XY_tilt = fabs(thrust_sp(2)) * tanf(tilt_max/180.0*M_PI);
+    float thrust_max_XY = sqrtf(THR_MAX * THR_MAX - thrust_sp(2) * thrust_sp(2));
     thrust_max_XY = min(thrust_max_XY_tilt, thrust_max_XY);
 
     // Saturate thrust in XY-direction.
@@ -307,7 +306,7 @@ void pos_controller_UDE::printf_param()
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>UDE Parameter <<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
-    cout <<"UDE_MASS : "<< UDE_MASS << endl;
+    cout <<"Quad_MASS : "<< Quad_MASS << endl;
 
     cout <<"UDE_Kp_X : "<< UDE_Kp_X << endl;
     cout <<"UDE_Kp_Y : "<< UDE_Kp_Y << endl;
@@ -321,20 +320,20 @@ void pos_controller_UDE::printf_param()
     cout <<"UDE_T_Y : "<< UDE_T_Y << endl;
     cout <<"UDE_T_Z : "<< UDE_T_Z << endl;
 
-    cout <<"UDE_XY_VEL_MAX : "<< UDE_XY_VEL_MAX << endl;
-    cout <<"UDE_Z_VEL_MAX : "<< UDE_Z_VEL_MAX << endl;
+    cout <<"XY_VEL_MAX : "<< XY_VEL_MAX << endl;
+    cout <<"Z_VEL_MAX : "<< Z_VEL_MAX << endl;
 
     cout <<"UDE_INT_LIM_X : "<< UDE_INT_LIM(0) << endl;
     cout <<"UDE_INT_LIM_Y : "<< UDE_INT_LIM(1) << endl;
     cout <<"UDE_INT_LIM_Z : "<< UDE_INT_LIM(2) << endl;
 
-    cout <<"UDE_THR_MIN : "<< UDE_THR_MIN << endl;
-    cout <<"UDE_THR_MAX : "<< UDE_THR_MAX << endl;
+    cout <<"THR_MIN : "<< THR_MIN << endl;
+    cout <<"THR_MAX : "<< THR_MAX << endl;
 
-    cout <<"UDE_tilt_max : "<< UDE_tilt_max << endl;
-    cout <<"UDE_a : "<< UDE_a << endl;
+    cout <<"tilt_max : "<< tilt_max << endl;
+    cout <<"throttle_a : "<< throttle_a << endl;
 
-    cout <<"UDE_b : "<< UDE_b << endl;
+    cout <<"throttle_b : "<< throttle_b << endl;
 
 }
 

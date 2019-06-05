@@ -56,6 +56,7 @@ px4_command::command Command_Now;                      //无人机当前执行�
 
 //Command Last [from upper node]
 px4_command::command Command_Last;                     //无人机上一条执行命令
+Eigen::Vector3d pos_drone_mocap;                          //无人机当前位置 (vicon)
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>函数声明<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 float get_ros_time(ros::Time begin);
 void prinft_command_state();
@@ -65,6 +66,15 @@ void Command_cb(const px4_command::command::ConstPtr& msg)
 {
     Command_Now = *msg;
 }
+void optitrack_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
+{
+    //位置 -- optitrack系 到 ENU系
+    int optitrack_frame = 1; //Frame convention 0: Z-up -- 1: Y-up
+    // Read the Drone Position from the Vrpn Package [Frame: Vicon]  (Vicon to ENU frame)
+    Eigen::Vector3d pos_drone_mocap_enu(-msg->pose.position.x,msg->pose.position.z,msg->pose.position.y);
+
+    pos_drone_mocap = pos_drone_mocap_enu;
+}
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
 {
@@ -72,6 +82,8 @@ int main(int argc, char **argv)
     ros::NodeHandle nh("~");
 
     ros::Subscriber Command_sub = nh.subscribe<px4_command::command>("/px4/command", 10, Command_cb);
+
+    ros::Subscriber optitrack_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/UAV/pose", 1000, optitrack_cb);
 
     int switch_ude;
 
@@ -219,7 +231,7 @@ int main(int argc, char **argv)
                 accel_sp = pos_controller_ude.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
             }else if(switch_ude == 2)
             {
-                accel_sp = pos_controller_ps.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
+                accel_sp = pos_controller_ps.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
             }else if(switch_ude == 3)
             {
                 accel_sp = pos_controller_ne.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
@@ -276,7 +288,7 @@ int main(int argc, char **argv)
                 accel_sp = pos_controller_ude.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
             }else if(switch_ude == 2)
             {
-                accel_sp = pos_controller_ps.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
+                accel_sp = pos_controller_ps.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
             }else if(switch_ude == 3)
             {
                 accel_sp = pos_controller_ne.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
@@ -303,7 +315,7 @@ int main(int argc, char **argv)
                 accel_sp = pos_controller_ude.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_controller.Hold_position, dt);
             }else if(switch_ude == 2)
             {
-                accel_sp = pos_controller_ps.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_controller.Hold_position, dt);
+                accel_sp = pos_controller_ps.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
             }else if(switch_ude == 3)
             {
                 accel_sp = pos_controller_ne.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
@@ -352,7 +364,7 @@ int main(int argc, char **argv)
                     accel_sp = pos_controller_ude.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
                 }else if(switch_ude == 2)
                 {
-                    accel_sp = pos_controller_ps.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
+                    accel_sp = pos_controller_ps.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
                 }else if(switch_ude == 3)
                 {
                     accel_sp = pos_controller_ne.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
@@ -405,7 +417,7 @@ int main(int argc, char **argv)
                 accel_sp = pos_controller_ude.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
             }else if(switch_ude == 2)
             {
-                accel_sp = pos_controller_ps.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
+                accel_sp = pos_controller_ps.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
             }else if(switch_ude == 3)
             {
                 accel_sp = pos_controller_ne.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);

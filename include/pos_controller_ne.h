@@ -17,7 +17,7 @@
 #include <LowPassFilter.h>
 #include <HighPassFilter.h>
 #include <LeadLagFilter.h>
-
+#include <px4_command/ude_log.h>
 
 using namespace std;
 
@@ -32,7 +32,14 @@ class pos_controller_NE
         pos_controller_NE(void):
             pos_NE_nh("~")
         {
-            pos_NE_nh.param<float>("NE_MASS", NE_MASS, 1.0);
+            pos_NE_nh.param<float>("Quad_MASS", Quad_MASS, 1.0);
+            pos_NE_nh.param<float>("XY_VEL_MAX", XY_VEL_MAX, 1.0);
+            pos_NE_nh.param<float>("Z_VEL_MAX", Z_VEL_MAX, 1.0);
+            pos_NE_nh.param<float>("THR_MIN", THR_MIN, 0.1);
+            pos_NE_nh.param<float>("THR_MAX", THR_MAX, 0.9);
+            pos_NE_nh.param<float>("tilt_max", tilt_max, 20.0);
+            pos_NE_nh.param<float>("throttle_a", throttle_a, 20.0);
+
             pos_NE_nh.param<float>("NE_Kp_XY", NE_Kp(0), 1.0);
             pos_NE_nh.param<float>("NE_Kp_XY", NE_Kp(1), 1.0);
             pos_NE_nh.param<float>("NE_Kp_Z", NE_Kp(2), 1.0);
@@ -47,16 +54,8 @@ class pos_controller_NE
             pos_NE_nh.param<float>("NE_INT_LIM_Y", NE_INT_LIM(1), 1.0);
             pos_NE_nh.param<float>("NE_INT_LIM_Z", NE_INT_LIM(2), 5.0);
 
-            pos_NE_nh.param<float>("NE_XY_VEL_MAX", NE_XY_VEL_MAX, 1.0);
-            pos_NE_nh.param<float>("NE_Z_VEL_MAX", NE_Z_VEL_MAX, 1.0);
 
-            pos_NE_nh.param<float>("NE_THR_MIN", NE_THR_MIN, 0.1);
-            pos_NE_nh.param<float>("NE_THR_MAX", NE_THR_MAX, 0.9);
-
-            pos_NE_nh.param<float>("NE_tilt_max", NE_tilt_max, 20.0);
-
-            pos_NE_nh.param<float>("NE_a", NE_a, 20.0);
-            pos_NE_nh.param<float>("NE_b", NE_b, 0.0);
+            pos_NE_nh.param<float>("throttle_b", throttle_b, 0.0);
 
             thrust_sp       = Eigen::Vector3d(0.0,0.0,0.0);
             u_l             = Eigen::Vector3d(0.0,0.0,0.0);
@@ -72,13 +71,14 @@ class pos_controller_NE
             flag_offboard   = 0;
 
             state_sub = pos_NE_nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &pos_controller_NE::state_cb,this);
+            ude_log_pub = pos_NE_nh.advertise<px4_command::ude_log>("/px4_command/ude_log", 10);
 
             set_filter();
         }
 
 
         //Mass of the quadrotor
-        float NE_MASS;
+        float Quad_MASS;
 
         //NE control parameter
         Eigen::Vector3f NE_Kp;
@@ -106,18 +106,18 @@ class pos_controller_NE
         Eigen::Vector3f NE_INT_LIM;
 
         //Limitation of the velocity
-        float NE_XY_VEL_MAX;
-        float NE_Z_VEL_MAX;
+        float XY_VEL_MAX;
+        float Z_VEL_MAX;
 
         //Limitation of the thrust
-        float NE_THR_MIN;
-        float NE_THR_MAX;
+        float THR_MIN;
+        float THR_MAX;
 
         //Limitation of the tilt angle (roll and pitch)  [degree]
-        float NE_tilt_max;
+        float tilt_max;
 
-        float NE_a;
-        float NE_b;
+        float throttle_a;
+        float throttle_b;
 
         Eigen::Vector3d error_pos,error_vel;
 
@@ -163,6 +163,10 @@ class pos_controller_NE
         Eigen::Vector3d pos_initial;
 
         Eigen::Vector3d NoiseEstimator;
+
+        ros::Publisher ude_log_pub;
+        //for log the control state
+        px4_command::ude_log ude_log;
 
         void state_cb(const mavros_msgs::State::ConstPtr &msg)
         {
@@ -216,7 +220,7 @@ Eigen::Vector3d pos_controller_NE::pos_controller(Eigen::Vector3d pos, Eigen::Ve
     //u_l
     for (int i = 0; i < 3; i++)
     {
-       u_l(i) = NE_MASS * (NE_Kp(i) * error_pos(i) + NE_Kd(i) * ( error_vel(i) + NoiseEstimator(i)));
+       u_l(i) = Quad_MASS * (NE_Kp(i) * error_pos(i) + NE_Kd(i) * ( error_vel(i) + NoiseEstimator(i)));
     }
 
     //UDE term
@@ -239,9 +243,9 @@ Eigen::Vector3d pos_controller_NE::pos_controller(Eigen::Vector3d pos, Eigen::Ve
         integral_NE(i) = integral_NE(i) +  (NE_Kp(i) * error_pos(i) + NE_Kd(i) * error_vel(i)) * delta_time;
     }
 
-    u_d(0) = NE_MASS /NE_T_ude(0) *( vel(0) - output_LLF(0) - integral_NE(0) );
-    u_d(1) = NE_MASS /NE_T_ude(1) *( vel(1) - output_LLF(1) - integral_NE(1) );
-    u_d(2) = NE_MASS /NE_T_ude(2) *( vel(2) - output_LLF(2) - integral_NE(2) );
+    u_d(0) = Quad_MASS /NE_T_ude(0) *( vel(0) - output_LLF(0) - integral_NE(0) );
+    u_d(1) = Quad_MASS /NE_T_ude(1) *( vel(1) - output_LLF(1) - integral_NE(1) );
+    u_d(2) = Quad_MASS /NE_T_ude(2) *( vel(2) - output_LLF(2) - integral_NE(2) );
 
     /* explicitly limit the integrator state */
     for (int i = 0; i < 3; i++)
@@ -252,20 +256,20 @@ Eigen::Vector3d pos_controller_NE::pos_controller(Eigen::Vector3d pos, Eigen::Ve
     //ENU frame
     u_total(0) = u_l(0) - u_d(0);
     u_total(1) = u_l(1) - u_d(1);
-    u_total(2) = u_l(2) - u_d(2) + NE_MASS * 9.8;
+    u_total(2) = u_l(2) - u_d(2) + Quad_MASS * 9.8;
 
     //Thrust to scale thrust[0,1]
     Eigen::Vector3d thrust_sp_scale;
-    thrust_sp_scale(0) = (u_total(0) - NE_b) / NE_a;
-    thrust_sp_scale(1) = (u_total(1) - NE_b) / NE_a;
-    thrust_sp_scale(2) = (u_total(2) - NE_b) / NE_a;
+    thrust_sp_scale(0) = (u_total(0) - throttle_b) / throttle_a;
+    thrust_sp_scale(1) = (u_total(1) - throttle_b) / throttle_a;
+    thrust_sp_scale(2) = (u_total(2) - throttle_b) / throttle_a;
 
     //Limit the Thrust
-    thrust_sp(2) = constrain_function2( thrust_sp_scale(2) , NE_THR_MIN, NE_THR_MAX);
+    thrust_sp(2) = constrain_function2( thrust_sp_scale(2) , THR_MIN, THR_MAX);
 
     // Get maximum allowed thrust in XY based on tilt angle and excess thrust.
-    float thrust_max_XY_tilt = fabs(thrust_sp(2)) * tanf(NE_tilt_max/180.0*M_PI);
-    float thrust_max_XY = sqrtf(NE_THR_MAX * NE_THR_MAX - thrust_sp(2) * thrust_sp(2));
+    float thrust_max_XY_tilt = fabs(thrust_sp(2)) * tanf(tilt_max/180.0*M_PI);
+    float thrust_max_XY = sqrtf(THR_MAX * THR_MAX - thrust_sp(2) * thrust_sp(2));
     thrust_max_XY = min(thrust_max_XY_tilt, thrust_max_XY);
 
     // Saturate thrust in XY-direction.
@@ -283,6 +287,41 @@ Eigen::Vector3d pos_controller_NE::pos_controller(Eigen::Vector3d pos, Eigen::Ve
     {
         integral_NE = Eigen::Vector3d(0.0,0.0,0.0);
     }
+
+
+    ude_log.pos[0] = pos(0);
+    ude_log.pos[1] = pos(1);
+    ude_log.pos[2] = pos(2);
+
+    ude_log.vel[0] = vel(0);
+    ude_log.vel[1] = vel(1);
+    ude_log.vel[2] = vel(2);
+
+    ude_log.error_pos[0] = error_pos(0);
+    ude_log.error_pos[1] = error_pos(1);
+    ude_log.error_pos[2] = error_pos(2);
+
+    ude_log.error_vel[0] = error_vel(0);
+    ude_log.error_vel[1] = error_vel(1);
+    ude_log.error_vel[2] = error_vel(2);
+
+    ude_log.u_l[0] = u_l(0);
+    ude_log.u_l[1] = u_l(1);
+    ude_log.u_l[2] = u_l(2);
+
+    ude_log.u_d[0] = u_d(0);
+    ude_log.u_d[1] = u_d(1);
+    ude_log.u_d[2] = u_d(2);
+
+    ude_log.u_total[0] = u_total(0);
+    ude_log.u_total[1] = u_total(1);
+    ude_log.u_total[2] = u_total(2);
+
+    ude_log.thrust_sp[0] = thrust_sp(0);
+    ude_log.thrust_sp[1] = thrust_sp(1);
+    ude_log.thrust_sp[2] = thrust_sp(2);
+
+    ude_log_pub.publish(ude_log);
 
     return thrust_sp;
 }
@@ -322,7 +361,7 @@ void pos_controller_NE::printf_param()
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>NE Parameter <<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
-    cout <<"NE_MASS : "<< NE_MASS << endl;
+    cout <<"Quad_MASS : "<< Quad_MASS << endl;
 
     cout <<"NE_Kp_X : "<< NE_Kp(0) << endl;
     cout <<"NE_Kp_Y : "<< NE_Kp(1) << endl;
@@ -337,20 +376,20 @@ void pos_controller_NE::printf_param()
     cout <<"NE_T_Z : "<< NE_T_ude(2) << endl;
     cout <<"NE_Tn : "<< NE_Tn << endl;
 
-    cout <<"NE_XY_VEL_MAX : "<< NE_XY_VEL_MAX << endl;
-    cout <<"NE_Z_VEL_MAX : "<< NE_Z_VEL_MAX << endl;
+    cout <<"XY_VEL_MAX : "<< XY_VEL_MAX << endl;
+    cout <<"Z_VEL_MAX : "<< Z_VEL_MAX << endl;
 
     cout <<"NE_INT_LIM_X : "<< NE_INT_LIM(0) << endl;
     cout <<"NE_INT_LIM_Y : "<< NE_INT_LIM(1) << endl;
     cout <<"NE_INT_LIM_Z : "<< NE_INT_LIM(2) << endl;
 
-    cout <<"NE_THR_MIN : "<< NE_THR_MIN << endl;
-    cout <<"NE_THR_MAX : "<< NE_THR_MAX << endl;
+    cout <<"THR_MIN : "<< THR_MIN << endl;
+    cout <<"THR_MAX : "<< THR_MAX << endl;
 
-    cout <<"NE_tilt_max : "<< NE_tilt_max << endl;
-    cout <<"NE_a : "<< NE_a << endl;
+    cout <<"tilt_max : "<< tilt_max << endl;
+    cout <<"throttle_a : "<< throttle_a << endl;
 
-    cout <<"NE_b : "<< NE_b << endl;
+    cout <<"throttle_b : "<< throttle_b << endl;
 
     cout <<"Filter_LPFx : "<< LPF_x.get_Time_constant() << endl;
 

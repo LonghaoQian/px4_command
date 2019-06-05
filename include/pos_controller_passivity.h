@@ -29,7 +29,15 @@ class pos_controller_passivity
         pos_controller_passivity(void):
             pos_passivity_nh("~")
         {
-            pos_passivity_nh.param<float>("passivity_MASS", passivity_MASS, 1.0);
+            pos_passivity_nh.param<float>("Quad_MASS", Quad_MASS, 1.0);
+            pos_passivity_nh.param<float>("XY_VEL_MAX", XY_VEL_MAX, 1.0);
+            pos_passivity_nh.param<float>("Z_VEL_MAX", Z_VEL_MAX, 1.0);
+            pos_passivity_nh.param<float>("THR_MIN", THR_MIN, 0.1);
+            pos_passivity_nh.param<float>("THR_MAX", THR_MAX, 0.9);
+            pos_passivity_nh.param<float>("tilt_max", tilt_max, 20.0);
+            pos_passivity_nh.param<float>("throttle_a", throttle_a, 20.0);
+            pos_passivity_nh.param<float>("throttle_b", throttle_b, 0.0);
+
             pos_passivity_nh.param<float>("passivity_Kp_XY", passivity_Kp(0), 1.0);
             pos_passivity_nh.param<float>("passivity_Kp_XY", passivity_Kp(1), 1.0);
             pos_passivity_nh.param<float>("passivity_Kp_Z", passivity_Kp(2), 1.0);
@@ -45,16 +53,6 @@ class pos_controller_passivity
             pos_passivity_nh.param<float>("passivity_INT_LIM_Y", passivity_INT_LIM(1), 1.0);
             pos_passivity_nh.param<float>("passivity_INT_LIM_Z", passivity_INT_LIM(2), 5.0);
 
-            pos_passivity_nh.param<float>("passivity_XY_VEL_MAX", passivity_XY_VEL_MAX, 1.0);
-            pos_passivity_nh.param<float>("passivity_Z_VEL_MAX", passivity_Z_VEL_MAX, 1.0);
-
-            pos_passivity_nh.param<float>("passivity_THR_MIN", passivity_THR_MIN, 0.1);
-            pos_passivity_nh.param<float>("passivity_THR_MAX", passivity_THR_MAX, 0.9);
-
-            pos_passivity_nh.param<float>("passivity_tilt_max", passivity_tilt_max, 20.0);
-
-            pos_passivity_nh.param<float>("passivity_a", passivity_a, 20.0);
-            pos_passivity_nh.param<float>("passivity_b", passivity_b, 0.0);
 
             thrust_sp       = Eigen::Vector3d(0.0,0.0,0.0);
             u_l             = Eigen::Vector3d(0.0,0.0,0.0);
@@ -81,7 +79,7 @@ class pos_controller_passivity
         }
 
         //Mass of the quadrotor
-        float passivity_MASS;
+        float Quad_MASS;
 
         //passivity control parameter
         Eigen::Vector3f passivity_Kp;
@@ -98,18 +96,18 @@ class pos_controller_passivity
         Eigen::Vector3f passivity_INT_LIM;
 
         //Limitation of the velocity
-        float passivity_XY_VEL_MAX;
-        float passivity_Z_VEL_MAX;
+        float XY_VEL_MAX;
+        float Z_VEL_MAX;
 
         //Limitation of the thrust
-        float passivity_THR_MIN;
-        float passivity_THR_MAX;
+        float THR_MIN;
+        float THR_MAX;
 
         //Limitation of the tilt angle (roll and pitch)  [degree]
-        float passivity_tilt_max;
+        float tilt_max;
 
-        float passivity_a;
-        float passivity_b;
+        float throttle_a;
+        float throttle_b;
 
         Eigen::Vector3d error_pos,error_vel;
 
@@ -192,7 +190,7 @@ Eigen::Vector3d pos_controller_passivity::pos_controller(Eigen::Vector3d pos, Ei
     //u_l
     for (int i = 0; i < 3; i++)
     {
-       u_l(i) = passivity_MASS * (passivity_Kp(i) * error_pos(i) + passivity_Kd(i) * z_k(i));
+       u_l(i) = Quad_MASS * (passivity_Kp(i) * error_pos(i) + passivity_Kd(i) * z_k(i));
     }
 
     //UDE term y1 y2 y3
@@ -227,7 +225,7 @@ Eigen::Vector3d pos_controller_passivity::pos_controller(Eigen::Vector3d pos, Ei
 
     for (int i = 0; i < 3; i++)
     {
-        u_d(i) = passivity_MASS * (y1_k(i) - y3_k(i));
+        u_d(i) = Quad_MASS * (y1_k(i) - y3_k(i));
     }
 
     /* explicitly limit the integrator state */
@@ -250,20 +248,20 @@ Eigen::Vector3d pos_controller_passivity::pos_controller(Eigen::Vector3d pos, Ei
     //ENU frame
     u_total(0) = u_l(0) - u_d(0);
     u_total(1) = u_l(1) - u_d(1);
-    u_total(2) = u_l(2) - u_d(2) + passivity_MASS * 9.8;
+    u_total(2) = u_l(2) - u_d(2) + Quad_MASS * 9.8;
 
     //Thrust to scale thrust[0,1]
     Eigen::Vector3d thrust_sp_scale;
-    thrust_sp_scale(0) = (u_total(0) - passivity_b) / passivity_a;
-    thrust_sp_scale(1) = (u_total(1) - passivity_b) / passivity_a;
-    thrust_sp_scale(2) = (u_total(2) - passivity_b) / passivity_a;
+    thrust_sp_scale(0) = (u_total(0) - throttle_b) / throttle_a;
+    thrust_sp_scale(1) = (u_total(1) - throttle_b) / throttle_a;
+    thrust_sp_scale(2) = (u_total(2) - throttle_b) / throttle_a;
 
     //Limit the Thrust
-    thrust_sp(2) = constrain_function2( thrust_sp_scale(2) , passivity_THR_MIN, passivity_THR_MAX);
+    thrust_sp(2) = constrain_function2( thrust_sp_scale(2) , THR_MIN, THR_MAX);
 
     // Get maximum allowed thrust in XY based on tilt angle and excess thrust.
-    float thrust_max_XY_tilt = fabs(thrust_sp(2)) * tanf(passivity_tilt_max/180.0*M_PI);
-    float thrust_max_XY = sqrtf(passivity_THR_MAX * passivity_THR_MAX - thrust_sp(2) * thrust_sp(2));
+    float thrust_max_XY_tilt = fabs(thrust_sp(2)) * tanf(tilt_max/180.0*M_PI);
+    float thrust_max_XY = sqrtf(THR_MAX * THR_MAX - thrust_sp(2) * thrust_sp(2));
     thrust_max_XY = min(thrust_max_XY_tilt, thrust_max_XY);
 
     // Saturate thrust in XY-direction.
@@ -359,7 +357,7 @@ void pos_controller_passivity::printf_param()
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>passivity Parameter <<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
-    cout <<"passivity_MASS : "<< passivity_MASS << endl;
+    cout <<"Quad_MASS : "<< Quad_MASS << endl;
 
     cout <<"passivity_Kp_X : "<< passivity_Kp(0) << endl;
     cout <<"passivity_Kp_Y : "<< passivity_Kp(1) << endl;
@@ -375,20 +373,20 @@ void pos_controller_passivity::printf_param()
     cout <<"passivity_T1 : "<< passivity_T1 << endl;
     cout <<"passivity_T2 : "<< passivity_T2 << endl;
 
-    cout <<"passivity_XY_VEL_MAX : "<< passivity_XY_VEL_MAX << endl;
-    cout <<"passivity_Z_VEL_MAX : "<< passivity_Z_VEL_MAX << endl;
+    cout <<"XY_VEL_MAX : "<< XY_VEL_MAX << endl;
+    cout <<"Z_VEL_MAX : "<< Z_VEL_MAX << endl;
 
     cout <<"passivity_INT_LIM_X : "<< passivity_INT_LIM(0) << endl;
     cout <<"passivity_INT_LIM_Y : "<< passivity_INT_LIM(1) << endl;
     cout <<"passivity_INT_LIM_Z : "<< passivity_INT_LIM(2) << endl;
 
-    cout <<"passivity_THR_MIN : "<< passivity_THR_MIN << endl;
-    cout <<"passivity_THR_MAX : "<< passivity_THR_MAX << endl;
+    cout <<"THR_MIN : "<< THR_MIN << endl;
+    cout <<"THR_MAX : "<< THR_MAX << endl;
 
-    cout <<"passivity_tilt_max : "<< passivity_tilt_max << endl;
-    cout <<"passivity_a : "<< passivity_a << endl;
+    cout <<"tilt_max : "<< tilt_max << endl;
+    cout <<"throttle_a : "<< throttle_a << endl;
 
-    cout <<"passivity_b : "<< passivity_b << endl;
+    cout <<"throttle_b : "<< throttle_b << endl;
 
 }
 
