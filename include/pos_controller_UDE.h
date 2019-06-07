@@ -43,14 +43,14 @@ class pos_controller_UDE
             pos_UDE_nh.param<float>("throttle_a", throttle_a, 20.0);
             pos_UDE_nh.param<float>("throttle_b", throttle_b, 0.0);
 
-            pos_UDE_nh.param<float>("UDE_Kp_X", UDE_Kp_X, 1.0);
-            pos_UDE_nh.param<float>("UDE_Kp_Y", UDE_Kp_Y, 1.0);
+            pos_UDE_nh.param<float>("UDE_Kp_XY", UDE_Kp_X, 1.0);
+            pos_UDE_nh.param<float>("UDE_Kp_XY", UDE_Kp_Y, 1.0);
             pos_UDE_nh.param<float>("UDE_Kp_Z", UDE_Kp_Z, 1.0);
-            pos_UDE_nh.param<float>("UDE_Kd_X", UDE_Kd_X, 2.0);
-            pos_UDE_nh.param<float>("UDE_Kd_Y", UDE_Kd_Y, 2.0);
+            pos_UDE_nh.param<float>("UDE_Kd_XY", UDE_Kd_X, 2.0);
+            pos_UDE_nh.param<float>("UDE_Kd_XY", UDE_Kd_Y, 2.0);
             pos_UDE_nh.param<float>("UDE_Kd_Z", UDE_Kd_Z, 2.0);
-            pos_UDE_nh.param<float>("UDE_T_X", UDE_T_X, 1.0);
-            pos_UDE_nh.param<float>("UDE_T_Y", UDE_T_Y, 1.0);
+            pos_UDE_nh.param<float>("UDE_T_XY", UDE_T_X, 1.0);
+            pos_UDE_nh.param<float>("UDE_T_XY", UDE_T_Y, 1.0);
             pos_UDE_nh.param<float>("UDE_T_Z", UDE_T_Z, 1.0);
             pos_UDE_nh.param<float>("UDE_INT_LIM_X", UDE_INT_LIM(0), 1.0);
             pos_UDE_nh.param<float>("UDE_INT_LIM_Y", UDE_INT_LIM(1), 1.0);
@@ -188,7 +188,7 @@ Eigen::Vector3d pos_controller_UDE::pos_controller(Eigen::Vector3d pos, Eigen::V
         // Perform the integration using a first order method and do not propagate the result if out of range or invalid
 
         float integral = 0;
-        if(error_pos(i) < 1.0)
+        if(error_pos(i) < 2.0)
         {
             integral = integral_ude(i) +  error_pos(i) * delta_time;
         }

@@ -343,11 +343,11 @@ void pos_controller_NE::printf_result()
 
     cout << "delta_time : " << delta_time<< " [s] " <<endl;
 
-    cout << "NoiseEstimator [X Y Z] : " << NoiseEstimator[0] << " [N] "<< NoiseEstimator[1]<<" [N] "<<NoiseEstimator[2]<<" [N] "<<endl;
-
-    cout << "output_LLF [X Y Z] : " << output_LLF[0] << " [N] "<< output_LLF[1]<<" [N] "<<output_LLF[2]<<" [N] "<<endl;
+    cout << "NoiseEstimator [X Y Z] : " <<  Quad_MASS *NE_Kd(0) * NoiseEstimator[0] << " [N] "<<Quad_MASS *NE_Kd(1) * NoiseEstimator[1]<<" [N] "<<Quad_MASS *NE_Kd(2) *NoiseEstimator[2]<<" [N] "<<endl;
 
     cout << "u_l [X Y Z] : " << u_l[0] << " [N] "<< u_l[1]<<" [N] "<<u_l[2]<<" [N] "<<endl;
+
+    cout << "output_LLF [X Y Z] : " << output_LLF[0] << " [N] "<< output_LLF[1]<<" [N] "<<output_LLF[2]<<" [N] "<<endl;
 
     cout << "u_d [X Y Z] : " << u_d[0] << " [N] "<< u_d[1]<<" [N] "<<u_d[2]<<" [N] "<<endl;
 
@@ -391,9 +391,11 @@ void pos_controller_NE::printf_param()
 
     cout <<"throttle_b : "<< throttle_b << endl;
 
-    cout <<"Filter_LPFx : "<< LPF_x.get_Time_constant() << endl;
+    cout <<"Filter_LPFx : "<< LPF_x.get_Time_constant()<<" Filter_LPFy : "<< LPF_y.get_Time_constant()<<" Filter_LPFz : "<< LPF_z.get_Time_constant() << endl;
+    cout <<"Filter_HPFx : "<< HPF_x.get_Time_constant()<<" Filter_HPFy : "<< HPF_y.get_Time_constant()<<" Filter_HPFz : "<< HPF_z.get_Time_constant() << endl;
+    cout <<"Filter_LLFx : "<< LLF_x.get_Time_constant()<<" Filter_LLFy : "<< LLF_y.get_Time_constant()<<" Filter_LLFz : "<< LLF_z.get_Time_constant() << endl;
 
-    cout <<"Filter_LLFx : "<< LLF_x.get_Kd() << endl;
+    cout <<"kd_LLFx : "<< LLF_x.get_Kd() <<" kd_LLFy : "<< LLF_y.get_Kd() <<" kd_LLFz : "<< LLF_z.get_Kd() << endl;
 
 
 }

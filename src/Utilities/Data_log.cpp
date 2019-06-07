@@ -15,16 +15,20 @@
 
 //msg 头文件
 #include <px4_command/ude_log.h>
-
+#include <nav_msgs/Odometry.h>
 using namespace std;
 
 px4_command::ude_log ude_log;
-
+nav_msgs::Odometry truth;
 void save_flight_data(std::ofstream& out_file, float timenow);                       //储存数据函数
 float get_dt(ros::Time last);
 void ude_log_cb(const px4_command::ude_log::ConstPtr& msg)
 {
     ude_log = *msg;
+}
+void truth_cb(const nav_msgs::Odometry::ConstPtr& msg)
+{
+    truth = *msg;
 }
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
@@ -34,6 +38,7 @@ int main(int argc, char **argv)
 
     //【订阅】cartographer估计位置
     ros::Subscriber ude_log_sub = nh.subscribe<px4_command::ude_log>("/px4_command/ude_log", 1000, ude_log_cb);
+    ros::Subscriber truth_sub = nh.subscribe<nav_msgs::Odometry>("/ground_truth_drone", 1000, truth_cb);
 
     // 频率
     ros::Rate rate(50.0);
@@ -55,7 +60,7 @@ int main(int argc, char **argv)
     time_t tt = time(NULL);
     tm* t = localtime(&tt);
     char iden_path[256];
-    sprintf(iden_path, "/home/odroid/log/Data-log-%d-%02d-%02d_%02d-%02d.txt", t->tm_year+1900, t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min);
+    sprintf(iden_path, "/home/fly_vision/log/Data-log-%d-%02d-%02d_%02d-%02d.txt", t->tm_year+1900, t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min);
     std::ofstream out_data_file(iden_path);
 
     if (!out_data_file)
@@ -74,6 +79,8 @@ int main(int argc, char **argv)
                                 << " u_d.x " << " u_d.y " << " u_d.z " \
                                 << " u_total.x " << " u_total.y " << " u_total.z " \
                                 << " thrust_sp.x " << " thrust_sp.y " << " thrust_sp.z " \
+                                << " truth.x " << " truth.y " << " truth.z " \
+                                << " truth.vx " << " truth.vy " << " truth.vz " \
                                 <<std::endl;
     }
 
@@ -110,6 +117,8 @@ void save_flight_data(std::ofstream& out_file, float timenow)
                               << ude_log.u_d[0] <<"  "<< ude_log.u_d[1] <<"  "<< ude_log.u_d[2] <<"  "\
                               << ude_log.u_total[0] <<"  "<< ude_log.u_total[1] <<"  "<< ude_log.u_total[2] <<"  "\
                               << ude_log.thrust_sp[0] <<"  "<< ude_log.thrust_sp[1] <<"  "<< ude_log.thrust_sp[2] <<"  "\
+                              << truth.pose.pose.position.x<<"  "<< truth.pose.pose.position.y <<"  "<< truth.pose.pose.position.z <<"  "\
+                              << truth.twist.twist.linear.x<<"  "<< truth.twist.twist.linear.y <<"  "<< truth.twist.twist.linear.z <<"  "\
                               << std::endl;
 }
 

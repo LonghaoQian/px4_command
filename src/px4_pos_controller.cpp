@@ -102,6 +102,7 @@ int main(int argc, char **argv)
     pos_controller_passivity pos_controller_ps;
     pos_controller_NE pos_controller_ne;
 
+
     if(switch_ude == 0)
     {
         pos_controller_pid.printf_param();
@@ -425,7 +426,9 @@ int main(int argc, char **argv)
 
             pos_controller.send_accel_setpoint(accel_sp, Command_Now.yaw_sp);
 
-            break;
+            break;   
+
+
         }
 
         Command_Last = Command_Now;

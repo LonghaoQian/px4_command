@@ -26,27 +26,24 @@ MPC_THRUST_HOVER : 0.5
 MPC_VELD_LP: 5.0
 
 # 位置环参数 for ude
-UDE_Kp_X : 1.0
-UDE_Kp_Y : 1.0
+UDE_Kp_XY : 1.0
 UDE_Kp_Z : 1.0
-UDE_Kd_X : 1.0
-UDE_Kd_Y : 1.0
-UDE_Kd_Z : 1.0
-UDE_T_X : 0.5
-UDE_T_Y : 0.5
-UDE_T_Z : 0.5
+UDE_Kd_XY : 2.0
+UDE_Kd_Z : 2.0
+UDE_T_XY : 1.0
+UDE_T_Z : 1.0
 UDE_INT_LIM_X : 5.0
 UDE_INT_LIM_Y : 5.0
 UDE_INT_LIM_Z : 10.0
 
 
 # 位置环参数 for passivity
-passivity_Kp_XY : 1.0
-passivity_Kp_Z : 1.0
-passivity_Kd_XY : 5.0
-passivity_Kd_Z : 5.0
-passivity_T_ude_XY : 1
-passivity_T_ude_Z : 1
+passivity_Kp_XY : 0.3
+passivity_Kp_Z : 0.3
+passivity_Kd_XY : 3.0
+passivity_Kd_Z : 3.0
+passivity_T_ude_XY : 2.0
+passivity_T_ude_Z : 2.0
 passivity_T1: 0.2
 
 passivity_INT_LIM_X : 5.0
@@ -56,11 +53,11 @@ passivity_INT_LIM_Z : 10.0
 # 位置环参数 for ne
 NE_Kp_XY : 1.0
 NE_Kp_Z : 1.0
-NE_Kd_XY : 1.0
-NE_Kd_Z : 1.0
-NE_T_ude_XY : 0.5
-NE_T_ude_Z : 0.5
-NE_Tn: 0.5
+NE_Kd_XY : 2.0
+NE_Kd_Z : 2.0
+NE_T_ude_XY : 1.0
+NE_T_ude_Z : 1.0
+NE_Tn: 0.1
 NE_INT_LIM_X : 5.0
 NE_INT_LIM_Y : 5.0
 NE_INT_LIM_Z : 10.0
