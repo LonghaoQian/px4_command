@@ -226,6 +226,14 @@ target_link_libraries(collision_avoidance_streo
   ${catkin_LIBRARIES}
 )
 
+add_executable(payload_drop
+  src/Application/payload_drop.cpp
+)
+add_dependencies(payload_drop px4_command_gencpp)
+target_link_libraries(payload_drop
+  ${catkin_LIBRARIES}
+)
+
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
