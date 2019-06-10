@@ -54,22 +54,3 @@ Use this command to switch to fsc_lab branch
 
 `git checkout fsc_lab`
 
-/****************************    AMOVLAB   **********************************
- *
- *   Copyright (c) 2016-2019 AmovLab Development Team. All rights reserved.
- *
-/****************************************************************************
- 
-*    Welcome to use our company's products，If you have any questions about
-*    this product,Please visit our website and ask questions.
-*    URL : www.amovauto.com & bbs.amovauto.com
-*    
-                      Software License Declaration
-
-*    Any one,including our customer, agent and authorized programmer,cannot
-*    share this document to the third party without the agreement of AmovLab.
-*
-*    Any problem cannot solved in the procedure of programming should be
-*    feedback to our bbs in time.
-*
-/****************************    AMOVLAB   **********************************
