@@ -57,8 +57,6 @@ class pos_controller_UDE
             pos_UDE_nh.param<float>("Limit/THR_MAX", THR_MAX, 0.9);
             pos_UDE_nh.param<float>("Limit/tilt_max", tilt_max, 20.0);
 
-
-
             thrust_sp       = Eigen::Vector3d(0.0,0.0,0.0);
             u_l             = Eigen::Vector3d(0.0,0.0,0.0);
             u_d             = Eigen::Vector3d(0.0,0.0,0.0);
@@ -221,37 +219,17 @@ Eigen::Vector3d pos_controller_UDE::pos_controller(Eigen::Vector3d pos, Eigen::V
         integral_ude = Eigen::Vector3d(0.0,0.0,0.0);
     }
 
-    ude_log.pos[0] = pos(0);
-    ude_log.pos[1] = pos(1);
-    ude_log.pos[2] = pos(2);
-
-    ude_log.vel[0] = vel(0);
-    ude_log.vel[1] = vel(1);
-    ude_log.vel[2] = vel(2);
-
-    ude_log.error_pos[0] = error_pos(0);
-    ude_log.error_pos[1] = error_pos(1);
-    ude_log.error_pos[2] = error_pos(2);
-
-    ude_log.error_vel[0] = error_vel(0);
-    ude_log.error_vel[1] = error_vel(1);
-    ude_log.error_vel[2] = error_vel(2);
-
-    ude_log.u_l[0] = u_l(0);
-    ude_log.u_l[1] = u_l(1);
-    ude_log.u_l[2] = u_l(2);
-
-    ude_log.u_d[0] = u_d(0);
-    ude_log.u_d[1] = u_d(1);
-    ude_log.u_d[2] = u_d(2);
-
-    ude_log.u_total[0] = u_total(0);
-    ude_log.u_total[1] = u_total(1);
-    ude_log.u_total[2] = u_total(2);
-
-    ude_log.thrust_sp[0] = thrust_sp(0);
-    ude_log.thrust_sp[1] = thrust_sp(1);
-    ude_log.thrust_sp[2] = thrust_sp(2);
+    for (int i = 0; i < 3; i++)
+    {
+        ude_log.pos[i] = pos(i);
+        ude_log.vel[i] = vel(i);
+        ude_log.error_pos[i] = error_pos(i);
+        ude_log.error_vel[i] = error_vel(i);
+        ude_log.u_l[i] = u_l(i);
+        ude_log.u_d[i] = u_d(i);
+        ude_log.u_total[i] = u_total(i);
+        ude_log.thrust_sp[i] = thrust_sp(i);
+    }
 
     ude_log_pub.publish(ude_log);
 
@@ -278,7 +256,6 @@ void pos_controller_UDE::printf_result()
     cout << "e_p [X Y Z] : " << error_pos[0] << " [N] "<< error_pos[1]<<" [N] "<<error_pos[2]<<" [N] "<<endl;
     cout << "e_v [X Y Z] : " << error_vel[0] << " [N] "<< error_vel[1]<<" [N] "<<error_vel[2]<<" [N] "<<endl;
     cout << "int [X Y Z] : " << integral_ude[0] << " [N] "<< integral_ude[1]<<" [N] "<<integral_ude[2]<<" [N] "<<endl;
-
 
     cout << "u_l [X Y Z] : " << u_l[0] << " [N] "<< u_l[1]<<" [N] "<<u_l[2]<<" [N] "<<endl;
 

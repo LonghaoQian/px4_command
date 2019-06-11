@@ -17,8 +17,8 @@
 #include <px4_command/command.h>
 #include <pos_controller_PID.h>
 #include <pos_controller_UDE.h>
-#include <pos_controller_passivity.h>
-#include <pos_controller_ne.h>
+#include <pos_controller_Passivity.h>
+#include <pos_controller_NE.h>
 
 
 #include <Eigen/Eigen>
