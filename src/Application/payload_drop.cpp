@@ -37,16 +37,15 @@ using namespace std;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>全 局 变 量<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 enum Command
 {
+    Idle,
+    Takeoff,
     Move_ENU,
     Move_Body,
     Hold,
     Land,
     Disarm,
     Failsafe_land,
-    Idle,
-    Takeoff
 };
-
 px4_command::command Command_now;
 //---------------------------------------正方形参数---------------------------------------------
 float fly_height;

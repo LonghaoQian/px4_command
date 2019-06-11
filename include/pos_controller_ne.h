@@ -32,30 +32,30 @@ class pos_controller_NE
         pos_controller_NE(void):
             pos_NE_nh("~")
         {
-            pos_NE_nh.param<float>("Quad_MASS", Quad_MASS, 1.0);
-            pos_NE_nh.param<float>("XY_VEL_MAX", XY_VEL_MAX, 1.0);
-            pos_NE_nh.param<float>("Z_VEL_MAX", Z_VEL_MAX, 1.0);
-            pos_NE_nh.param<float>("THR_MIN", THR_MIN, 0.1);
-            pos_NE_nh.param<float>("THR_MAX", THR_MAX, 0.9);
-            pos_NE_nh.param<float>("tilt_max", tilt_max, 20.0);
-            pos_NE_nh.param<float>("throttle_a", throttle_a, 20.0);
+            pos_NE_nh.param<float>("Quad/mass", Quad_MASS, 1.0);
+            pos_NE_nh.param<float>("Quad/throttle_a", throttle_a, 20.0);
+            pos_NE_nh.param<float>("Quad/throttle_b", throttle_b, 0.0);
 
-            pos_NE_nh.param<float>("NE_Kp_XY", NE_Kp(0), 1.0);
-            pos_NE_nh.param<float>("NE_Kp_XY", NE_Kp(1), 1.0);
-            pos_NE_nh.param<float>("NE_Kp_Z", NE_Kp(2), 1.0);
-            pos_NE_nh.param<float>("NE_Kd_XY", NE_Kd(0), 2.0);
-            pos_NE_nh.param<float>("NE_Kd_XY", NE_Kd(1), 2.0);
-            pos_NE_nh.param<float>("NE_Kd_Z", NE_Kd(2), 2.0);
-            pos_NE_nh.param<float>("NE_T_ude_XY", NE_T_ude(0), 1.0);
-            pos_NE_nh.param<float>("NE_T_ude_XY", NE_T_ude(1), 1.0);
-            pos_NE_nh.param<float>("NE_T_ude_Z", NE_T_ude(2), 1.0);
-            pos_NE_nh.param<float>("NE_Tn", NE_Tn, 1.0);
-            pos_NE_nh.param<float>("NE_INT_LIM_X", NE_INT_LIM(0), 1.0);
-            pos_NE_nh.param<float>("NE_INT_LIM_Y", NE_INT_LIM(1), 1.0);
-            pos_NE_nh.param<float>("NE_INT_LIM_Z", NE_INT_LIM(2), 5.0);
+            pos_NE_nh.param<float>("Pos_ne/Kp_xy", Kp(0), 1.0);
+            pos_NE_nh.param<float>("Pos_ne/Kp_xy", Kp(1), 1.0);
+            pos_NE_nh.param<float>("Pos_ne/Kp_z",  Kp(2), 1.0);
+            pos_NE_nh.param<float>("Pos_ne/Kd_xy", Kd(0), 2.0);
+            pos_NE_nh.param<float>("Pos_ne/Kd_xy", Kd(1), 2.0);
+            pos_NE_nh.param<float>("Pos_ne/Kd_z",  Kd(2), 2.0);
+            pos_NE_nh.param<float>("Pos_ne/T_ude_xy", T_ude(0), 1.0);
+            pos_NE_nh.param<float>("Pos_ne/T_ude_xy", T_ude(1), 1.0);
+            pos_NE_nh.param<float>("Pos_ne/T_ude_z", T_ude(2), 1.0);
+            pos_NE_nh.param<float>("Pos_ne/T_n", T_n, 1.0);
+            pos_NE_nh.param<float>("Pos_ne/INT_LIM_X", NE_INT_LIM(0), 1.0);
+            pos_NE_nh.param<float>("Pos_ne/INT_LIM_Y", NE_INT_LIM(1), 1.0);
+            pos_NE_nh.param<float>("Pos_ne/INT_LIM_Z", NE_INT_LIM(2), 5.0);
 
 
-            pos_NE_nh.param<float>("throttle_b", throttle_b, 0.0);
+            pos_NE_nh.param<float>("Limit/XY_VEL_MAX", XY_VEL_MAX, 1.0);
+            pos_NE_nh.param<float>("Limit/Z_VEL_MAX", Z_VEL_MAX, 1.0);
+            pos_NE_nh.param<float>("Limit/THR_MIN", THR_MIN, 0.1);
+            pos_NE_nh.param<float>("Limit/THR_MAX", THR_MAX, 0.9);
+            pos_NE_nh.param<float>("Limit/tilt_max", tilt_max, 20.0);
 
             thrust_sp       = Eigen::Vector3d(0.0,0.0,0.0);
             u_l             = Eigen::Vector3d(0.0,0.0,0.0);
@@ -81,13 +81,13 @@ class pos_controller_NE
         float Quad_MASS;
 
         //NE control parameter
-        Eigen::Vector3f NE_Kp;
+        Eigen::Vector3f Kp;
 
-        Eigen::Vector3f NE_Kd;
+        Eigen::Vector3f Kd;
 
-        Eigen::Vector3f NE_T_ude;
+        Eigen::Vector3f T_ude;
 
-        float NE_Tn;
+        float T_n;
 
         //Filter for NE
         LowPassFilter LPF_x;
@@ -186,17 +186,17 @@ class pos_controller_NE
 
 void pos_controller_NE::set_filter()
 {
-    LPF_x.set_Time_constant(NE_Tn);
-    LPF_y.set_Time_constant(NE_Tn);
-    LPF_z.set_Time_constant(NE_Tn);
+    LPF_x.set_Time_constant(T_n);
+    LPF_y.set_Time_constant(T_n);
+    LPF_z.set_Time_constant(T_n);
 
-    HPF_x.set_Time_constant(NE_Tn);
-    HPF_y.set_Time_constant(NE_Tn);
-    HPF_z.set_Time_constant(NE_Tn);
+    HPF_x.set_Time_constant(T_n);
+    HPF_y.set_Time_constant(T_n);
+    HPF_z.set_Time_constant(T_n);
 
-    LLF_x.set_Time_constant(NE_Tn, NE_Kd(0));
-    LLF_y.set_Time_constant(NE_Tn, NE_Kd(1));
-    LLF_z.set_Time_constant(NE_Tn, NE_Kd(2));
+    LLF_x.set_Time_constant(T_n, Kd(0));
+    LLF_y.set_Time_constant(T_n, Kd(1));
+    LLF_z.set_Time_constant(T_n, Kd(2));
 }
 
 Eigen::Vector3d pos_controller_NE::set_initial_pos(Eigen::Vector3d pos)
@@ -220,7 +220,7 @@ Eigen::Vector3d pos_controller_NE::pos_controller(Eigen::Vector3d pos, Eigen::Ve
     //u_l
     for (int i = 0; i < 3; i++)
     {
-       u_l(i) = Quad_MASS * (NE_Kp(i) * error_pos(i) + NE_Kd(i) * ( error_vel(i) + NoiseEstimator(i)));
+       u_l(i) = Quad_MASS * (Kp(i) * error_pos(i) + Kd(i) * ( error_vel(i) + NoiseEstimator(i)));
     }
 
     //UDE term
@@ -240,12 +240,12 @@ Eigen::Vector3d pos_controller_NE::pos_controller(Eigen::Vector3d pos, Eigen::Ve
 
     for (int i = 0; i < 3; i++)
     {
-        integral_NE(i) = integral_NE(i) +  (NE_Kp(i) * error_pos(i) + NE_Kd(i) * error_vel(i)) * delta_time;
+        integral_NE(i) = integral_NE(i) +  (Kp(i) * error_pos(i) + Kd(i) * error_vel(i)) * delta_time;
     }
 
-    u_d(0) = Quad_MASS /NE_T_ude(0) *( vel(0) - output_LLF(0) - integral_NE(0) );
-    u_d(1) = Quad_MASS /NE_T_ude(1) *( vel(1) - output_LLF(1) - integral_NE(1) );
-    u_d(2) = Quad_MASS /NE_T_ude(2) *( vel(2) - output_LLF(2) - integral_NE(2) );
+    u_d(0) = Quad_MASS /T_ude(0) *( vel(0) - output_LLF(0) - integral_NE(0) );
+    u_d(1) = Quad_MASS /T_ude(1) *( vel(1) - output_LLF(1) - integral_NE(1) );
+    u_d(2) = Quad_MASS /T_ude(2) *( vel(2) - output_LLF(2) - integral_NE(2) );
 
     /* explicitly limit the integrator state */
     for (int i = 0; i < 3; i++)
@@ -343,7 +343,7 @@ void pos_controller_NE::printf_result()
 
     cout << "delta_time : " << delta_time<< " [s] " <<endl;
 
-    cout << "NoiseEstimator [X Y Z] : " <<  Quad_MASS *NE_Kd(0) * NoiseEstimator[0] << " [N] "<<Quad_MASS *NE_Kd(1) * NoiseEstimator[1]<<" [N] "<<Quad_MASS *NE_Kd(2) *NoiseEstimator[2]<<" [N] "<<endl;
+    cout << "NoiseEstimator [X Y Z] : " <<  Quad_MASS *Kd(0) * NoiseEstimator[0] << " [N] "<<Quad_MASS *Kd(1) * NoiseEstimator[1]<<" [N] "<<Quad_MASS *Kd(2) *NoiseEstimator[2]<<" [N] "<<endl;
 
     cout << "u_l [X Y Z] : " << u_l[0] << " [N] "<< u_l[1]<<" [N] "<<u_l[2]<<" [N] "<<endl;
 
@@ -363,18 +363,18 @@ void pos_controller_NE::printf_param()
 
     cout <<"Quad_MASS : "<< Quad_MASS << endl;
 
-    cout <<"NE_Kp_X : "<< NE_Kp(0) << endl;
-    cout <<"NE_Kp_Y : "<< NE_Kp(1) << endl;
-    cout <<"NE_Kp_Z : "<< NE_Kp(2) << endl;
+    cout <<"Kp_X : "<< Kp(0) << endl;
+    cout <<"Kp_Y : "<< Kp(1) << endl;
+    cout <<"Kp_Z : "<< Kp(2) << endl;
 
-    cout <<"NE_Kd_X : "<< NE_Kd(0) << endl;
-    cout <<"NE_Kd_Y : "<< NE_Kd(1) << endl;
-    cout <<"NE_Kd_Z : "<< NE_Kd(2) << endl;
+    cout <<"Kd_X : "<< Kd(0) << endl;
+    cout <<"Kd_Y : "<< Kd(1) << endl;
+    cout <<"Kd_Z : "<< Kd(2) << endl;
 
-    cout <<"NE_T_X : "<< NE_T_ude(0) << endl;
-    cout <<"NE_T_Y : "<< NE_T_ude(1) << endl;
-    cout <<"NE_T_Z : "<< NE_T_ude(2) << endl;
-    cout <<"NE_Tn : "<< NE_Tn << endl;
+    cout <<"NE_T_X : "<< T_ude(0) << endl;
+    cout <<"NE_T_Y : "<< T_ude(1) << endl;
+    cout <<"NE_T_Z : "<< T_ude(2) << endl;
+    cout <<"T_n : "<< T_n << endl;
 
     cout <<"XY_VEL_MAX : "<< XY_VEL_MAX << endl;
     cout <<"Z_VEL_MAX : "<< Z_VEL_MAX << endl;

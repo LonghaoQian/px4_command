@@ -27,18 +27,21 @@ using namespace std;
 using namespace namespace_command_to_mavros;
 
 //自定义的Command变量
-//相应的命令分别为 移动(惯性系ENU)，移动(机体系)，悬停，降落，上锁，紧急降落，待机
+//相应的命令分别为 待机,起飞，移动(惯性系ENU)，移动(机体系)，悬停，降落，上锁，紧急降落
 enum Command
 {
+    Idle,
+    Takeoff,
     Move_ENU,
     Move_Body,
     Hold,
     Land,
     Disarm,
     Failsafe_land,
-    Idle,
-    Takeoff
 };
+
+float Takeoff_height;
+float Disarm_height;
 
 //Command Now [from upper node]
 px4_command::command Command_Now;                      //无人机当前执行命令
@@ -61,6 +64,13 @@ int main(int argc, char **argv)
 
     ros::Subscriber Command_sub = nh.subscribe<px4_command::command>("/px4/command", 10, Command_cb);
 
+    // 参数读取
+    nh.param<float>("Takeoff_height", Takeoff_height, 1.0);
+    nh.param<float>("Disarm_height", Disarm_height, 0.15);
+
+    cout << "Takeoff_height"<< Takeoff_height<<" [m] "<<endl;
+    cout << "Disarm_height "<< Disarm_height <<" [m] "<<endl;
+
     // 频率 [50Hz]
     ros::Rate rate(50.0);
 
@@ -68,11 +78,11 @@ int main(int argc, char **argv)
 
     Eigen::Vector3d vel_sp(0,0,0);
 
+    double yaw_sp;
+
     command_to_mavros pos_sender;
 
     pos_sender.printf_param();
-
-    pos_sender.show_geo_fence();
 
     int check_flag;
     // 这一步是为了程序运行前检查一下参数是否正确
@@ -105,8 +115,9 @@ int main(int argc, char **argv)
 
     }
 
-
-    pos_sender.set_takeoff_position();
+    Eigen::Vector3d Takeoff_position = Eigen::Vector3d(0.0,0.0,0.0);
+    //Set the takeoff position
+    Takeoff_position = pos_sender.pos_drone_fcu;
 
     Command_Now.comid = 0;
     Command_Now.command = Idle;
@@ -122,9 +133,13 @@ int main(int argc, char **argv)
 
         float cur_time = get_ros_time(begin_time);
 
-        pos_sender.prinft_drone_state2(cur_time);
+        pos_sender.prinft_drone_state(cur_time);
         prinft_command_state();
-        pos_sender.check_failsafe();
+        //Check for geo fence: If drone is out of the geo fence, it will land now.
+        if(pos_sender.check_failsafe() == 1)
+        {
+            Command_Now.command = Land;
+        }
 
         //无人机一旦接受到Land指令，则会屏蔽其他指令
         if(Command_Last.command == Land)
@@ -134,41 +149,90 @@ int main(int argc, char **argv)
 
         switch (Command_Now.command)
         {
+        case Idle:
+            pos_sender.idle();
+            break;
+        case Takeoff:
+            pos_sp = Eigen::Vector3d(Takeoff_position[0],Takeoff_position[1],Takeoff_position[2]+Takeoff_height);
+            vel_sp = Eigen::Vector3d(0.0,0.0,0.0);
+            yaw_sp = pos_sender.euler_fcu[2]; //rad
+
+            pos_sender.send_pos_setpoint(pos_sp, yaw_sp);
+
+            break;
+
         case Move_ENU:
 
             if( Command_Now.sub_mode == 0 )
             {
                 pos_sp = Eigen::Vector3d(Command_Now.pos_sp[0],Command_Now.pos_sp[1],Command_Now.pos_sp[2]);
+                yaw_sp = Command_Now.yaw_sp;
 
-                pos_sender.send_pos_setpoint(pos_sp, Command_Now.yaw_sp);
+                pos_sender.send_pos_setpoint(pos_sp, yaw_sp);
             }
             else if( Command_Now.sub_mode == 3 )
             {
                 vel_sp = Eigen::Vector3d(Command_Now.vel_sp[0],Command_Now.vel_sp[1],Command_Now.vel_sp[2]);
 
-                pos_sender.send_vel_setpoint(vel_sp, Command_Now.yaw_sp);
+                pos_sender.send_vel_setpoint(vel_sp, yaw_sp);
             }
 
             break;
 
+            //这里机体系只提供速度模式
         case Move_Body:
 
             vel_sp = Eigen::Vector3d(Command_Now.vel_sp[0],Command_Now.vel_sp[1],Command_Now.vel_sp[2]);
 
-            pos_sender.send_vel_setpoint_body(vel_sp, Command_Now.yaw_sp);
+            yaw_sp = Command_Now.yaw_sp;
+
+            pos_sender.send_vel_setpoint_body(vel_sp, yaw_sp);
 
             break;
 
         case Hold:
+            if (Command_Last.command != Hold)
+            {
+                pos_sp = Eigen::Vector3d(pos_sender.pos_drone_fcu[0],pos_sender.pos_drone_fcu[1],pos_sender.pos_drone_fcu[2]);
+                yaw_sp = pos_sender.euler_fcu[2];
+            }
 
-            pos_sender.loiter();
-
+            pos_sender.send_pos_setpoint(pos_sp, yaw_sp);
             break;
 
 
         case Land:
+            if (Command_Last.command != Land)
+            {
+                pos_sp = Eigen::Vector3d(pos_sender.pos_drone_fcu[0],pos_sender.pos_drone_fcu[1],Takeoff_position[2]);
+                yaw_sp = pos_sender.euler_fcu[2];
+            }
 
-            pos_sender.land();
+            //如果距离起飞高度小于10厘米，则直接上锁并切换为手动模式；
+            if(abs(pos_sender.pos_drone_fcu[2] - Takeoff_position[2]) < Disarm_height)
+            {
+                if(pos_sender.current_state.mode == "OFFBOARD")
+                {
+                    pos_sender.mode_cmd.request.custom_mode = "MANUAL";
+                    pos_sender.set_mode_client.call(pos_sender.mode_cmd);
+                }
+
+                if(pos_sender.current_state.armed)
+                {
+                    pos_sender.arm_cmd.request.value = false;
+                    pos_sender.arming_client.call(pos_sender.arm_cmd);
+
+                }
+
+                if (pos_sender.arm_cmd.response.success)
+                {
+                    cout<<"Disarm successfully!"<<endl;
+                }
+            }else
+            {
+
+                pos_sender.send_pos_setpoint(pos_sp, yaw_sp);
+            }
 
             break;
 
@@ -198,17 +262,6 @@ int main(int argc, char **argv)
 
             break;
 
-        // 【】
-        case Idle:
-            pos_sender.idle();
-            break;
-
-        case Takeoff:
-            pos_sp = Eigen::Vector3d(pos_sender.Takeoff_position[0],pos_sender.Takeoff_position[1],pos_sender.Takeoff_position[2]+pos_sender.Takeoff_height);
-
-            pos_sender.send_pos_setpoint(pos_sp, Command_Now.yaw_sp);
-
-            break;
         }
 
 
@@ -286,5 +339,5 @@ void prinft_command_state()
         cout << "Z_setpoint   : "<< Command_Now.vel_sp[2] << " [m/s]" <<endl;
     }
 
-    cout << "Yaw_setpoint : "  << Command_Now.yaw_sp << " [deg] " <<endl;
+    cout << "Yaw_setpoint : "  << Command_Now.yaw_sp * 180/M_PI<< " [deg] " <<endl;
 }

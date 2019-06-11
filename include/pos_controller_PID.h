@@ -36,21 +36,24 @@ class pos_controller_PID
         pos_controller_PID(void):
             pos_pid_nh("~")
         {
-            pos_pid_nh.param<float>("MPC_XY_P", MPC_XY_P, 1.0);
-            pos_pid_nh.param<float>("MPC_Z_P", MPC_Z_P, 1.0);
-            pos_pid_nh.param<float>("MPC_XY_VEL_P", MPC_XY_VEL_P, 0.1);
-            pos_pid_nh.param<float>("MPC_Z_VEL_P", MPC_Z_VEL_P, 0.1);
-            pos_pid_nh.param<float>("MPC_XY_VEL_I", MPC_XY_VEL_I, 0.02);
-            pos_pid_nh.param<float>("MPC_Z_VEL_I", MPC_Z_VEL_I, 0.02);
-            pos_pid_nh.param<float>("MPC_XY_VEL_D", MPC_XY_VEL_D, 0.01);
-            pos_pid_nh.param<float>("MPC_Z_VEL_D", MPC_Z_VEL_D, 0.01);
-            pos_pid_nh.param<float>("XY_VEL_MAX", MPC_XY_VEL_MAX, 1.0);
-            pos_pid_nh.param<float>("Z_VEL_MAX", MPC_Z_VEL_MAX, 0.5);
-            pos_pid_nh.param<float>("MPC_THRUST_HOVER", MPC_THRUST_HOVER, 0.4);
-            pos_pid_nh.param<float>("THR_MIN", MPC_THR_MIN, 0.1);
-            pos_pid_nh.param<float>("THR_MAX", MPC_THR_MAX, 0.9);
-            pos_pid_nh.param<float>("tilt_max", tilt_max, 5.0);
-            pos_pid_nh.param<float>("MPC_VELD_LP", MPC_VELD_LP, 5.0);
+            pos_pid_nh.param<float>("Pos_pid/Kp_xy", Kp_xy, 1.0);
+            pos_pid_nh.param<float>("Pos_pid/Kp_z", Kp_z, 1.0);
+            pos_pid_nh.param<float>("Pos_pid/Kp_vxvy", Kp_vxvy, 0.1);
+            pos_pid_nh.param<float>("Pos_pid/Kp_vz", Kp_vz, 0.1);
+            pos_pid_nh.param<float>("Pos_pid/Ki_vxvy", Ki_vxvy, 0.02);
+            pos_pid_nh.param<float>("Pos_pid/Ki_vz", Ki_vz, 0.02);
+            pos_pid_nh.param<float>("Pos_pid/Kd_vxvy", Kd_vxvy, 0.01);
+            pos_pid_nh.param<float>("Pos_pid/Kd_vz", Kd_vz, 0.01);
+            pos_pid_nh.param<float>("Pos_pid/Hover_throttle", Hover_throttle, 0.5);
+            pos_pid_nh.param<float>("Pos_pid/MPC_VELD_LP", MPC_VELD_LP, 5.0);
+
+            pos_pid_nh.param<float>("Limit/XY_VEL_MAX", MPC_XY_VEL_MAX, 1.0);
+            pos_pid_nh.param<float>("Limit/Z_VEL_MAX", MPC_Z_VEL_MAX, 0.5);
+            pos_pid_nh.param<float>("Limit/THR_MIN", MPC_THR_MIN, 0.1);
+            pos_pid_nh.param<float>("Limit/THR_MAX", MPC_THR_MAX, 0.9);
+            pos_pid_nh.param<float>("Limit/tilt_max", tilt_max, 5.0);
+
+
 
             pos_drone       = Eigen::Vector3d(0.0,0.0,0.0);
             vel_drone       = Eigen::Vector3d(0.0,0.0,0.0);
@@ -69,21 +72,21 @@ class pos_controller_PID
         }
 
         //PID parameter for the control law
-        float MPC_XY_P;
-        float MPC_Z_P;
-        float MPC_XY_VEL_P;
-        float MPC_Z_VEL_P;
-        float MPC_XY_VEL_I;
-        float MPC_Z_VEL_I;
-        float MPC_XY_VEL_D;
-        float MPC_Z_VEL_D;
+        float Kp_xy;
+        float Kp_z;
+        float Kp_vxvy;
+        float Kp_vz;
+        float Ki_vxvy;
+        float Ki_vz;
+        float Kd_vxvy;
+        float Kd_vz;
 
         //Limitation of the velocity
         float MPC_XY_VEL_MAX;
         float MPC_Z_VEL_MAX;
 
         //Hover thrust of drone (decided by the mass of the drone)
-        float MPC_THRUST_HOVER;
+        float Hover_throttle;
 
         //Limitation of the thrust
         float MPC_THR_MIN;
@@ -190,8 +193,8 @@ void pos_controller_PID::_positionController(Eigen::Vector3d pos_sp, Eigen::Vect
 
     if((sub_mode & 0b10) == 0) //xy channel
     {
-        vel_setpoint(0) = MPC_XY_P * (pos_sp(0) - pos_drone(0));
-        vel_setpoint(1) = MPC_XY_P * (pos_sp(1) - pos_drone(1));
+        vel_setpoint(0) = Kp_xy * (pos_sp(0) - pos_drone(0));
+        vel_setpoint(1) = Kp_xy * (pos_sp(1) - pos_drone(1));
     }
     else
     {
@@ -201,7 +204,7 @@ void pos_controller_PID::_positionController(Eigen::Vector3d pos_sp, Eigen::Vect
 
     if((sub_mode & 0b01) == 0) //z channel
     {
-        vel_setpoint(2) = MPC_Z_P  * (pos_sp(2) - pos_drone(2));
+        vel_setpoint(2) = Kp_z  * (pos_sp(2) - pos_drone(2));
     }
     else
     {
@@ -239,26 +242,26 @@ void pos_controller_PID::_velocityController()
 
     Eigen::Vector3d error_vel = vel_setpoint - vel_drone;
 
-    vel_P_output(0) = MPC_XY_VEL_P * error_vel(0);
-    vel_P_output(1) = MPC_XY_VEL_P * error_vel(1);
-    vel_P_output(2) = MPC_Z_VEL_P  * error_vel(2);
+    vel_P_output(0) = Kp_vxvy * error_vel(0);
+    vel_P_output(1) = Kp_vxvy * error_vel(1);
+    vel_P_output(2) = Kp_vz  * error_vel(2);
 
     Eigen::Vector3d vel_error_deriv = cal_vel_error_deriv(error_vel);
 
-    vel_D_output(0) = MPC_XY_VEL_D * vel_error_deriv(0);
-    vel_D_output(1) = MPC_XY_VEL_D * vel_error_deriv(1);
-    vel_D_output(2) = MPC_Z_VEL_D  * vel_error_deriv(2);
+    vel_D_output(0) = Kd_vxvy * vel_error_deriv(0);
+    vel_D_output(1) = Kd_vxvy * vel_error_deriv(1);
+    vel_D_output(2) = Kd_vz  * vel_error_deriv(2);
 
 
-    // Consider thrust in Z-direction. [Here MPC_THRUST_HOVER is added]
-    float thrust_desired_Z  = vel_P_output(2) + thurst_int(2) + vel_D_output(2) + MPC_THRUST_HOVER;
+    // Consider thrust in Z-direction. [Here Hover_throttle is added]
+    float thrust_desired_Z  = vel_P_output(2) + thurst_int(2) + vel_D_output(2) + Hover_throttle;
 
     // Apply Anti-Windup in Z-direction.
     // 两种情况：期望推力大于最大推力，且速度误差朝上；期望推力小于最小推力，且速度误差朝下
     bool stop_integral_Z = ( thrust_desired_Z  >= MPC_THR_MAX && error_vel(2) >= 0.0f) ||
                            ( thrust_desired_Z  <= MPC_THR_MIN && error_vel(2) <= 0.0f);
     if (!stop_integral_Z) {
-            thurst_int(2) += MPC_Z_VEL_I  * error_vel(2) * delta_time;
+            thurst_int(2) += Ki_vz  * error_vel(2) * delta_time;
 
             // limit thrust integral
             thurst_int(2) = min(fabs(thurst_int(2)), MPC_THR_MAX ) * sign_function(thurst_int(2));
@@ -292,15 +295,15 @@ void pos_controller_PID::_velocityController()
     // Use tracking Anti-Windup for XY-direction: during saturation, the integrator is used to unsaturate the output
     // see Anti-Reset Windup for PID controllers, L.Rundqwist, 1990
     // Actually, I dont understand here.
-    float arw_gain = 2.f / MPC_XY_VEL_P;
+    float arw_gain = 2.f / Kp_vxvy;
 
     float vel_err_lim_x,vel_err_lim_y;
     vel_err_lim_x = error_vel(0) - (thrust_desired_X - thrust_sp(0)) * arw_gain;
     vel_err_lim_y = error_vel(1) - (thrust_desired_Y - thrust_sp(1)) * arw_gain;
 
     // Update integral
-    thurst_int(0) += MPC_XY_VEL_I * vel_err_lim_x * delta_time;
-    thurst_int(1) += MPC_XY_VEL_I * vel_err_lim_y * delta_time;
+    thurst_int(0) += Ki_vxvy * vel_err_lim_x * delta_time;
+    thurst_int(1) += Ki_vxvy * vel_err_lim_y * delta_time;
 
     //If not in OFFBOARD mode, set all intergral to zero.
     if(flag_offboard == 0)
@@ -363,25 +366,23 @@ void pos_controller_PID::printf_param()
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>PID Parameter <<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
     cout <<"Position Loop:  " <<endl;
-    cout <<"MPC_XY_P : "<< MPC_XY_P << endl;
-    cout <<"MPC_Z_P : "<< MPC_Z_P << endl;
+    cout <<"Kp_xy : "<< Kp_xy << endl;
+    cout <<"Kp_z : "<< Kp_z << endl;
     cout <<"Velocity Loop:  " <<endl;
-    cout <<"MPC_XY_VEL_P : "<< MPC_XY_VEL_P << endl;
-    cout <<"MPC_Z_VEL_P : "<< MPC_Z_VEL_P << endl;
-    cout <<"MPC_XY_VEL_I : "<< MPC_XY_VEL_I << endl;
-    cout <<"MPC_Z_VEL_I : "<< MPC_Z_VEL_I << endl;
-    cout <<"MPC_XY_VEL_D : "<< MPC_XY_VEL_D << endl;
-    cout <<"MPC_Z_VEL_D : "<< MPC_Z_VEL_D << endl;
+    cout <<"Kp_vxvy : "<< Kp_vxvy << endl;
+    cout <<"Kp_vz : "<< Kp_vz << endl;
+    cout <<"Ki_vxvy : "<< Ki_vxvy << endl;
+    cout <<"Ki_vz : "<< Ki_vz << endl;
+    cout <<"Kd_vxvy : "<< Kd_vxvy << endl;
+    cout <<"Kd_vz : "<< Kd_vz << endl;
 
     cout <<"Limit:  " <<endl;
     cout <<"MPC_XY_VEL_MAX : "<< MPC_XY_VEL_MAX << endl;
     cout <<"MPC_Z_VEL_MAX : "<< MPC_Z_VEL_MAX << endl;
-
-
     cout <<"tilt_max : "<< tilt_max << endl;
     cout <<"MPC_THR_MIN : "<< MPC_THR_MIN << endl;
     cout <<"MPC_THR_MAX : "<< MPC_THR_MAX << endl;
-    cout <<"MPC_THRUST_HOVER : "<< MPC_THRUST_HOVER << endl;
+    cout <<"Hover_throttle : "<< Hover_throttle << endl;
 
 }
 

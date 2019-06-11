@@ -199,7 +199,7 @@ int main(int argc, char **argv)
 
     //读取参数表中的参数
     // 使用激光SLAM数据orVicon数据 0 for vicon， 1 for 激光SLAM
-    nh.param<int>("flag_use_laser_or_vicon", flag_use_laser_or_vicon, 0);
+    nh.param<int>("pos_estimator/flag_use_laser_or_vicon", flag_use_laser_or_vicon, 0);
 
     // 【订阅】cartographer估计位置
     ros::Subscriber laser_sub = nh.subscribe<tf2_msgs::TFMessage>("/tf", 1000, laser_cb);

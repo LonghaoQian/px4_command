@@ -15,14 +15,14 @@
 using namespace std;
 enum Command
 {
+    Idle,
+    Takeoff,
     Move_ENU,
     Move_Body,
     Hold,
     Land,
     Disarm,
     Failsafe_land,
-    Idle,
-    Takeoff
 };
 
 ros::Publisher move_pub;
@@ -226,7 +226,7 @@ void generate_com(int sub_mode, float state_desired[4]){
     }
 
 
-    Command_now.yaw_sp = state_desired[3];
+    Command_now.yaw_sp = state_desired[3]/180.0*M_PI;
     Command_now.comid = comid;
     comid++;
 }

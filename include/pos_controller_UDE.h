@@ -34,27 +34,28 @@ class pos_controller_UDE
         pos_controller_UDE(void):
             pos_UDE_nh("~")
         {
-            pos_UDE_nh.param<float>("Quad_MASS", Quad_MASS, 1.0);
-            pos_UDE_nh.param<float>("XY_VEL_MAX", XY_VEL_MAX, 1.0);
-            pos_UDE_nh.param<float>("Z_VEL_MAX", Z_VEL_MAX, 1.0);
-            pos_UDE_nh.param<float>("THR_MIN", THR_MIN, 0.1);
-            pos_UDE_nh.param<float>("THR_MAX", THR_MAX, 0.9);
-            pos_UDE_nh.param<float>("tilt_max", tilt_max, 20.0);
-            pos_UDE_nh.param<float>("throttle_a", throttle_a, 20.0);
-            pos_UDE_nh.param<float>("throttle_b", throttle_b, 0.0);
+            pos_UDE_nh.param<float>("Quad/mass", Quad_MASS, 1.0);
+            pos_UDE_nh.param<float>("Quad/throttle_a", throttle_a, 20.0);
+            pos_UDE_nh.param<float>("Quad/throttle_b", throttle_b, 0.0);
 
-            pos_UDE_nh.param<float>("UDE_Kp_XY", UDE_Kp_X, 1.0);
-            pos_UDE_nh.param<float>("UDE_Kp_XY", UDE_Kp_Y, 1.0);
-            pos_UDE_nh.param<float>("UDE_Kp_Z", UDE_Kp_Z, 1.0);
-            pos_UDE_nh.param<float>("UDE_Kd_XY", UDE_Kd_X, 2.0);
-            pos_UDE_nh.param<float>("UDE_Kd_XY", UDE_Kd_Y, 2.0);
-            pos_UDE_nh.param<float>("UDE_Kd_Z", UDE_Kd_Z, 2.0);
-            pos_UDE_nh.param<float>("UDE_T_XY", UDE_T_X, 1.0);
-            pos_UDE_nh.param<float>("UDE_T_XY", UDE_T_Y, 1.0);
-            pos_UDE_nh.param<float>("UDE_T_Z", UDE_T_Z, 1.0);
-            pos_UDE_nh.param<float>("UDE_INT_LIM_X", UDE_INT_LIM(0), 1.0);
-            pos_UDE_nh.param<float>("UDE_INT_LIM_Y", UDE_INT_LIM(1), 1.0);
-            pos_UDE_nh.param<float>("UDE_INT_LIM_Z", UDE_INT_LIM(2), 5.0);
+            pos_UDE_nh.param<float>("Pos_ude/Kp_xy", Kp(0), 1.0);
+            pos_UDE_nh.param<float>("Pos_ude/Kp_xy", Kp(1), 1.0);
+            pos_UDE_nh.param<float>("Pos_ude/Kp_z", Kp(2), 1.0);
+            pos_UDE_nh.param<float>("Pos_ude/Kd_xy", Kd(0), 2.0);
+            pos_UDE_nh.param<float>("Pos_ude/Kd_xy", Kd(1), 2.0);
+            pos_UDE_nh.param<float>("Pos_ude/Kd_z", Kd(2), 2.0);
+            pos_UDE_nh.param<float>("Pos_ude/T_ude_xy", T_ude(0), 1.0);
+            pos_UDE_nh.param<float>("Pos_ude/T_ude_xy", T_ude(1), 1.0);
+            pos_UDE_nh.param<float>("Pos_ude/T_ude_z", T_ude(2), 1.0);
+            pos_UDE_nh.param<float>("Pos_ude/INT_LIM_X", INT_LIM(0), 1.0);
+            pos_UDE_nh.param<float>("Pos_ude/INT_LIM_Y", INT_LIM(1), 1.0);
+            pos_UDE_nh.param<float>("Pos_ude/INT_LIM_Z", INT_LIM(2), 5.0);
+
+            pos_UDE_nh.param<float>("Limit/XY_VEL_MAX", XY_VEL_MAX, 1.0);
+            pos_UDE_nh.param<float>("Limit/Z_VEL_MAX", Z_VEL_MAX, 1.0);
+            pos_UDE_nh.param<float>("Limit/THR_MIN", THR_MIN, 0.1);
+            pos_UDE_nh.param<float>("Limit/THR_MAX", THR_MAX, 0.9);
+            pos_UDE_nh.param<float>("Limit/tilt_max", tilt_max, 20.0);
 
 
 
@@ -79,20 +80,12 @@ class pos_controller_UDE
         float Quad_MASS;
 
         //UDE control parameter
-        float UDE_Kp_X;
-        float UDE_Kp_Y;
-        float UDE_Kp_Z;
-
-        float UDE_Kd_X;
-        float UDE_Kd_Y;
-        float UDE_Kd_Z;
-
-        float UDE_T_X;
-        float UDE_T_Y;
-        float UDE_T_Z;
+        Eigen::Vector3f Kp;
+        Eigen::Vector3f Kd;
+        Eigen::Vector3f T_ude;
 
         //Limitation of UDE integral
-        Eigen::Vector3f UDE_INT_LIM;
+        Eigen::Vector3f INT_LIM;
 
         //Limitation of the velocity
         float XY_VEL_MAX;
@@ -172,15 +165,10 @@ Eigen::Vector3d pos_controller_UDE::pos_controller(Eigen::Vector3d pos, Eigen::V
     for (int i = 0; i < 3; i++)
     {
         error_pos(i) = constrain_function2(error_pos(i), -1.0, 1.0);
+        u_l(i) = Quad_MASS * (Kp(i) * error_pos(i) + Kd(i) * error_vel(i));
+        u_d(i) = Quad_MASS / T_ude(i) * (Kd(i) * error_pos(i) + error_vel(i) + Kp(i) * integral_ude(i));
     }
 
-    u_l(0) = Quad_MASS * (UDE_Kp_X * error_pos(0) + UDE_Kd_X * error_vel(0));
-    u_l(1) = Quad_MASS * (UDE_Kp_Y * error_pos(1) + UDE_Kd_Y * error_vel(1));
-    u_l(2) = Quad_MASS * (UDE_Kp_Z * error_pos(2) + UDE_Kd_Y * error_vel(2));
-
-    u_d(0) = Quad_MASS / UDE_T_X * (UDE_Kd_X * error_pos(0) + error_vel(0) + UDE_Kp_X * integral_ude(0));
-    u_d(1) = Quad_MASS / UDE_T_Y * (UDE_Kd_Y * error_pos(1) + error_vel(1) + UDE_Kp_Y * integral_ude(1));
-    u_d(2) = Quad_MASS / UDE_T_Z * (UDE_Kd_Z * error_pos(2) + error_vel(2) + UDE_Kp_Z * integral_ude(2));
 
     /* explicitly limit the integrator state */
     for (int i = 0; i < 3; i++)
@@ -195,7 +183,7 @@ Eigen::Vector3d pos_controller_UDE::pos_controller(Eigen::Vector3d pos, Eigen::V
 
         integral_ude(i) = integral;
 
-        u_d(i) = constrain_function2(u_d(i), -UDE_INT_LIM(i), UDE_INT_LIM(i));
+        u_d(i) = constrain_function2(u_d(i), -INT_LIM(i), INT_LIM(i));
     }
 
     //ENU frame
@@ -308,24 +296,24 @@ void pos_controller_UDE::printf_param()
 
     cout <<"Quad_MASS : "<< Quad_MASS << endl;
 
-    cout <<"UDE_Kp_X : "<< UDE_Kp_X << endl;
-    cout <<"UDE_Kp_Y : "<< UDE_Kp_Y << endl;
-    cout <<"UDE_Kp_Z : "<< UDE_Kp_Z << endl;
+    cout <<"Kp_x : "<< Kp(0) << endl;
+    cout <<"Kp_y : "<< Kp(1) << endl;
+    cout <<"Kp_z : "<< Kp(2) << endl;
 
-    cout <<"UDE_Kd_X : "<< UDE_Kd_X << endl;
-    cout <<"UDE_Kd_Y : "<< UDE_Kd_Y << endl;
-    cout <<"UDE_Kd_Z : "<< UDE_Kd_Z << endl;
+    cout <<"Kd_x : "<< Kd(0) << endl;
+    cout <<"Kd_y : "<< Kd(1) << endl;
+    cout <<"Kd_z : "<< Kd(2) << endl;
 
-    cout <<"UDE_T_X : "<< UDE_T_X << endl;
-    cout <<"UDE_T_Y : "<< UDE_T_Y << endl;
-    cout <<"UDE_T_Z : "<< UDE_T_Z << endl;
+    cout <<"T_ude_x : "<< T_ude(0) << endl;
+    cout <<"T_ude_y : "<< T_ude(1) << endl;
+    cout <<"T_ude_z : "<< T_ude(2) << endl;
 
     cout <<"XY_VEL_MAX : "<< XY_VEL_MAX << endl;
     cout <<"Z_VEL_MAX : "<< Z_VEL_MAX << endl;
 
-    cout <<"UDE_INT_LIM_X : "<< UDE_INT_LIM(0) << endl;
-    cout <<"UDE_INT_LIM_Y : "<< UDE_INT_LIM(1) << endl;
-    cout <<"UDE_INT_LIM_Z : "<< UDE_INT_LIM(2) << endl;
+    cout <<"INT_LIM_X : "<< INT_LIM(0) << endl;
+    cout <<"INT_LIM_Y : "<< INT_LIM(1) << endl;
+    cout <<"INT_LIM_Z : "<< INT_LIM(2) << endl;
 
     cout <<"THR_MIN : "<< THR_MIN << endl;
     cout <<"THR_MAX : "<< THR_MAX << endl;

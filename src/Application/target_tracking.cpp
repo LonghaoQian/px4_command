@@ -24,14 +24,14 @@ using namespace std;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>全 局 变 量<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 enum Command
 {
+    Idle,
+    Takeoff,
     Move_ENU,
     Move_Body,
     Hold,
     Land,
     Disarm,
     Failsafe_land,
-    Idle,
-    Takeoff
 };
 //---------------------------------------Vision---------------------------------------------
 geometry_msgs::Pose pos_target;                                 //目标位置[机体系下：前方x为正，右方y为正，下方z为正]
@@ -399,7 +399,7 @@ void generate_com(int sub_mode, float state_desired[4])
     }
 
 
-    Command_now.yaw_sp = state_desired[3];
+    Command_now.yaw_sp = state_desired[3]/180.0*M_PI;
     Command_now.comid = comid;
     comid++;
 }

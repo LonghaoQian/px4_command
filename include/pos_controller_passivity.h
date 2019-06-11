@@ -29,29 +29,30 @@ class pos_controller_passivity
         pos_controller_passivity(void):
             pos_passivity_nh("~")
         {
-            pos_passivity_nh.param<float>("Quad_MASS", Quad_MASS, 1.0);
-            pos_passivity_nh.param<float>("XY_VEL_MAX", XY_VEL_MAX, 1.0);
-            pos_passivity_nh.param<float>("Z_VEL_MAX", Z_VEL_MAX, 1.0);
-            pos_passivity_nh.param<float>("THR_MIN", THR_MIN, 0.1);
-            pos_passivity_nh.param<float>("THR_MAX", THR_MAX, 0.9);
-            pos_passivity_nh.param<float>("tilt_max", tilt_max, 20.0);
-            pos_passivity_nh.param<float>("throttle_a", throttle_a, 20.0);
-            pos_passivity_nh.param<float>("throttle_b", throttle_b, 0.0);
+            pos_passivity_nh.param<float>("Quad/mass", Quad_MASS, 1.0);
+            pos_passivity_nh.param<float>("Quad/throttle_a", throttle_a, 20.0);
+            pos_passivity_nh.param<float>("Quad/throttle_b", throttle_b, 0.0);
 
-            pos_passivity_nh.param<float>("passivity_Kp_XY", passivity_Kp(0), 1.0);
-            pos_passivity_nh.param<float>("passivity_Kp_XY", passivity_Kp(1), 1.0);
-            pos_passivity_nh.param<float>("passivity_Kp_Z", passivity_Kp(2), 1.0);
-            pos_passivity_nh.param<float>("passivity_Kd_XY", passivity_Kd(0), 2.0);
-            pos_passivity_nh.param<float>("passivity_Kd_XY", passivity_Kd(1), 2.0);
-            pos_passivity_nh.param<float>("passivity_Kd_Z", passivity_Kd(2), 2.0);
-            pos_passivity_nh.param<float>("passivity_T_ude_XY", passivity_T_ude(0), 1.0);
-            pos_passivity_nh.param<float>("passivity_T_ude_XY", passivity_T_ude(1), 1.0);
-            pos_passivity_nh.param<float>("passivity_T_ude_Z", passivity_T_ude(2), 1.0);
-            pos_passivity_nh.param<float>("passivity_T1", passivity_T1, 1.0);
-            pos_passivity_nh.param<float>("passivity_T2", passivity_T2, 1.0);
-            pos_passivity_nh.param<float>("passivity_INT_LIM_X", passivity_INT_LIM(0), 1.0);
-            pos_passivity_nh.param<float>("passivity_INT_LIM_Y", passivity_INT_LIM(1), 1.0);
-            pos_passivity_nh.param<float>("passivity_INT_LIM_Z", passivity_INT_LIM(2), 5.0);
+            pos_passivity_nh.param<float>("Pos_passivity/Kp_xy", Kp(0), 1.0);
+            pos_passivity_nh.param<float>("Pos_passivity/Kp_xy", Kp(1), 1.0);
+            pos_passivity_nh.param<float>("Pos_passivity/Kp_z",  Kp(2), 1.0);
+            pos_passivity_nh.param<float>("Pos_passivity/Kd_xy", Kd(0), 2.0);
+            pos_passivity_nh.param<float>("Pos_passivity/Kd_xy", Kd(1), 2.0);
+            pos_passivity_nh.param<float>("Pos_passivity/Kd_z",  Kd(2), 2.0);
+            pos_passivity_nh.param<float>("Pos_passivity/T_ude_xy", T_ude(0), 1.0);
+            pos_passivity_nh.param<float>("Pos_passivity/T_ude_xy", T_ude(1), 1.0);
+            pos_passivity_nh.param<float>("Pos_passivity/T_ude_z",  T_ude(2), 1.0);
+            pos_passivity_nh.param<float>("Pos_passivity/T1", T1, 1.0);
+            pos_passivity_nh.param<float>("Pos_passivity/T2", T2, 1.0);
+            pos_passivity_nh.param<float>("Pos_passivity/INT_LIM_X", INT_LIM(0), 1.0);
+            pos_passivity_nh.param<float>("Pos_passivity/INT_LIM_Y", INT_LIM(1), 1.0);
+            pos_passivity_nh.param<float>("Pos_passivity/INT_LIM_Z", INT_LIM(2), 5.0);
+
+            pos_passivity_nh.param<float>("Limit/XY_VEL_MAX", XY_VEL_MAX, 1.0);
+            pos_passivity_nh.param<float>("Limit/Z_VEL_MAX", Z_VEL_MAX, 1.0);
+            pos_passivity_nh.param<float>("Limit/THR_MIN", THR_MIN, 0.1);
+            pos_passivity_nh.param<float>("Limit/THR_MAX", THR_MAX, 0.9);
+            pos_passivity_nh.param<float>("Limit/tilt_max", tilt_max, 20.0);
 
 
             thrust_sp       = Eigen::Vector3d(0.0,0.0,0.0);
@@ -82,18 +83,18 @@ class pos_controller_passivity
         float Quad_MASS;
 
         //passivity control parameter
-        Eigen::Vector3f passivity_Kp;
+        Eigen::Vector3f Kp;
 
-        Eigen::Vector3f passivity_Kd;
+        Eigen::Vector3f Kd;
 
-        Eigen::Vector3f passivity_T_ude;
+        Eigen::Vector3f T_ude;
 
-        float passivity_T1;
+        float T1;
 
-        float passivity_T2;
+        float T2;
 
         //Limitation of passivity integral
-        Eigen::Vector3f passivity_INT_LIM;
+        Eigen::Vector3f INT_LIM;
 
         //Limitation of the velocity
         float XY_VEL_MAX;
@@ -176,7 +177,7 @@ Eigen::Vector3d pos_controller_passivity::pos_controller(Eigen::Vector3d pos, Ei
 
     //z_k
     Eigen::Vector3d z_k;
-    z_k = 1.0f/(passivity_T1 + delta_time)*(passivity_T1 * z_last + error_pos - error_last);
+    z_k = 1.0f/(T1 + delta_time)*(T1 * z_last + error_pos - error_last);
 
     /* limit rates */
     // for (int i = 0; i < 3; i++)
@@ -190,14 +191,14 @@ Eigen::Vector3d pos_controller_passivity::pos_controller(Eigen::Vector3d pos, Ei
     //u_l
     for (int i = 0; i < 3; i++)
     {
-       u_l(i) = Quad_MASS * (passivity_Kp(i) * error_pos(i) + passivity_Kd(i) * z_k(i));
+       u_l(i) = Quad_MASS * (Kp(i) * error_pos(i) + Kd(i) * z_k(i));
     }
 
     //UDE term y1 y2 y3
     Eigen::Vector3d y1_k;
     for (int i = 0; i < 3; i++)
     {
-        y1_k(i) = 1.0f/(passivity_T_ude(i) + delta_time) * (passivity_T_ude(i) * y1_last(i) + pos(i) - pos_last(i));
+        y1_k(i) = 1.0f/(T_ude(i) + delta_time) * (T_ude(i) * y1_last(i) + pos(i) - pos_last(i));
     }
 
     pos_last = pos;
@@ -206,7 +207,7 @@ Eigen::Vector3d pos_controller_passivity::pos_controller(Eigen::Vector3d pos, Ei
     Eigen::Vector3d y2_k;
     for (int i = 0; i < 3; i++)
     {
-        y2_k(i) = 1.0f/(passivity_T1 + delta_time) * (passivity_T1 * y2_last(i) + delta_time * error_pos(i));
+        y2_k(i) = 1.0f/(T1 + delta_time) * (T1 * y2_last(i) + delta_time * error_pos(i));
         //y2_k(i) =   ( 0.98 * y2_last(i) + 0.0099 * (error_pos(i)+error_last(i)));
 
     }
@@ -217,7 +218,7 @@ Eigen::Vector3d pos_controller_passivity::pos_controller(Eigen::Vector3d pos, Ei
     Eigen::Vector3d y3_k;
     for (int i = 0; i < 3; i++)
     {
-        y3_k(i) = 1.0f/(passivity_T_ude(i) + delta_time) * (passivity_T_ude(i) * y3_last(i) + delta_time * (passivity_Kp(i) * integral_passivity(i) + passivity_Kd(i)*y2_k(i)));
+        y3_k(i) = 1.0f/(T_ude(i) + delta_time) * (T_ude(i) * y3_last(i) + delta_time * (Kp(i) * integral_passivity(i) + Kd(i)*y2_k(i)));
     }
 
     y3_last = y3_k;
@@ -237,12 +238,12 @@ Eigen::Vector3d pos_controller_passivity::pos_controller(Eigen::Vector3d pos, Ei
             integral = integral_passivity(i) +  error_pos(i) * delta_time;
         }
 
-        if (u_d(i) > -passivity_INT_LIM(i) && u_d[i] < passivity_INT_LIM(i))
+        if (u_d(i) > -INT_LIM(i) && u_d[i] < INT_LIM(i))
         {
                 integral_passivity(i) = integral;
         }
 
-        u_d(i) = constrain_function2(u_d(i), -passivity_INT_LIM(i), passivity_INT_LIM(i));
+        u_d(i) = constrain_function2(u_d(i), -INT_LIM(i), INT_LIM(i));
     }
 
     //ENU frame
@@ -359,26 +360,26 @@ void pos_controller_passivity::printf_param()
 
     cout <<"Quad_MASS : "<< Quad_MASS << endl;
 
-    cout <<"passivity_Kp_X : "<< passivity_Kp(0) << endl;
-    cout <<"passivity_Kp_Y : "<< passivity_Kp(1) << endl;
-    cout <<"passivity_Kp_Z : "<< passivity_Kp(2) << endl;
+    cout <<"Kp_X : "<< Kp(0) << endl;
+    cout <<"Kp_Y : "<< Kp(1) << endl;
+    cout <<"Kp_Z : "<< Kp(2) << endl;
 
-    cout <<"passivity_Kd_X : "<< passivity_Kd(0) << endl;
-    cout <<"passivity_Kd_Y : "<< passivity_Kd(1) << endl;
-    cout <<"passivity_Kd_Z : "<< passivity_Kd(2) << endl;
+    cout <<"Kd_X : "<< Kd(0) << endl;
+    cout <<"Kd_Y : "<< Kd(1) << endl;
+    cout <<"Kd_Z : "<< Kd(2) << endl;
 
-    cout <<"passivity_T_X : "<< passivity_T_ude(0) << endl;
-    cout <<"passivity_T_Y : "<< passivity_T_ude(1) << endl;
-    cout <<"passivity_T_Z : "<< passivity_T_ude(2) << endl;
-    cout <<"passivity_T1 : "<< passivity_T1 << endl;
-    cout <<"passivity_T2 : "<< passivity_T2 << endl;
+    cout <<"passivity_T_X : "<< T_ude(0) << endl;
+    cout <<"passivity_T_Y : "<< T_ude(1) << endl;
+    cout <<"passivity_T_Z : "<< T_ude(2) << endl;
+    cout <<"T1 : "<< T1 << endl;
+    cout <<"T2 : "<< T2 << endl;
 
     cout <<"XY_VEL_MAX : "<< XY_VEL_MAX << endl;
     cout <<"Z_VEL_MAX : "<< Z_VEL_MAX << endl;
 
-    cout <<"passivity_INT_LIM_X : "<< passivity_INT_LIM(0) << endl;
-    cout <<"passivity_INT_LIM_Y : "<< passivity_INT_LIM(1) << endl;
-    cout <<"passivity_INT_LIM_Z : "<< passivity_INT_LIM(2) << endl;
+    cout <<"INT_LIM_X : "<< INT_LIM(0) << endl;
+    cout <<"INT_LIM_Y : "<< INT_LIM(1) << endl;
+    cout <<"INT_LIM_Z : "<< INT_LIM(2) << endl;
 
     cout <<"THR_MIN : "<< THR_MIN << endl;
     cout <<"THR_MAX : "<< THR_MAX << endl;

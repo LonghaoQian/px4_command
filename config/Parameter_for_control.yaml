@@ -1,109 +1,82 @@
 ## 飞机参数
-Quad_MASS: 0.8
-throttle_a: 20.0
-throttle_b: 0.0
-tilt_max: 20.0
+Quad:
+  mass: 0.8
+  throttle_a: 20.0
+  throttle_b: 0.0
 
-THR_MIN: 0.1
-THR_MAX: 0.9
-XY_VEL_MAX : 0.8
-Z_VEL_MAX : 0.5
+##geo fence
+geo_fence:
+  x_min: -2.0
+  x_max: 2.0
+  y_min: -2.0
+  y_max: 2.0
+  z_min: -0.5
+  z_max: 3.0
+
+## 限制参数
+Limit:
+  tilt_max: 20.0
+  THR_MIN: 0.1
+  THR_MAX: 0.9
+  XY_VEL_MAX : 0.8
+  Z_VEL_MAX : 0.5
 
 ## 起飞高度
 Takeoff_height : 0.8
-
+Disarm_height : 0.15
 
 # 位置环参数
-MPC_XY_P : 0.95
-MPC_Z_P : 1.0
-MPC_XY_VEL_P : 0.09
-MPC_Z_VEL_P : 0.2
-MPC_XY_VEL_I : 0.02
-MPC_Z_VEL_I : 0.02
-MPC_XY_VEL_D : 0.01
-MPC_Z_VEL_D : 0.00
-MPC_THRUST_HOVER : 0.5
-MPC_VELD_LP: 5.0
+Pos_pid:
+  Kp_xy : 0.95
+  Kp_z : 1.0
+  Kp_vxvy : 0.09
+  Kp_vz : 0.2
+  Ki_vxvy : 0.02
+  Ki_vz : 0.02
+  Kd_vxvy : 0.01
+  Kd_vz : 0.00
+  Hover_throttle : 0.5
+  MPC_VELD_LP: 5.0
 
 # 位置环参数 for ude
-UDE_Kp_XY : 1.0
-UDE_Kp_Z : 1.0
-UDE_Kd_XY : 2.0
-UDE_Kd_Z : 2.0
-UDE_T_XY : 1.0
-UDE_T_Z : 1.0
-UDE_INT_LIM_X : 5.0
-UDE_INT_LIM_Y : 5.0
-UDE_INT_LIM_Z : 10.0
-
+Pos_ude:
+  Kp_xy : 1.0
+  Kp_z : 1.0
+  Kd_xy : 2.0
+  Kd_Zz : 2.0
+  T_ude_xy : 1.0
+  T_ude_z : 1.0
+  INT_LIM_X : 5.0
+  INT_LIM_Y : 5.0
+  INT_LIM_Z : 10.0
 
 # 位置环参数 for passivity
-passivity_Kp_XY : 0.3
-passivity_Kp_Z : 0.3
-passivity_Kd_XY : 3.0
-passivity_Kd_Z : 3.0
-passivity_T_ude_XY : 2.0
-passivity_T_ude_Z : 2.0
-passivity_T1: 0.2
-
-passivity_INT_LIM_X : 5.0
-passivity_INT_LIM_Y : 5.0
-passivity_INT_LIM_Z : 10.0
+Pos_passivity:
+  Kp_xy : 0.3
+  Kp_z : 0.3
+  Kd_xy : 3.0
+  Kd_z : 3.0
+  T_ude_xy : 2.0
+  T_ude_z : 2.0
+  T1: 0.2
+  INT_LIM_X : 5.0
+  INT_LIM_Y : 5.0
+  INT_LIM_Z : 10.0
 
 # 位置环参数 for ne
-NE_Kp_XY : 1.0
-NE_Kp_Z : 1.0
-NE_Kd_XY : 2.0
-NE_Kd_Z : 2.0
-NE_T_ude_XY : 1.0
-NE_T_ude_Z : 1.0
-NE_Tn: 0.1
-NE_INT_LIM_X : 5.0
-NE_INT_LIM_Y : 5.0
-NE_INT_LIM_Z : 10.0
+Pos_ne:
+  Kp_xy : 1.0
+  Kp_z : 1.0
+  Kd_xy : 2.0
+  Kd_z : 2.0
+  T_ude_xy : 1.0
+  T_ude_z : 1.0
+  Tn: 0.1
+  INT_LIM_X : 5.0
+  INT_LIM_Y : 5.0
+  INT_LIM_Z : 10.0
 
 
-
-## 姿态环参数
-MC_ROLL_P: 6.5
-
-MC_ROLLRATE_P: 0.10
-
-MC_ROLLRATE_I: 0.01
-
-MC_RR_INT_LIM: 0.1
-
-MC_ROLLRATE_D: 0.003
-
-MC_PITCH_P: 6.5
-
-MC_PITCHRATE_P: 0.10
-
-MC_PITCHRATE_I: 0.01
-
-MC_PR_INT_LIM: 0.1
-
-MC_PITCHRATE_D: 0.003
-
-MC_YAW_P: 2.8
-
-MC_YAWRATE_P: 0.2
-
-MC_YAWRATE_I: 0.1
-
-MC_YR_INT_LIM: 0.3
-
-MC_YAWRATE_D: 0.0
-
-MC_YAW_FF: 0.5
-
-MC_ROLLRATE_MAX: 220.0
-
-MC_PITCHRATE_MAX: 220.0
-
-MC_YAWRATE_MAX: 200.0
-
-MC_DTERM_CUTOFF: 30.0
 
 
 

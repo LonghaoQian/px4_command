@@ -35,14 +35,14 @@ using namespace std;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>全 局 变 量<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 enum Command
 {
+    Idle,
+    Takeoff,
     Move_ENU,
     Move_Body,
     Hold,
     Land,
     Disarm,
     Failsafe_land,
-    Idle,
-    Takeoff
 };
 
 #define RAD2DEG(x) ((x)*180./M_PI)

@@ -31,32 +31,35 @@ using namespace namespace_UDE;
 using namespace namespace_passivity;
 using namespace namespace_NE;
 
-
+//注意：代码中，参与运算的角度均是以rad为单位，但是涉及到显示时或者需要手动输入时均以deg为单位。
 //自定义的Command变量
-//相应的命令分别为 移动(惯性系ENU)，移动(机体系)，悬停，降落，上锁，紧急降落，待机
+//相应的命令分别为 待机,起飞，移动(惯性系ENU)，移动(机体系)，悬停，降落，上锁，紧急降落
 enum Command
 {
+    Idle,
+    Takeoff,
     Move_ENU,
     Move_Body,
     Hold,
     Land,
     Disarm,
     Failsafe_land,
-    Idle,
-    Takeoff
 };
-
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>变量声明<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 Eigen::Vector3d pos_sp(0,0,0);
 Eigen::Vector3d vel_sp(0,0,0);
-double yaw_sp = 0;
 Eigen::Vector3d accel_sp(0,0,0);
+double yaw_sp = 0;
 
-//Command Now [from upper node]
+float Takeoff_height;
+float Disarm_height;
+
+Eigen::Vector3d Takeoff_position = Eigen::Vector3d(0.0,0.0,0.0);
+
 px4_command::command Command_Now;                      //无人机当前执行命令
-
-//Command Last [from upper node]
 px4_command::command Command_Last;                     //无人机上一条执行命令
-Eigen::Vector3d pos_drone_mocap;                          //无人机当前位置 (vicon)
+
+Eigen::Vector3d pos_drone_mocap;                       //无人机当前位置 (vicon)
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>函数声明<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 float get_ros_time(ros::Time begin);
 void prinft_command_state();
@@ -81,27 +84,36 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "px4_pos_controller");
     ros::NodeHandle nh("~");
 
+    // 【订阅】指令
+    //  本话题来自根据需求自定义的上层模块，比如track_land.cpp 比如move.cpp
     ros::Subscriber Command_sub = nh.subscribe<px4_command::command>("/px4/command", 10, Command_cb);
 
     ros::Subscriber optitrack_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/UAV/pose", 1000, optitrack_cb);
 
-    int switch_ude;
+    // 参数读取
+    nh.param<float>("Takeoff_height", Takeoff_height, 1.0);
+    nh.param<float>("Disarm_height", Disarm_height, 0.15);
 
-    nh.param<int>("switch_ude", switch_ude, 0);
+    cout << "Takeoff_height: "<< Takeoff_height<<" [m] "<<endl;
+    cout << "Disarm_height : "<< Disarm_height <<" [m] "<<endl;
 
     ros::Rate rate(50.0);
 
+    //用于与mavros通讯的类
     command_to_mavros pos_controller;
 
     pos_controller.printf_param();
 
-    pos_controller.show_geo_fence();
-
+    //位置控制类 - 根据switch_ude选择其中一个使用，默认为PID
     pos_controller_PID pos_controller_pid;
     pos_controller_UDE pos_controller_ude;
     pos_controller_passivity pos_controller_ps;
     pos_controller_NE pos_controller_ne;
 
+    // 选择控制率
+    int switch_ude;
+    cout << "Please choose the controller: 0 for PID,1 for UDE,2 for passivity, 3 for NE: "<<endl;
+    cin >> switch_ude;
 
     if(switch_ude == 0)
     {
@@ -149,8 +161,9 @@ int main(int argc, char **argv)
     }
 
     //Set the takeoff position
-    pos_controller.set_takeoff_position();
+    Takeoff_position = pos_controller.pos_drone_fcu;
 
+    //NE需要设置起飞初始值
     if(switch_ude == 3)
     {
         pos_controller_ne.set_initial_pos(pos_controller.pos_drone_fcu);
@@ -158,7 +171,6 @@ int main(int argc, char **argv)
 
     //初始化命令-
     // 默认设置：Idle模式 电机怠速旋转 等待来自上层的控制指令
-
     Command_Now.comid = 0;
     Command_Now.command = Idle;
     Command_Now.sub_mode = 0;
@@ -169,11 +181,12 @@ int main(int argc, char **argv)
     Command_Now.vel_sp[1] = 0;
     Command_Now.vel_sp[2] = 0;
     Command_Now.yaw_sp = 0;
+
+
     // 记录启控时间
     ros::Time begin_time = ros::Time::now();
     float last_time = get_ros_time(begin_time);
     float dt = 0;
-
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主  循  环<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     while(ros::ok())
     {
@@ -189,10 +202,14 @@ int main(int argc, char **argv)
         last_time = cur_time;
 
         //Check for geo fence: If drone is out of the geo fence, it will land now.
-        pos_controller.check_failsafe();
+        if(pos_controller.check_failsafe() == 1)
+        {
+            Command_Now.command = Land;
+        }
 
         //Printf the drone state
-        pos_controller.prinft_drone_state2(cur_time);
+        //pos_controller.prinft_drone_state_full(cur_time);
+        pos_controller.prinft_drone_state(cur_time);
 
         //Printf the command state
         prinft_command_state();
@@ -220,9 +237,16 @@ int main(int argc, char **argv)
 
         switch (Command_Now.command)
         {
-        case Move_ENU:
-            pos_sp = Eigen::Vector3d(Command_Now.pos_sp[0],Command_Now.pos_sp[1],Command_Now.pos_sp[2]);
-            vel_sp = Eigen::Vector3d(Command_Now.vel_sp[0],Command_Now.vel_sp[1],Command_Now.vel_sp[2]);
+        // 【Idle】 怠速旋转，此时可以切入offboard模式，但不会起飞。
+        case Idle:
+            pos_controller.idle();
+            break;
+
+        // 【Takeoff】 从摆放初始位置原地起飞至指定高度，偏航角也保持当前角度
+        case Takeoff:
+            pos_sp = Eigen::Vector3d(Takeoff_position[0],Takeoff_position[1],Takeoff_position[2]+Takeoff_height);
+            vel_sp = Eigen::Vector3d(0.0,0.0,0.0);
+            yaw_sp = pos_controller.euler_fcu[2]; //rad
 
             if(switch_ude == 0)
             {
@@ -235,13 +259,38 @@ int main(int argc, char **argv)
                 accel_sp = pos_controller_ps.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
             }else if(switch_ude == 3)
             {
-                accel_sp = pos_controller_ne.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
+                accel_sp = pos_controller_ne.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
             }
 
-            pos_controller.send_accel_setpoint(accel_sp, Command_Now.yaw_sp);
+            pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
 
             break;
 
+        // 【Move_ENU】 ENU系移动。只有PID算法中才有追踪速度的选项，其他控制只能追踪位置
+        case Move_ENU:
+            pos_sp = Eigen::Vector3d(Command_Now.pos_sp[0],Command_Now.pos_sp[1],Command_Now.pos_sp[2]);
+            vel_sp = Eigen::Vector3d(Command_Now.vel_sp[0],Command_Now.vel_sp[1],Command_Now.vel_sp[2]);
+            yaw_sp = Command_Now.yaw_sp;
+
+            if(switch_ude == 0)
+            {
+                accel_sp = pos_controller_pid.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, dt);
+            }else if(switch_ude == 1)
+            {
+                accel_sp = pos_controller_ude.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
+            }else if(switch_ude == 2)
+            {
+                accel_sp = pos_controller_ps.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
+            }else if(switch_ude == 3)
+            {
+                accel_sp = pos_controller_ne.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
+            }
+
+            pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
+
+            break;
+
+        // 【Move_Body】 机体系移动。只有PID算法中才有追踪速度的选项，其他控制只能追踪位置
         case Move_Body:
             //只有在comid增加时才会进入解算
             if( Command_Now.comid  >  Command_Last.comid )
@@ -252,7 +301,7 @@ int main(int argc, char **argv)
                     float d_vel_body[2] = {Command_Now.vel_sp[0], Command_Now.vel_sp[1]};         //the desired xy velocity in Body Frame
                     float d_vel_enu[2];                                                           //the desired xy velocity in NED Frame
 
-                    rotation_yaw(pos_controller.Euler_fcu[2], d_vel_body, d_vel_enu);
+                    rotation_yaw(pos_controller.euler_fcu[2], d_vel_body, d_vel_enu);
                     vel_sp[0] = d_vel_enu[0];
                     vel_sp[1] = d_vel_enu[1];
                 }
@@ -261,7 +310,7 @@ int main(int argc, char **argv)
                 {
                     float d_pos_body[2] = {Command_Now.pos_sp[0], Command_Now.pos_sp[1]};         //the desired xy position in Body Frame
                     float d_pos_enu[2];                                                           //the desired xy position in enu Frame (The origin point is the drone)
-                    rotation_yaw(pos_controller.Euler_fcu[2], d_pos_body, d_pos_enu);
+                    rotation_yaw(pos_controller.euler_fcu[2], d_pos_body, d_pos_enu);
 
                     pos_sp[0] = pos_controller.pos_drone_fcu[0] + d_pos_enu[0];
                     pos_sp[1] = pos_controller.pos_drone_fcu[1] + d_pos_enu[1];
@@ -277,7 +326,7 @@ int main(int argc, char **argv)
                     pos_sp[2] = pos_controller.pos_drone_fcu[2] + Command_Now.pos_sp[2];
                 }
 
-                yaw_sp = pos_controller.Euler_fcu[2]* 180/M_PI + Command_Now.yaw_sp;
+                yaw_sp = pos_controller.euler_fcu[2] + Command_Now.yaw_sp;
 
             }
 
@@ -292,50 +341,49 @@ int main(int argc, char **argv)
                 accel_sp = pos_controller_ps.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
             }else if(switch_ude == 3)
             {
-                accel_sp = pos_controller_ne.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
+                accel_sp = pos_controller_ne.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
             }
 
             pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
 
             break;
 
+        // 【Hold】 悬停。当前位置悬停
         case Hold:
             if (Command_Last.command != Hold)
             {
-                pos_controller.Hold_position = Eigen::Vector3d(pos_controller.pos_drone_fcu[0],pos_controller.pos_drone_fcu[1],pos_controller.pos_drone_fcu[2]);
-                pos_controller.Hold_yaw = pos_controller.Euler_fcu[2]* 180/M_PI;
-                pos_sp = pos_controller.Hold_position;
-                yaw_sp = pos_controller.Hold_yaw;
+                pos_sp = Eigen::Vector3d(pos_controller.pos_drone_fcu[0],pos_controller.pos_drone_fcu[1],pos_controller.pos_drone_fcu[2]);
+                yaw_sp = pos_controller.euler_fcu[2];
             }
 
             if(switch_ude == 0)
             {
-                accel_sp = pos_controller_pid.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_controller.Hold_position, vel_sp, Command_Now.sub_mode, dt);
+                accel_sp = pos_controller_pid.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, dt);
             }else if(switch_ude == 1)
             {
-                accel_sp = pos_controller_ude.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_controller.Hold_position, dt);
+                accel_sp = pos_controller_ude.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
             }else if(switch_ude == 2)
             {
                 accel_sp = pos_controller_ps.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
             }else if(switch_ude == 3)
             {
-                accel_sp = pos_controller_ne.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
+                accel_sp = pos_controller_ne.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
             }
 
-            pos_controller.send_accel_setpoint(accel_sp, pos_controller.Hold_yaw);
+            pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
 
             break;
 
-
+        // 【Land】 降落。当前位置原地降落，降落后会自动上锁，且切换为mannual模式
         case Land:
             if (Command_Last.command != Land)
             {
-                pos_sp = Eigen::Vector3d(pos_controller.pos_drone_fcu[0],pos_controller.pos_drone_fcu[1],pos_controller.Takeoff_position[2]);
-                yaw_sp = pos_controller.Euler_fcu[2]* 180/M_PI;
+                pos_sp = Eigen::Vector3d(pos_controller.pos_drone_fcu[0],pos_controller.pos_drone_fcu[1],Takeoff_position[2]);
+                yaw_sp = pos_controller.euler_fcu[2];
             }
 
             //如果距离起飞高度小于10厘米，则直接上锁并切换为手动模式；
-            if(abs(pos_controller.pos_drone_fcu[2] - pos_controller.Takeoff_position[2]) < (0.1))
+            if(abs(pos_controller.pos_drone_fcu[2] - Takeoff_position[2]) < Disarm_height)
             {
                 if(pos_controller.current_state.mode == "OFFBOARD")
                 {
@@ -368,7 +416,7 @@ int main(int argc, char **argv)
                     accel_sp = pos_controller_ps.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
                 }else if(switch_ude == 3)
                 {
-                    accel_sp = pos_controller_ne.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
+                    accel_sp = pos_controller_ne.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
                 }
 
                 pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
@@ -376,6 +424,7 @@ int main(int argc, char **argv)
 
             break;
 
+        // 【Disarm】 紧急上锁。直接上锁，不建议使用，危险。
         case Disarm:
             if(pos_controller.current_state.mode == "OFFBOARD")
             {
@@ -397,37 +446,9 @@ int main(int argc, char **argv)
 
             break;
 
-        // 【】
+        // 【Failsafe_land】 暂空。可进行自定义
         case Failsafe_land:
             break;
-
-        // 【】
-        case Idle:
-            pos_controller.idle();
-            break;
-
-        case Takeoff:
-            pos_sp = Eigen::Vector3d(pos_controller.Takeoff_position[0],pos_controller.Takeoff_position[1],pos_controller.Takeoff_position[2]+pos_controller.Takeoff_height);
-            vel_sp = Eigen::Vector3d(0.0,0.0,0.0);
-
-            if(switch_ude == 0)
-            {
-                accel_sp = pos_controller_pid.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, dt);
-            }else if(switch_ude == 1)
-            {
-                accel_sp = pos_controller_ude.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
-            }else if(switch_ude == 2)
-            {
-                accel_sp = pos_controller_ps.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
-            }else if(switch_ude == 3)
-            {
-                accel_sp = pos_controller_ne.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
-            }
-
-            pos_controller.send_accel_setpoint(accel_sp, Command_Now.yaw_sp);
-
-            break;   
-
 
         }
 
@@ -482,7 +503,7 @@ void prinft_command_state()
             cout << "Z_setpoint   : "<< Command_Now.vel_sp[2] << " [m/s]" <<endl;
         }
 
-        cout << "Yaw_setpoint : "  << Command_Now.yaw_sp << " [deg] " <<endl;
+        cout << "Yaw_setpoint : "  << Command_Now.yaw_sp* 180/M_PI << " [deg] " <<endl;
 
         break;
     case Move_Body:
@@ -509,20 +530,20 @@ void prinft_command_state()
             cout << "Z_setpoint   : "<< Command_Now.vel_sp[2] << " [m/s]" <<endl;
         }
 
-        cout << "Yaw_setpoint : "  << Command_Now.yaw_sp << " [deg] " <<endl;
+        cout << "Yaw_setpoint : "  << Command_Now.yaw_sp * 180/M_PI<< " [deg] " <<endl;
 
         break;
 
     case Hold:
         cout << "Command: [ Hold ] " <<endl;
         cout << "Hold Position [X Y Z] : " << pos_sp[0] << " [ m ] "<< pos_sp[1]<<" [ m ] "<< pos_sp[2]<<" [ m ] "<<endl;
-        cout << "Yaw_setpoint : "  << yaw_sp << " [deg] " <<endl;
+        cout << "Yaw_setpoint : "  << yaw_sp* 180/M_PI << " [deg] " <<endl;
         break;
 
     case Land:
         cout << "Command: [ Land ] " <<endl;
         cout << "Land Position [X Y Z] : " << pos_sp[0] << " [ m ] "<< pos_sp[1]<<" [ m ] "<< pos_sp[2]<<" [ m ] "<<endl;
-        cout << "Yaw_setpoint : "  << Command_Now.yaw_sp << " [deg] " <<endl;
+        cout << "Yaw_setpoint : "  << yaw_sp* 180/M_PI << " [deg] " <<endl;
         break;
 
     case Disarm:
@@ -540,7 +561,7 @@ void prinft_command_state()
     case Takeoff:
         cout << "Command: [ Takeoff ] " <<endl;
         cout << "Takeoff Position [X Y Z] : " << pos_sp[0] << " [ m ] "<< pos_sp[1]<<" [ m ] "<< pos_sp[2]<<" [ m ] "<<endl;
-        cout << "Yaw_setpoint : "  << Command_Now.yaw_sp << " [deg] " <<endl;
+        cout << "Yaw_setpoint : "  << yaw_sp* 180/M_PI << " [deg] " <<endl;
         break;
     }
 
