@@ -17,7 +17,7 @@
 #include <LowPassFilter.h>
 #include <HighPassFilter.h>
 #include <LeadLagFilter.h>
-#include <px4_command/ude_log.h>
+#include <px4_command/data_log.h>
 
 using namespace std;
 
@@ -71,7 +71,7 @@ class pos_controller_NE
             flag_offboard   = 0;
 
             state_sub = pos_NE_nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &pos_controller_NE::state_cb,this);
-            ude_log_pub = pos_NE_nh.advertise<px4_command::ude_log>("/px4_command/ude_log", 10);
+            data_log_pub = pos_NE_nh.advertise<px4_command::data_log>("/px4_command/data_log", 10);
 
             set_filter();
         }
@@ -164,9 +164,9 @@ class pos_controller_NE
 
         Eigen::Vector3d NoiseEstimator;
 
-        ros::Publisher ude_log_pub;
+        ros::Publisher data_log_pub;
         //for log the control state
-        px4_command::ude_log ude_log;
+        px4_command::data_log data_log;
 
         void state_cb(const mavros_msgs::State::ConstPtr &msg)
         {
@@ -289,16 +289,15 @@ Eigen::Vector3d pos_controller_NE::pos_controller(Eigen::Vector3d pos, Eigen::Ve
 
     for (int i = 0; i < 3; i++)
     {
-        ude_log.pos[i] = pos(i);
-        ude_log.vel[i] = vel(i);
-        ude_log.error_pos[i] = error_pos(i);
-        ude_log.error_vel[i] = error_vel(i);
-        ude_log.u_l[i] = u_l(i);
-        ude_log.u_d[i] = u_d(i);
-        ude_log.u_total[i] = u_total(i);
-        ude_log.thrust_sp[i] = thrust_sp(i);
+        data_log.pos[i] = pos(i);
+        data_log.vel[i] = vel(i);
+        data_log.pos_sp[i] = pos_sp(i);
+        data_log.u_l[i] = u_l(i);
+        data_log.u_d[i] = u_d(i);
+        data_log.u_total[i] = u_total(i);
+        data_log.thrust_sp[i] = thrust_sp(i);
     }
-    ude_log_pub.publish(ude_log);
+    data_log_pub.publish(data_log);
 
     return thrust_sp;
 }

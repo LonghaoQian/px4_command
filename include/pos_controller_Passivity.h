@@ -13,7 +13,7 @@
 #include <Eigen/Eigen>
 #include <math.h>
 #include <math_utils.h>
-#include <px4_command/ude_log.h>
+#include <px4_command/data_log.h>
 
 
 using namespace std;
@@ -75,7 +75,7 @@ class pos_controller_passivity
 
             state_sub = pos_passivity_nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &pos_controller_passivity::state_cb,this);
 
-            ude_log_pub = pos_passivity_nh.advertise<px4_command::ude_log>("/px4_command/ude_log", 10);
+            data_log_pub = pos_passivity_nh.advertise<px4_command::data_log>("/px4_command/data_log", 10);
 
             set_filter();
 
@@ -149,9 +149,9 @@ class pos_controller_passivity
         ros::NodeHandle pos_passivity_nh;
 
         ros::Subscriber state_sub;
-        ros::Publisher ude_log_pub;
+        ros::Publisher data_log_pub;
         //for log the control state
-        px4_command::ude_log ude_log;
+        px4_command::data_log data_log;
 
         void state_cb(const mavros_msgs::State::ConstPtr &msg)
         {
@@ -286,39 +286,17 @@ Eigen::Vector3d pos_controller_passivity::pos_controller(Eigen::Vector3d pos, Ei
         integral_passivity = Eigen::Vector3d(0.0,0.0,0.0);
     }
 
-    ude_log.pos[0] = pos(0);
-    ude_log.pos[1] = pos(1);
-    ude_log.pos[2] = pos(2);
-
-    ude_log.vel[0] = vel(0);
-    ude_log.vel[1] = vel(1);
-    ude_log.vel[2] = vel(2);
-
-    ude_log.error_pos[0] = error_pos(0);
-    ude_log.error_pos[1] = error_pos(1);
-    ude_log.error_pos[2] = error_pos(2);
-
-    ude_log.error_vel[0] = error_vel(0);
-    ude_log.error_vel[1] = error_vel(1);
-    ude_log.error_vel[2] = error_vel(2);
-
-    ude_log.u_l[0] = u_l(0);
-    ude_log.u_l[1] = u_l(1);
-    ude_log.u_l[2] = u_l(2);
-
-    ude_log.u_d[0] = u_d(0);
-    ude_log.u_d[1] = u_d(1);
-    ude_log.u_d[2] = u_d(2);
-
-    ude_log.u_total[0] = u_total(0);
-    ude_log.u_total[1] = u_total(1);
-    ude_log.u_total[2] = u_total(2);
-
-    ude_log.thrust_sp[0] = thrust_sp(0);
-    ude_log.thrust_sp[1] = thrust_sp(1);
-    ude_log.thrust_sp[2] = thrust_sp(2);
-
-    ude_log_pub.publish(ude_log);
+    for (int i = 0; i < 3; i++)
+    {
+        data_log.pos[i] = pos(i);
+        data_log.vel[i] = vel(i);
+        data_log.pos_sp[i] = pos_sp(i);
+        data_log.u_l[i] = u_l(i);
+        data_log.u_d[i] = u_d(i);
+        data_log.u_total[i] = u_total(i);
+        data_log.thrust_sp[i] = thrust_sp(i);
+    }
+    data_log_pub.publish(data_log);
 
     return thrust_sp;
 }

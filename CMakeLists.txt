@@ -35,7 +35,7 @@ add_message_files(
   DIRECTORY msg
   FILES
   command.msg
-  ude_log.msg
+  data_log.msg
 )
 
 ## Generate added messages and services with any dependencies listed here

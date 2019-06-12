@@ -14,17 +14,17 @@
 #include <iomanip>
 
 //msg 头文件
-#include <px4_command/ude_log.h>
+#include <px4_command/data_log.h>
 #include <nav_msgs/Odometry.h>
 using namespace std;
 
-px4_command::ude_log ude_log;
+px4_command::data_log data_log;
 nav_msgs::Odometry truth;
 void save_flight_data(std::ofstream& out_file, float timenow);                       //储存数据函数
 float get_dt(ros::Time last);
-void ude_log_cb(const px4_command::ude_log::ConstPtr& msg)
+void data_log_cb(const px4_command::data_log::ConstPtr& msg)
 {
-    ude_log = *msg;
+    data_log = *msg;
 }
 void truth_cb(const nav_msgs::Odometry::ConstPtr& msg)
 {
@@ -37,7 +37,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh("~");
 
     //【订阅】cartographer估计位置
-    ros::Subscriber ude_log_sub = nh.subscribe<px4_command::ude_log>("/px4_command/ude_log", 1000, ude_log_cb);
+    ros::Subscriber data_log_sub = nh.subscribe<px4_command::data_log>("/px4_command/data_log", 1000, data_log_cb);
     ros::Subscriber truth_sub = nh.subscribe<nav_msgs::Odometry>("/ground_truth_drone", 1000, truth_cb);
 
     // 频率
@@ -73,8 +73,8 @@ int main(int argc, char **argv)
         std::cout << "save data!!"<<std::endl;
         out_data_file <<" Time "<< " pos_drone.x " << " pos_drone.y " << " pos_drone.z " \
                                 << " vel_drone.x " << " vel_drone.y " << " vel_drone.z " \
-                                << " error_pos.x " << " error_pos.y " << " error_pos.z " \
-                                << " error_vel.x " << " error_vel.y " << " error_vel.z " \
+                                << " pos_sp.x " << " pos_sp.y " << " pos_sp.z " \
+                                << " vel_sp.x " << " vel_sp.y " << " vel_sp.z " \
                                 << " u_l.x " << " u_l.y " << " u_l.z " \
                                 << " u_d.x " << " u_d.y " << " u_d.z " \
                                 << " u_total.x " << " u_total.y " << " u_total.z " \
@@ -109,14 +109,14 @@ int main(int argc, char **argv)
 
 void save_flight_data(std::ofstream& out_file, float timenow)
 {
-    out_file << timenow <<"  "<< ude_log.pos[0] <<"  "<< ude_log.pos[1] <<"  "<< ude_log.pos[2] <<"  "\
-                              << ude_log.vel[0] <<"  "<< ude_log.vel[1] <<"  "<< ude_log.vel[2] <<"  "\
-                              << ude_log.error_pos[0] <<"  "<< ude_log.error_pos[1] <<"  "<< ude_log.error_pos[2] <<"  "\
-                              << ude_log.error_vel[0] <<"  "<< ude_log.error_vel[1] <<"  "<< ude_log.error_vel[2] <<"  "\
-                              << ude_log.u_l[0] <<"  "<< ude_log.u_l[1] <<"  "<< ude_log.u_l[2] <<"  "\
-                              << ude_log.u_d[0] <<"  "<< ude_log.u_d[1] <<"  "<< ude_log.u_d[2] <<"  "\
-                              << ude_log.u_total[0] <<"  "<< ude_log.u_total[1] <<"  "<< ude_log.u_total[2] <<"  "\
-                              << ude_log.thrust_sp[0] <<"  "<< ude_log.thrust_sp[1] <<"  "<< ude_log.thrust_sp[2] <<"  "\
+    out_file << timenow <<"  "<< data_log.pos[0] <<"  "<< data_log.pos[1] <<"  "<< data_log.pos[2] <<"  "\
+                              << data_log.vel[0] <<"  "<< data_log.vel[1] <<"  "<< data_log.vel[2] <<"  "\
+                              << data_log.pos_sp[0] <<"  "<< data_log.pos_sp[1] <<"  "<< data_log.pos_sp[2] <<"  "\
+                              << data_log.vel_sp[0] <<"  "<< data_log.vel_sp[1] <<"  "<< data_log.vel_sp[2] <<"  "\
+                              << data_log.u_l[0] <<"  "<< data_log.u_l[1] <<"  "<< data_log.u_l[2] <<"  "\
+                              << data_log.u_d[0] <<"  "<< data_log.u_d[1] <<"  "<< data_log.u_d[2] <<"  "\
+                              << data_log.u_total[0] <<"  "<< data_log.u_total[1] <<"  "<< data_log.u_total[2] <<"  "\
+                              << data_log.thrust_sp[0] <<"  "<< data_log.thrust_sp[1] <<"  "<< data_log.thrust_sp[2] <<"  "\
                               << truth.pose.pose.position.x<<"  "<< truth.pose.pose.position.y <<"  "<< truth.pose.pose.position.z <<"  "\
                               << truth.twist.twist.linear.x<<"  "<< truth.twist.twist.linear.y <<"  "<< truth.twist.twist.linear.z <<"  "\
                               << std::endl;

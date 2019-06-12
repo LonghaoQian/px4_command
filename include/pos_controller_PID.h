@@ -22,7 +22,7 @@
 #include <Eigen/Eigen>
 #include <math.h>
 #include <math_utils.h>
-
+#include <px4_command/data_log.h>
 using namespace std;
 
 namespace namespace_PID {
@@ -68,6 +68,7 @@ class pos_controller_PID
             flag_offboard   = 0;
 
             state_sub = pos_pid_nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &pos_controller_PID::state_cb,this);
+            data_log_pub = pos_pid_nh.advertise<px4_command::data_log>("/px4_command/data_log", 10);
 
         }
 
@@ -150,6 +151,10 @@ class pos_controller_PID
         ros::NodeHandle pos_pid_nh;
 
         ros::Subscriber state_sub;
+        ros::Publisher data_log_pub;
+
+        //for log the control state
+        px4_command::data_log data_log;
 
         void state_cb(const mavros_msgs::State::ConstPtr &msg)
         {
@@ -178,6 +183,16 @@ Eigen::Vector3d pos_controller_PID::pos_controller(Eigen::Vector3d pos, Eigen::V
     _positionController(pos_sp, vel_sp, sub_mode);
 
     _velocityController();
+
+    for (int i = 0; i < 3; i++)
+    {
+        data_log.pos[i] = pos(i);
+        data_log.vel[i] = vel(i);
+        data_log.pos_sp[i] = pos_sp(i);
+        data_log.vel_sp[i] = vel_sp(i);
+    }
+
+    data_log_pub.publish(data_log);
 
     return thrust_sp;
 }

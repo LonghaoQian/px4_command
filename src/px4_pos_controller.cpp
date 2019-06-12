@@ -259,7 +259,7 @@ int main(int argc, char **argv)
                 accel_sp = pos_controller_ps.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
             }else if(switch_ude == 3)
             {
-                accel_sp = pos_controller_ne.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
+                accel_sp = pos_controller_ps.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
             }
 
             pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
@@ -281,9 +281,11 @@ int main(int argc, char **argv)
             }else if(switch_ude == 2)
             {
                 accel_sp = pos_controller_ps.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
+                //accel_sp = pos_controller_ps.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
             }else if(switch_ude == 3)
             {
                 accel_sp = pos_controller_ne.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
+                //accel_sp = pos_controller_ps.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
             }
 
             pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
