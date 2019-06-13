@@ -6,12 +6,12 @@ Quad:
 
 ##geo fence
 geo_fence:
-  x_min: -2.0
-  x_max: 2.0
-  y_min: -2.0
-  y_max: 2.0
+  x_min: -20.0
+  x_max: 20.0
+  y_min: -20.0
+  y_max: 20.0
   z_min: -0.5
-  z_max: 3.0
+  z_max: 30.0
 
 ## 限制参数
 Limit:
@@ -24,7 +24,7 @@ Limit:
 ## 起飞高度
 Takeoff_height : 0.8
 Disarm_height : 0.15
-
+flag_att_sp : 1
 # 位置环参数
 Pos_pid:
   Kp_xy : 0.95

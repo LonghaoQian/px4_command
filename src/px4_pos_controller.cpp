@@ -49,7 +49,12 @@ enum Command
 Eigen::Vector3d pos_sp(0,0,0);
 Eigen::Vector3d vel_sp(0,0,0);
 Eigen::Vector3d accel_sp(0,0,0);
+Eigen::Quaterniond q_sp;
+Eigen::Vector3d att_sp(0,0,0);
+float thrust_sp;
 double yaw_sp = 0;
+
+int flag_att_sp;
 
 float Takeoff_height;
 float Disarm_height;
@@ -93,9 +98,11 @@ int main(int argc, char **argv)
     // 参数读取
     nh.param<float>("Takeoff_height", Takeoff_height, 1.0);
     nh.param<float>("Disarm_height", Disarm_height, 0.15);
+    nh.param<int>("flag_att_sp", flag_att_sp, 0);
 
     cout << "Takeoff_height: "<< Takeoff_height<<" [m] "<<endl;
     cout << "Disarm_height : "<< Disarm_height <<" [m] "<<endl;
+    cout << "flag_att_sp : "<< flag_att_sp <<"  "<<endl;
 
     ros::Rate rate(50.0);
 
@@ -262,7 +269,23 @@ int main(int argc, char **argv)
                 accel_sp = pos_controller_ps.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
             }
 
-            pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
+            if(flag_att_sp == 0)
+            {
+                pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
+            }else
+            {
+                q_sp =  thrustToAttitude(accel_sp, yaw_sp);
+
+                //att_sp =  quaternion_to_euler(q_sp);
+
+                thrust_sp = accel_sp.norm();
+
+                //cout << "thrust_sp: " << thrust_sp <<endl;
+
+                //cout << "Attitude_sp0 [R P Y] : " << att_sp[0] * 180/M_PI <<" [deg] "<<att_sp[1] * 180/M_PI << " [deg] "<< att_sp[2] * 180/M_PI<<" [deg] "<<endl;
+
+                pos_controller.send_attitude_setpoint(q_sp, thrust_sp);
+            }
 
             break;
 
@@ -288,7 +311,24 @@ int main(int argc, char **argv)
                 //accel_sp = pos_controller_ps.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, dt);
             }
 
-            pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
+            if(flag_att_sp == 0)
+            {
+                pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
+            }else
+            {
+                q_sp =  thrustToAttitude(accel_sp, yaw_sp);
+
+                //att_sp =  quaternion_to_euler(q_sp);
+
+                thrust_sp = accel_sp.norm();
+
+                //cout << "thrust_sp: " << thrust_sp <<endl;
+
+                //cout << "Attitude_sp0 [R P Y] : " << att_sp[0] * 180/M_PI <<" [deg] "<<att_sp[1] * 180/M_PI << " [deg] "<< att_sp[2] * 180/M_PI<<" [deg] "<<endl;
+
+                pos_controller.send_attitude_setpoint(q_sp, thrust_sp);
+            }
+
 
             break;
 
@@ -346,7 +386,23 @@ int main(int argc, char **argv)
                 accel_sp = pos_controller_ne.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
             }
 
-            pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
+            if(flag_att_sp == 0)
+            {
+                pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
+            }else
+            {
+                q_sp =  thrustToAttitude(accel_sp, yaw_sp);
+
+                //att_sp =  quaternion_to_euler(q_sp);
+
+                thrust_sp = accel_sp.norm();
+
+                //cout << "thrust_sp: " << thrust_sp <<endl;
+
+                //cout << "Attitude_sp0 [R P Y] : " << att_sp[0] * 180/M_PI <<" [deg] "<<att_sp[1] * 180/M_PI << " [deg] "<< att_sp[2] * 180/M_PI<<" [deg] "<<endl;
+
+                pos_controller.send_attitude_setpoint(q_sp, thrust_sp);
+            }
 
             break;
 
@@ -372,7 +428,23 @@ int main(int argc, char **argv)
                 accel_sp = pos_controller_ne.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
             }
 
-            pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
+            if(flag_att_sp == 0)
+            {
+                pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
+            }else
+            {
+                q_sp =  thrustToAttitude(accel_sp, yaw_sp);
+
+                //att_sp =  quaternion_to_euler(q_sp);
+
+                thrust_sp = accel_sp.norm();
+
+                //cout << "thrust_sp: " << thrust_sp <<endl;
+
+                //cout << "Attitude_sp0 [R P Y] : " << att_sp[0] * 180/M_PI <<" [deg] "<<att_sp[1] * 180/M_PI << " [deg] "<< att_sp[2] * 180/M_PI<<" [deg] "<<endl;
+
+                pos_controller.send_attitude_setpoint(q_sp, thrust_sp);
+            }
 
             break;
 
@@ -421,7 +493,23 @@ int main(int argc, char **argv)
                     accel_sp = pos_controller_ne.pos_controller(pos_drone_mocap, pos_controller.vel_drone_fcu, pos_sp, dt);
                 }
 
-                pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
+                if(flag_att_sp == 0)
+                {
+                    pos_controller.send_accel_setpoint(accel_sp, yaw_sp);
+                }else
+                {
+                    q_sp =  thrustToAttitude(accel_sp, yaw_sp);
+
+                    //att_sp =  quaternion_to_euler(q_sp);
+
+                    thrust_sp = accel_sp.norm();
+
+                    //cout << "thrust_sp: " << thrust_sp <<endl;
+
+                    //cout << "Attitude_sp0 [R P Y] : " << att_sp[0] * 180/M_PI <<" [deg] "<<att_sp[1] * 180/M_PI << " [deg] "<< att_sp[2] * 180/M_PI<<" [deg] "<<endl;
+
+                    pos_controller.send_attitude_setpoint(q_sp, thrust_sp);
+                }
             }
 
             break;

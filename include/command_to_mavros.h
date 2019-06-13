@@ -174,7 +174,7 @@ class command_to_mavros
     void send_accel_setpoint(Eigen::Vector3d accel_sp, float yaw_sp);
 
     //发送角度期望值至飞控（输入：期望角度-四元数,期望推力）
-    void send_attitude_setpoint(Eigen::Vector4d attitude_sp, float thrust_sp);
+    void send_attitude_setpoint(Eigen::Quaterniond attitude_sp, float thrust_sp);
 
     //发送角度期望值至飞控（输入：期望角速度,期望推力）
     void send_attitude_rate_setpoint(Eigen::Vector3d attitude_rate_sp, float thrust_sp);
@@ -344,7 +344,7 @@ void command_to_mavros::send_accel_setpoint(Eigen::Vector3d accel_sp, float yaw_
 }
 
 //发送角度期望值至飞控（输入：期望角度-四元数,期望推力）
-void command_to_mavros::send_attitude_setpoint(Eigen::Vector4d attitude_sp, float thrust_sp)
+void command_to_mavros::send_attitude_setpoint(Eigen::Quaterniond attitude_sp, float thrust_sp)
 {
     mavros_msgs::AttitudeTarget att_setpoint;
 
@@ -353,10 +353,10 @@ void command_to_mavros::send_attitude_setpoint(Eigen::Vector4d attitude_sp, floa
 
     att_setpoint.type_mask = 0b00000111;
 
-    att_setpoint.orientation.x = attitude_sp[0];
-    att_setpoint.orientation.y = attitude_sp[1];
-    att_setpoint.orientation.z = attitude_sp[2];
-    att_setpoint.orientation.w = attitude_sp[3];
+    att_setpoint.orientation.x = attitude_sp.x();
+    att_setpoint.orientation.y = attitude_sp.y();
+    att_setpoint.orientation.z = attitude_sp.z();
+    att_setpoint.orientation.w = attitude_sp.w();
 
     att_setpoint.thrust = thrust_sp;
 

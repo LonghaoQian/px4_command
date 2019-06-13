@@ -9,9 +9,11 @@
 
 #include <mavros_msgs/SetMode.h>
 #include <mavros_msgs/State.h>
-
+#include <mavros_msgs/State.h>
 
 #include <Eigen/Eigen>
+#include <math.h>
+#include <math_utils.h>
 
 
 using namespace std;
@@ -27,16 +29,26 @@ int main(int argc, char **argv)
     vector       = Eigen::Vector3d(0.0,0.0,0.0);
 
 
-    float a;
+    //float a;
+
+    Eigen::Vector3d thr_sp;
+    float yaw_sp;
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主  循  环<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     while(ros::ok())
     {
 
-                cout << "Setting to POSCTL Mode..." <<endl;
+        cout << "Please input the thrust_x: "<<endl;
+        cin >> thr_sp(0);
+        cout << "Please input the thrust_y: "<<endl;
+        cin >> thr_sp(1);
+        cout << "Please input the thrust_z: "<<endl;
+        cin >> thr_sp(2);
+        cout << "Please input the yaw_sp: "<<endl;
+        cin >> yaw_sp;
 
 
-                a = vector.norm();
+        Eigen::Quaterniond q_sp = thrustToAttitude(thr_sp, yaw_sp);
 
         //周期休眠
         rate.sleep();
