@@ -234,6 +234,13 @@ target_link_libraries(payload_drop
   ${catkin_LIBRARIES}
 )
 
+add_executable(formation_control_sitl
+  src/Application/formation_control_sitl.cpp
+)
+add_dependencies(formation_control_sitl px4_command_gencpp)
+target_link_libraries(formation_control_sitl
+  ${catkin_LIBRARIES}
+)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
