@@ -18,41 +18,53 @@
 
 #include <ros/ros.h>
 
+#include <state_from_mavros.h>
 #include <command_to_mavros.h>
-#include <px4_command/command.h>
+
+#include <pos_controller_PID.h>
+#include <pos_controller_UDE.h>
+#include <pos_controller_Passivity.h>
+#include <pos_controller_cascade_PID.h>
+#include <pos_controller_NE.h>
+#include <circle_trajectory.h>
+
+#include <px4_command/ControlCommand.h>
+#include <px4_command/DroneState.h>
+#include <px4_command/TrajectoryPoint.h>
+#include <px4_command/AttitudeReference.h>
+
+#include <px4_command/Trajectory.h>
 
 #include <Eigen/Eigen>
 
 using namespace std;
-using namespace namespace_command_to_mavros;
+ 
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>变量声明<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+px4_command::ControlCommand Command_Now;                      //无人机当前执行命令
+px4_command::ControlCommand Command_Last;                     //无人机上一条执行命令
 
-//自定义的Command变量
-//相应的命令分别为 待机,起飞，移动(惯性系ENU)，移动(机体系)，悬停，降落，上锁，紧急降落
-enum Command
-{
-    Idle,
-    Takeoff,
-    Move_ENU,
-    Move_Body,
-    Hold,
-    Land,
-    Disarm,
-    Failsafe_land,
-};
+px4_command::DroneState _DroneState;                         //无人机状态量
+Eigen::Vector3d pos_sp(0,0,0);
+Eigen::Vector3d vel_sp(0,0,0);
+double yaw_sp;
 
 float Takeoff_height;
 float Disarm_height;
+float Use_mocap_raw;
 
-//Command Now [from upper node]
-px4_command::command Command_Now;                      //无人机当前执行命令
+//变量声明 - 其他变量
+//Geigraphical fence 地理围栏
+Eigen::Vector2f geo_fence_x;
+Eigen::Vector2f geo_fence_y;
+Eigen::Vector2f geo_fence_z;
 
-//Command Last [from upper node]
-px4_command::command Command_Last;                     //无人机上一条执行命令
-
+Eigen::Vector3d Takeoff_position = Eigen::Vector3d(0.0,0.0,0.0);
 float get_ros_time(ros::Time begin);
 void prinft_command_state();
-
-void Command_cb(const px4_command::command::ConstPtr& msg)
+void rotation_yaw(float yaw_angle, float input[2], float output[2]);
+void printf_param();
+int check_failsafe();
+void Command_cb(const px4_command::ControlCommand::ConstPtr& msg)
 {
     Command_Now = *msg;
 }
@@ -62,27 +74,27 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "px4_sender");
     ros::NodeHandle nh("~");
 
-    ros::Subscriber Command_sub = nh.subscribe<px4_command::command>("/px4/command", 10, Command_cb);
+    ros::Subscriber Command_sub = nh.subscribe<px4_command::ControlCommand>("/px4/control_command", 10, Command_cb);
 
     // 参数读取
     nh.param<float>("Takeoff_height", Takeoff_height, 1.0);
     nh.param<float>("Disarm_height", Disarm_height, 0.15);
+    nh.param<float>("Use_mocap_raw", Use_mocap_raw, 0.0);
+    nh.param<float>("geo_fence/x_min", geo_fence_x[0], -100.0);
+    nh.param<float>("geo_fence/x_max", geo_fence_x[1], 100.0);
+    nh.param<float>("geo_fence/y_min", geo_fence_y[0], -100.0);
+    nh.param<float>("geo_fence/y_max", geo_fence_y[1], 100.0);
+    nh.param<float>("geo_fence/z_min", geo_fence_z[0], -100.0);
+    nh.param<float>("geo_fence/z_max", geo_fence_z[1], 100.0);
 
-    cout << "Takeoff_height"<< Takeoff_height<<" [m] "<<endl;
-    cout << "Disarm_height "<< Disarm_height <<" [m] "<<endl;
-
+    printf_param();
     // 频率 [50Hz]
     ros::Rate rate(50.0);
 
-    Eigen::Vector3d pos_sp(0,0,0);
-
-    Eigen::Vector3d vel_sp(0,0,0);
-
-    double yaw_sp;
-
-    command_to_mavros pos_sender;
-
-    pos_sender.printf_param();
+    // 用于与mavros通讯的类，通过mavros接收来至飞控的消息【飞控->mavros->本程序】
+    state_from_mavros _state_from_mavros;
+    // 用于与mavros通讯的类，通过mavros发送控制指令至飞控【本程序->mavros->飞控】
+    command_to_mavros _command_to_mavros;
 
     int check_flag;
     // 这一步是为了程序运行前检查一下参数是否正确
@@ -95,170 +107,205 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    // 等待和飞控的连接
-    while(ros::ok() && pos_sender.current_state.connected)
-    {
-        ros::spinOnce();
-        rate.sleep();
-        ROS_INFO("Not Connected");
-    }
-
-    // 连接成功
-    ROS_INFO("Connected!!");
-
     // 先读取一些飞控的数据
-    int i =0;
-    for(i=0;i<50;i++)
+    for(int i=0;i<50;i++)
     {
         ros::spinOnce();
         rate.sleep();
 
     }
 
-    Eigen::Vector3d Takeoff_position = Eigen::Vector3d(0.0,0.0,0.0);
-    //Set the takeoff position
-    Takeoff_position = pos_sender.pos_drone_fcu;
+    
+    // Set the takeoff position
+    Takeoff_position[0] = _state_from_mavros._DroneState.position[0];
+    Takeoff_position[1] = _state_from_mavros._DroneState.position[1];
+    Takeoff_position[2] = _state_from_mavros._DroneState.position[2];
 
-    Command_Now.comid = 0;
-    Command_Now.command = Idle;
+
+    // 初始化命令-
+    // 默认设置：Idle模式 电机怠速旋转 等待来自上层的控制指令
+    Command_Now.Mode = command_to_mavros::Idle;
+    Command_Now.Command_ID = 0;
+    Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;
+    Command_Now.Reference_State.position_ref[0] = 0;
+    Command_Now.Reference_State.position_ref[1] = 0;
+    Command_Now.Reference_State.position_ref[2] = 0;
+    Command_Now.Reference_State.velocity_ref[0] = 0;
+    Command_Now.Reference_State.velocity_ref[1] = 0;
+    Command_Now.Reference_State.velocity_ref[2] = 0;
+    Command_Now.Reference_State.acceleration_ref[0] = 0;
+    Command_Now.Reference_State.acceleration_ref[1] = 0;
+    Command_Now.Reference_State.acceleration_ref[2] = 0;
+    Command_Now.Reference_State.yaw_ref = 0;
+
 
     // 记录启控时间
     ros::Time begin_time = ros::Time::now();
-
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主  循  环<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     while(ros::ok())
     {
         ros::spinOnce();
 
-
         float cur_time = get_ros_time(begin_time);
 
-        pos_sender.prinft_drone_state(cur_time);
+        // 获取当前无人机状态
+        _DroneState.time_from_start = cur_time;
+
+        _DroneState = _state_from_mavros._DroneState;
+
+        // 打印无人机状态
+        _state_from_mavros.prinft_drone_state(_DroneState);
+
+        //Printf the command state
         prinft_command_state();
-        //Check for geo fence: If drone is out of the geo fence, it will land now.
-        if(pos_sender.check_failsafe() == 1)
+
+        // 无人机一旦接受到Land指令，则会屏蔽其他指令
+        if(Command_Last.Mode == command_to_mavros::Land)
         {
-            Command_Now.command = Land;
+            Command_Now.Mode = command_to_mavros::Land;
         }
 
-        //无人机一旦接受到Land指令，则会屏蔽其他指令
-        if(Command_Last.command == Land)
+        // Check for geo fence: If drone is out of the geo fence, it will land now.
+        if(check_failsafe() == 1)
         {
-            Command_Now.command = Land;
+            Command_Now.Mode = command_to_mavros::Land;
         }
 
-        switch (Command_Now.command)
+        switch (Command_Now.Mode)
         {
-        case Idle:
-            pos_sender.idle();
+        case command_to_mavros::Idle:
+            _command_to_mavros.idle();
             break;
-        case Takeoff:
+            
+        case command_to_mavros::Takeoff:
             pos_sp = Eigen::Vector3d(Takeoff_position[0],Takeoff_position[1],Takeoff_position[2]+Takeoff_height);
             vel_sp = Eigen::Vector3d(0.0,0.0,0.0);
-            yaw_sp = pos_sender.euler_fcu[2]; //rad
+            yaw_sp = _DroneState.attitude[2]; //rad
 
-            pos_sender.send_pos_setpoint(pos_sp, yaw_sp);
+            _command_to_mavros.send_pos_setpoint(pos_sp, yaw_sp);
 
             break;
 
-        case Move_ENU:
+        // 不支持复合模式
+        case command_to_mavros::Move_ENU:
 
-            if( Command_Now.sub_mode == 0 )
+            //只有在comid增加时才会进入解算 ： 机体系 至 惯性系
+            if( Command_Now.Command_ID  >  Command_Last.Command_ID )
             {
-                pos_sp = Eigen::Vector3d(Command_Now.pos_sp[0],Command_Now.pos_sp[1],Command_Now.pos_sp[2]);
-                yaw_sp = Command_Now.yaw_sp;
+                if( Command_Now.Reference_State.Sub_mode  == 0 )
+                {
+                    pos_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1],Command_Now.Reference_State.position_ref[2]);
+                    yaw_sp = Command_Now.Reference_State.yaw_ref;
 
-                pos_sender.send_pos_setpoint(pos_sp, yaw_sp);
+                    _command_to_mavros.send_pos_setpoint(pos_sp, yaw_sp);
+                }
+                else if( Command_Now.Reference_State.Sub_mode  == 3 )
+                {
+                    vel_sp = Eigen::Vector3d(Command_Now.Reference_State.velocity_ref[0],Command_Now.Reference_State.velocity_ref[1],Command_Now.Reference_State.velocity_ref[2]);
+
+                    _command_to_mavros.send_vel_setpoint(vel_sp, yaw_sp);
+                }
             }
-            else if( Command_Now.sub_mode == 3 )
-            {
-                vel_sp = Eigen::Vector3d(Command_Now.vel_sp[0],Command_Now.vel_sp[1],Command_Now.vel_sp[2]);
+            break;
 
-                pos_sender.send_vel_setpoint(vel_sp, yaw_sp);
+        // 不支持复合模式
+        case command_to_mavros::Move_Body:
+
+            if( Command_Now.Reference_State.Sub_mode  == 0 )
+            {
+                float d_pos_body[2] = {Command_Now.Reference_State.position_ref[0], Command_Now.Reference_State.position_ref[1]};         //the desired xy position in Body Frame
+                float d_pos_enu[2];                                                           //the desired xy position in enu Frame (The origin point is the drone)
+                rotation_yaw(_DroneState.attitude[2], d_pos_body, d_pos_enu);
+
+                pos_sp[0] = _DroneState.position[0] + d_pos_enu[0];
+                pos_sp[1] = _DroneState.position[1] + d_pos_enu[1];
+                pos_sp[2] = _DroneState.position[2] + Command_Now.Reference_State.position_ref[2];
+
+                yaw_sp = _DroneState.attitude[2] + Command_Now.Reference_State.yaw_ref;
+
+                _command_to_mavros.send_pos_setpoint(pos_sp, yaw_sp);
+            }
+            else if( Command_Now.Reference_State.Sub_mode  == 3 )
+            {
+                vel_sp = Eigen::Vector3d(Command_Now.Reference_State.velocity_ref[0],Command_Now.Reference_State.velocity_ref[1],Command_Now.Reference_State.velocity_ref[2]);
+
+                yaw_sp =  Command_Now.Reference_State.yaw_ref;
+
+                _command_to_mavros.send_vel_setpoint_body(vel_sp, yaw_sp);
             }
 
-            break;
-
-            //这里机体系只提供速度模式
-        case Move_Body:
-
-            vel_sp = Eigen::Vector3d(Command_Now.vel_sp[0],Command_Now.vel_sp[1],Command_Now.vel_sp[2]);
-
-            yaw_sp = Command_Now.yaw_sp;
-
-            pos_sender.send_vel_setpoint_body(vel_sp, yaw_sp);
 
             break;
 
-        case Hold:
-            if (Command_Last.command != Hold)
+        case command_to_mavros::Hold:
+            if (Command_Last.Mode != command_to_mavros::Hold)
             {
-                pos_sp = Eigen::Vector3d(pos_sender.pos_drone_fcu[0],pos_sender.pos_drone_fcu[1],pos_sender.pos_drone_fcu[2]);
-                yaw_sp = pos_sender.euler_fcu[2];
+                pos_sp = Eigen::Vector3d(_DroneState.position[0],_DroneState.position[1],_DroneState.position[2]);
+                yaw_sp = _DroneState.attitude[2];
             }
 
-            pos_sender.send_pos_setpoint(pos_sp, yaw_sp);
+            _command_to_mavros.send_pos_setpoint(pos_sp, yaw_sp);
             break;
 
 
-        case Land:
-            if (Command_Last.command != Land)
+        case command_to_mavros::Land:
+            if (Command_Last.Mode != command_to_mavros::Land)
             {
-                pos_sp = Eigen::Vector3d(pos_sender.pos_drone_fcu[0],pos_sender.pos_drone_fcu[1],Takeoff_position[2]);
-                yaw_sp = pos_sender.euler_fcu[2];
+                pos_sp = Eigen::Vector3d(_DroneState.position[0],_DroneState.position[1],Takeoff_position[2]);
+                yaw_sp = _DroneState.attitude[2];
             }
 
             //如果距离起飞高度小于10厘米，则直接上锁并切换为手动模式；
-            if(abs(pos_sender.pos_drone_fcu[2] - Takeoff_position[2]) < Disarm_height)
+            //如果距离起飞高度小于10厘米，则直接上锁并切换为手动模式；
+            if(abs(_DroneState.position[2] - Takeoff_position[2]) < Disarm_height)
             {
-                if(pos_sender.current_state.mode == "OFFBOARD")
+                if(_DroneState.mode == "OFFBOARD")
                 {
-                    pos_sender.mode_cmd.request.custom_mode = "MANUAL";
-                    pos_sender.set_mode_client.call(pos_sender.mode_cmd);
+                    _command_to_mavros.mode_cmd.request.custom_mode = "MANUAL";
+                    _command_to_mavros.set_mode_client.call(_command_to_mavros.mode_cmd);
                 }
 
-                if(pos_sender.current_state.armed)
+                if(_DroneState.armed)
                 {
-                    pos_sender.arm_cmd.request.value = false;
-                    pos_sender.arming_client.call(pos_sender.arm_cmd);
+                    _command_to_mavros.arm_cmd.request.value = false;
+                    _command_to_mavros.arming_client.call(_command_to_mavros.arm_cmd);
 
                 }
 
-                if (pos_sender.arm_cmd.response.success)
+                if (_command_to_mavros.arm_cmd.response.success)
                 {
                     cout<<"Disarm successfully!"<<endl;
                 }
             }else
             {
 
-                pos_sender.send_pos_setpoint(pos_sp, yaw_sp);
+                _command_to_mavros.send_pos_setpoint(pos_sp, yaw_sp);
             }
 
             break;
 
-        case Disarm:
-
-            if(pos_sender.current_state.mode == "OFFBOARD")
+        case command_to_mavros::Disarm:
+            if(_DroneState.mode == "OFFBOARD")
             {
-                pos_sender.mode_cmd.request.custom_mode = "MANUAL";
-                pos_sender.set_mode_client.call(pos_sender.mode_cmd);
+                _command_to_mavros.mode_cmd.request.custom_mode = "MANUAL";
+                _command_to_mavros.set_mode_client.call(_command_to_mavros.mode_cmd);
             }
 
-            if(pos_sender.current_state.armed)
+            if(_DroneState.armed)
             {
-                pos_sender.arm_cmd.request.value = false;
-                pos_sender.arming_client.call(pos_sender.arm_cmd);
+                _command_to_mavros.arm_cmd.request.value = false;
+                _command_to_mavros.arming_client.call(_command_to_mavros.arm_cmd);
 
             }
 
-            if (pos_sender.arm_cmd.response.success)
+            if (_command_to_mavros.arm_cmd.response.success)
             {
                 cout<<"Disarm successfully!"<<endl;
             }
 
             break;
 
-        case Failsafe_land:
+        case command_to_mavros::Failsafe_land:
 
             break;
 
@@ -286,58 +333,92 @@ float get_ros_time(ros::Time begin)
 void prinft_command_state()
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Command State<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-    switch(Command_Now.command)
+    switch(Command_Now.Mode)
     {
-    case Move_ENU:
+    case command_to_mavros::Move_ENU:
         cout << "Command: [ Move_ENU ] " <<endl;
         break;
-    case Move_Body:
+    case command_to_mavros::Move_Body:
         cout << "Command: [ Move_Body ] " <<endl;
         break;
-    case Hold:
+    case command_to_mavros::Hold:
         cout << "Command: [ Hold ] " <<endl;
         break;
-    case Land:
+    case command_to_mavros::Land:
         cout << "Command: [ Land ] " <<endl;
         break;
-    case Disarm:
+    case command_to_mavros::Disarm:
         cout << "Command: [ Disarm ] " <<endl;
         break;
-    case Failsafe_land:
+    case command_to_mavros::Failsafe_land:
         cout << "Command: [ Failsafe_land ] " <<endl;
         break;
-    case Idle:
+    case command_to_mavros::Idle:
         cout << "Command: [ Idle ] " <<endl;
         break;
-    case Takeoff:
+    case command_to_mavros::Takeoff:
         cout << "Command: [ Takeoff ] " <<endl;
         break;
 
     }
 
     int sub_mode;
-    sub_mode = Command_Now.sub_mode;
+    sub_mode = Command_Now.Reference_State.Sub_mode ;
 
     if((sub_mode & 0b10) == 0) //xy channel
     {
         cout << "Submode: xy position control "<<endl;
-        cout << "X_setpoint   : " << Command_Now.pos_sp[0] << " [ m ]"  << "  Y_setpoint : "<< Command_Now.pos_sp[1] << " [ m ]"<<endl;
+        cout << "X_setpoint   : " << Command_Now.Reference_State.position_ref[0] << " [ m ]"  << "  Y_setpoint : "<< Command_Now.Reference_State.position_ref[1] << " [ m ]"<<endl;
     }
     else{
         cout << "Submode: xy velocity control "<<endl;
-        cout << "X_setpoint   : " << Command_Now.vel_sp[0] << " [m/s]" << "  Y_setpoint : "<< Command_Now.vel_sp[1] << " [m/s]" <<endl;
+        cout << "X_setpoint   : " << Command_Now.Reference_State.velocity_ref[0] << " [m/s]" << "  Y_setpoint : "<< Command_Now.Reference_State.velocity_ref[1] << " [m/s]" <<endl;
     }
 
     if((sub_mode & 0b01) == 0) //z channel
     {
         cout << "Submode:  z position control "<<endl;
-        cout << "Z_setpoint   : "<< Command_Now.pos_sp[2] << " [ m ]" << endl;
+        cout << "Z_setpoint   : "<< Command_Now.Reference_State.position_ref[2] << " [ m ]" << endl;
     }
     else
     {
         cout << "Submode:  z velocity control "<<endl;
-        cout << "Z_setpoint   : "<< Command_Now.vel_sp[2] << " [m/s]" <<endl;
+        cout << "Z_setpoint   : "<< Command_Now.Reference_State.velocity_ref[2] << " [m/s]" <<endl;
     }
 
-    cout << "Yaw_setpoint : "  << Command_Now.yaw_sp * 180/M_PI<< " [deg] " <<endl;
+    cout << "Yaw_setpoint : "  << Command_Now.Reference_State.yaw_ref * 180/M_PI<< " [deg] " <<endl;
+}
+
+void printf_param()
+{
+    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Parameter <<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    cout << "Takeoff_height: "<< Takeoff_height<<" [m] "<<endl;
+    cout << "Disarm_height : "<< Disarm_height <<" [m] "<<endl;
+    cout << "Use_mocap_raw : "<< Use_mocap_raw <<" [1 for use mocap raw data] "<<endl;
+    cout << "geo_fence_x : "<< geo_fence_x[0] << " [m]  to  "<<geo_fence_x[1] << " [m]"<< endl;
+    cout << "geo_fence_y : "<< geo_fence_y[0] << " [m]  to  "<<geo_fence_y[1] << " [m]"<< endl;
+    cout << "geo_fence_z : "<< geo_fence_z[0] << " [m]  to  "<<geo_fence_z[1] << " [m]"<< endl;
+
+}
+
+int check_failsafe()
+{
+    if (_DroneState.position[0] < geo_fence_x[0] || _DroneState.position[0] > geo_fence_x[1] ||
+        _DroneState.position[1] < geo_fence_y[0] || _DroneState.position[1] > geo_fence_y[1] ||
+        _DroneState.position[2] < geo_fence_z[0] || _DroneState.position[2] > geo_fence_z[1])
+    {
+        return 1;
+        cout << "Out of the geo fence, the drone is landing... "<< endl;
+    }
+    else{
+        return 0;
+    }
+}
+
+// 【坐标系旋转函数】- 机体系到enu系
+// input是机体系,output是惯性系，yaw_angle是当前偏航角
+void rotation_yaw(float yaw_angle, float input[2], float output[2])
+{
+    output[0] = input[0] * cos(yaw_angle) - input[1] * sin(yaw_angle);
+    output[1] = input[0] * sin(yaw_angle) + input[1] * cos(yaw_angle);
 }

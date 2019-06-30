@@ -15,18 +15,28 @@ geo_fence:
 
 ## 限制参数
 Limit:
+  pxy_error_max: 0.8
+  vxy_error_max: 1.0
+  pz_error_max: 0.5
+  vz_error_max: 1.0
+  pxy_int_max : 5.0
+  pz_int_max : 5.0
   tilt_max: 20.0
   THR_MIN: 0.1
   THR_MAX: 0.9
+  int_start_error: 100.0
+
   XY_VEL_MAX : 0.8
   Z_VEL_MAX : 0.5
-
+  
+  
 ## 起飞高度
 Takeoff_height : 0.8
 Disarm_height : 0.15
-flag_att_sp : 1
+Use_mocap_raw : 0
+
 # 位置环参数
-Pos_pid:
+Pos_cascade_pid:
   Kp_xy : 0.95
   Kp_z : 1.0
   Kp_vxvy : 0.09
@@ -38,6 +48,16 @@ Pos_pid:
   Hover_throttle : 0.5
   MPC_VELD_LP: 5.0
 
+# 位置环参数
+Pos_pid:
+  Kp_xy : 2.5
+  Kp_z : 2.5
+  Ki_xy : 0.5
+  Ki_z : 0.5
+  Kd_xy : 3.0
+  Kd_vz : 3.0
+
+
 # 位置环参数 for ude
 Pos_ude:
   Kp_xy : 0.5
@@ -46,9 +66,6 @@ Pos_ude:
   Kd_Zz : 2.0
   T_ude_xy : 1.0
   T_ude_z : 1.0
-  INT_LIM_X : 5.0
-  INT_LIM_Y : 5.0
-  INT_LIM_Z : 10.0
 
 # 位置环参数 for passivity
 Pos_passivity:
@@ -58,10 +75,7 @@ Pos_passivity:
   Kd_z : 2.0
   T_ude_xy : 1.0
   T_ude_z : 1.0
-  T1: 0.1
-  INT_LIM_X : 5.0
-  INT_LIM_Y : 5.0
-  INT_LIM_Z : 10.0
+  T_ps: 0.1
 
 # 位置环参数 for ne
 Pos_ne:
@@ -71,12 +85,17 @@ Pos_ne:
   Kd_z : 2.0
   T_ude_xy : 1.0
   T_ude_z : 1.0
-  Tn: 0.1
-  INT_LIM_X : 5.0
-  INT_LIM_Y : 5.0
-  INT_LIM_Z : 10.0
+  T_ne: 0.1
 
-
+# 圆轨迹参数 for Circle_Trajectory
+Circle_Trajectory:
+  Center_x: 0.0
+  Center_y: 0.0
+  Center_z: 1.0
+  radius: 1.0
+  linear_vel: 0.31415926
+  time_total: 50.0
+  direction: 1.0
 
 
 

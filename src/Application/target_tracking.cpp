@@ -8,31 +8,21 @@
  * 说明: 目标追踪示例程序
  *      1. 订阅目标位置(来自视觉的ros节点)
  *      2. 追踪算法及追踪策略
- *      3. 发布上层控制指令 (px4_command::command)
+ *      3. 发布上层控制指令 (px4_command::ControlCommand)
 ***************************************************************************************************************************/
 //ros头文件
 #include <ros/ros.h>
 
 //topic 头文件
 #include <iostream>
-#include <px4_command/command.h>
-
+#include <px4_command/ControlCommand.h>
+#include <command_to_mavros.h>
 #include <geometry_msgs/Pose.h>
 
 
 using namespace std;
+ 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>全 局 变 量<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-enum Command
-{
-    Idle,
-    Takeoff,
-    Move_ENU,
-    Move_Body,
-    Hold,
-    Land,
-    Disarm,
-    Failsafe_land,
-};
 //---------------------------------------Vision---------------------------------------------
 geometry_msgs::Pose pos_target;                                 //目标位置[机体系下：前方x为正，右方y为正，下方z为正]
 
@@ -60,7 +50,7 @@ float track_thres_vel_z;                                          //追踪速度
 int num_count_vision_lost = 0;                                                      //视觉丢失计数器
 int count_vision_lost = 0;                                                          //视觉丢失计数器阈值
 //---------------------------------------Output---------------------------------------------
-px4_command::command Command_now;                               //发送给position_control.cpp的命令
+px4_command::ControlCommand Command_Now;                               //发送给position_control.cpp的命令
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>声 明 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void printf_param();                                                                 //打印各项参数以供检查
@@ -101,7 +91,7 @@ int main(int argc, char **argv)
     ros::Subscriber vision_sub = nh.subscribe<geometry_msgs::Pose>("/vision/target", 10, vision_cb);
 
     // 【发布】发送给position_control.cpp的命令
-    ros::Publisher command_pub = nh.advertise<px4_command::command>("/px4/command", 10);
+    ros::Publisher command_pub = nh.advertise<px4_command::ControlCommand>("/px4/control_command", 10);
 
     // 频率 [20Hz]
     // 这个频率取决于视觉程序输出的频率，一般不能低于10Hz，不然追踪效果不好
@@ -222,9 +212,9 @@ int main(int argc, char **argv)
 
             // 惯性系移动
             case 1:
-                Command_now.command = Move_ENU;
+                Command_Now.Mode = command_to_mavros::Move_ENU;
                 generate_com(0, state_desired);
-                command_pub.publish(Command_now);
+                command_pub.publish(Command_Now);
 
                 Num_StateMachine_Last = Num_StateMachine;
                 Num_StateMachine = 0;
@@ -232,9 +222,9 @@ int main(int argc, char **argv)
 
             // 机体系移动
             case 2:
-                Command_now.command = Move_Body;
+                Command_Now.Mode = command_to_mavros::Move_Body;
                 generate_com(0, state_desired);
-                command_pub.publish(Command_now);
+                command_pub.publish(Command_Now);
 
                 Num_StateMachine_Last = Num_StateMachine;
                 Num_StateMachine = 0;
@@ -242,8 +232,8 @@ int main(int argc, char **argv)
 
             //Land
             case 3:
-                Command_now.command = Land;
-                command_pub.publish(Command_now);
+                Command_Now.Mode = command_to_mavros::Land;
+                command_pub.publish(Command_Now);
 
                 Num_StateMachine_Last = Num_StateMachine;
             break;
@@ -267,49 +257,49 @@ int main(int argc, char **argv)
                 //发送悬停指令
                 if(flag_detected == 0 || (distance < distance_thres))
                 {
-                    Command_now.command = Hold;
+                    Command_Now.Mode = command_to_mavros::Hold;
                 }
                 //如果捕捉到目标
                 else
                 {
                     //追踪是在机体系下完成
-                    Command_now.command = Move_Body;
-                    Command_now.sub_mode = 2;   //xy velocity z position
-                    Command_now.comid = comid;
+                    Command_Now.Mode = command_to_mavros::Move_Body;
+                    Command_Now.Reference_State.Sub_mode  = command_to_mavros::XY_VEL_Z_POS;   //xy velocity z position
+                    Command_Now.Command_ID = comid;
                     comid++;
 
                     if (flag_x == 0)
                     {
-                        Command_now.vel_sp[0] =  0;
+                        Command_Now.Reference_State.velocity_ref[0] =  0;
                     }else
                     {
-                        Command_now.vel_sp[0] =  kpx_track * (pos_target.position.x - delta_x);
+                        Command_Now.Reference_State.velocity_ref[0] =  kpx_track * (pos_target.position.x - delta_x);
                     }
 
-                    Command_now.vel_sp[1] =  - kpy_track * pos_target.position.y;
+                    Command_Now.Reference_State.velocity_ref[1] =  - kpy_track * pos_target.position.y;
 
                     //Height is locked.
-                    //Command_now.vel_sp[2] =  - kpz_track * pos_target.position.z;
-                    Command_now.pos_sp[2] =  0;
+                    //Command_Now.Reference_State.velocity_ref[2] =  - kpz_track * pos_target.position.z;
+                    Command_Now.Reference_State.position_ref[2] =  0;
 
                     //目前航向角锁定
-                    Command_now.yaw_sp = 0;
+                    Command_Now.Reference_State.yaw_ref = 0;
 
                     //速度限幅
-                    Command_now.vel_sp[0] = satfunc(Command_now.vel_sp[0], track_max_vel_x, track_thres_vel_x);
-                    Command_now.vel_sp[1] = satfunc(Command_now.vel_sp[1], track_max_vel_y, track_thres_vel_y);
-                   // Command_now.vel_sp[2] = satfunc(Command_now.vel_sp[2], track_max_vel_z, track_thres_vel_z);
+                    Command_Now.Reference_State.velocity_ref[0] = satfunc(Command_Now.Reference_State.velocity_ref[0], track_max_vel_x, track_thres_vel_x);
+                    Command_Now.Reference_State.velocity_ref[1] = satfunc(Command_Now.Reference_State.velocity_ref[1], track_max_vel_y, track_thres_vel_y);
+                   // Command_Now.Reference_State.velocity_ref[2] = satfunc(Command_Now.Reference_State.velocity_ref[2], track_max_vel_z, track_thres_vel_z);
 
                     //如果期望速度为0,则直接执行悬停指令
-                    if(Command_now.vel_sp[0]==0 && Command_now.vel_sp[1] == 0)
+                    if(Command_Now.Reference_State.velocity_ref[0]==0 && Command_Now.Reference_State.velocity_ref[1] == 0)
                     {
-                        Command_now.command = Hold;
+                        Command_Now.Mode = command_to_mavros::Hold;
                     }
 
                 }
 
                 //Publish
-                command_pub.publish(Command_now);
+                command_pub.publish(Command_Now);
 
                 Num_StateMachine_Last = Num_StateMachine;
 
@@ -336,7 +326,7 @@ void printf_result()
     cout << "pos_target: [X Y Z] : " << " " << pos_target.position.x  << " [m] "<< pos_target.position.y  <<" [m] "<< pos_target.position.z <<" [m] "<<endl;
 
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>Control State<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-    cout << "Command: " << Command_now.vel_sp[0] << " [m/s] "<< Command_now.vel_sp[1] << " [m/s] "<< Command_now.vel_sp[2] << " [m/s] "<<endl;
+    cout << "Command: " << Command_Now.Reference_State.velocity_ref[0] << " [m/s] "<< Command_Now.Reference_State.velocity_ref[1] << " [m/s] "<< Command_Now.Reference_State.velocity_ref[2] << " [m/s] "<<endl;
 }
 
 void printf_param()
@@ -370,7 +360,7 @@ void printf_param()
 void generate_com(int sub_mode, float state_desired[4])
 {
     static int comid = 1;
-    Command_now.sub_mode = sub_mode;
+    Command_Now.Reference_State.Sub_mode  = sub_mode;
 
 //# sub_mode 2-bit value:
 //# 0 for position, 1 for vel, 1st for xy, 2nd for z.
@@ -380,27 +370,27 @@ void generate_com(int sub_mode, float state_desired[4])
 
     if((sub_mode & 0b10) == 0) //xy channel
     {
-        Command_now.pos_sp[0] = state_desired[0];
-        Command_now.pos_sp[1] = state_desired[1];
+        Command_Now.Reference_State.position_ref[0] = state_desired[0];
+        Command_Now.Reference_State.position_ref[1] = state_desired[1];
     }
     else
     {
-        Command_now.vel_sp[0] = state_desired[0];
-        Command_now.vel_sp[1] = state_desired[1];
+        Command_Now.Reference_State.velocity_ref[0] = state_desired[0];
+        Command_Now.Reference_State.velocity_ref[1] = state_desired[1];
     }
 
     if((sub_mode & 0b01) == 0) //z channel
     {
-        Command_now.pos_sp[2] = state_desired[2];
+        Command_Now.Reference_State.position_ref[2] = state_desired[2];
     }
     else
     {
-        Command_now.vel_sp[2] = state_desired[2];
+        Command_Now.Reference_State.velocity_ref[2] = state_desired[2];
     }
 
 
-    Command_now.yaw_sp = state_desired[3]/180.0*M_PI;
-    Command_now.comid = comid;
+    Command_Now.Reference_State.yaw_ref = state_desired[3]/180.0*M_PI;
+    Command_Now.Command_ID = comid;
     comid++;
 }
 

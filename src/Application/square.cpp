@@ -23,23 +23,13 @@
 #include <iostream>
 #include <stdio.h>
 #include <std_msgs/Bool.h>
-#include <px4_command/command.h>
-
+#include <px4_command/ControlCommand.h>
+#include <command_to_mavros.h>
 
 using namespace std;
+ 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>全 局 变 量<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-enum Command
-{
-    Idle,
-    Takeoff,
-    Move_ENU,
-    Move_Body,
-    Hold,
-    Land,
-    Disarm,
-    Failsafe_land,
-};
-px4_command::command Command_now;
+px4_command::ControlCommand Command_Now;
 //---------------------------------------正方形参数---------------------------------------------
 float size_square;                  //正方形边长
 float height_square;                //飞行高度
@@ -53,7 +43,7 @@ int main(int argc, char **argv)
     ros::Rate rate(1.0);
 
     // 【发布】发送给position_control.cpp的命令
-    ros::Publisher move_pub = nh.advertise<px4_command::command>("/px4/command", 10);
+    ros::Publisher move_pub = nh.advertise<px4_command::ControlCommand>("/px4/control_command", 10);
 
     //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>参数读取<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     nh.param<float>("size_square", size_square, 1.5);
@@ -85,16 +75,16 @@ int main(int argc, char **argv)
     while (i < sleep_time)
     {
 
-        Command_now.command = Move_ENU;  //Move模式
-        Command_now.sub_mode = 0;             //子模式：位置控制模式
-        Command_now.pos_sp[0] = 0;
-        Command_now.pos_sp[1] = 0;
-        Command_now.pos_sp[2] = height_square;
-        Command_now.yaw_sp = 0;
-        Command_now.comid = comid;
+        Command_Now.Mode = command_to_mavros::Move_ENU;  //Move模式
+        Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;             //子模式：位置控制模式
+        Command_Now.Reference_State.position_ref[0] = 0;
+        Command_Now.Reference_State.position_ref[1] = 0;
+        Command_Now.Reference_State.position_ref[2] = height_square;
+        Command_Now.Reference_State.yaw_ref = 0;
+        Command_Now.Command_ID = comid;
         comid++;
 
-        move_pub.publish(Command_now);
+        move_pub.publish(Command_Now);
 
         rate.sleep();
 
@@ -110,16 +100,16 @@ int main(int argc, char **argv)
     while (i < sleep_time)
     {
 
-        Command_now.command = Move_ENU;  //Move模式
-        Command_now.sub_mode = 0;             //子模式：位置控制模式
-        Command_now.pos_sp[0] = -size_square/2;
-        Command_now.pos_sp[1] = -size_square/2;
-        Command_now.pos_sp[2] = height_square;
-        Command_now.yaw_sp = 0;
-        Command_now.comid = comid;
+        Command_Now.Mode = command_to_mavros::Move_ENU;  //Move模式
+        Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;             //子模式：位置控制模式
+        Command_Now.Reference_State.position_ref[0] = -size_square/2;
+        Command_Now.Reference_State.position_ref[1] = -size_square/2;
+        Command_Now.Reference_State.position_ref[2] = height_square;
+        Command_Now.Reference_State.yaw_ref = 0;
+        Command_Now.Command_ID = comid;
         comid++;
 
-        move_pub.publish(Command_now);
+        move_pub.publish(Command_Now);
 
         rate.sleep();
 
@@ -136,16 +126,16 @@ int main(int argc, char **argv)
     while (i < sleep_time)
     {
 
-        Command_now.command = Move_ENU;  //Move模式
-        Command_now.sub_mode = 0;             //子模式：位置控制模式
-        Command_now.pos_sp[0] = size_square/2;
-        Command_now.pos_sp[1] = -size_square/2;
-        Command_now.pos_sp[2] = height_square;
-        Command_now.yaw_sp = 0;
-        Command_now.comid = comid;
+        Command_Now.Mode = command_to_mavros::Move_ENU;  //Move模式
+        Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;             //子模式：位置控制模式
+        Command_Now.Reference_State.position_ref[0] = size_square/2;
+        Command_Now.Reference_State.position_ref[1] = -size_square/2;
+        Command_Now.Reference_State.position_ref[2] = height_square;
+        Command_Now.Reference_State.yaw_ref = 0;
+        Command_Now.Command_ID = comid;
         comid++;
 
-        move_pub.publish(Command_now);
+        move_pub.publish(Command_Now);
 
         rate.sleep();
 
@@ -160,16 +150,16 @@ int main(int argc, char **argv)
     while (i < sleep_time)
     {
 
-        Command_now.command = Move_ENU;  //Move模式
-        Command_now.sub_mode = 0;             //子模式：位置控制模式
-        Command_now.pos_sp[0] = size_square/2;
-        Command_now.pos_sp[1] = size_square/2;
-        Command_now.pos_sp[2] = height_square;
-        Command_now.yaw_sp = 0;
-        Command_now.comid = comid;
+        Command_Now.Mode = command_to_mavros::Move_ENU;  //Move模式
+        Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;             //子模式：位置控制模式
+        Command_Now.Reference_State.position_ref[0] = size_square/2;
+        Command_Now.Reference_State.position_ref[1] = size_square/2;
+        Command_Now.Reference_State.position_ref[2] = height_square;
+        Command_Now.Reference_State.yaw_ref = 0;
+        Command_Now.Command_ID = comid;
         comid++;
 
-        move_pub.publish(Command_now);
+        move_pub.publish(Command_Now);
 
         rate.sleep();
 
@@ -184,16 +174,16 @@ int main(int argc, char **argv)
     while (i < sleep_time)
     {
 
-        Command_now.command = Move_ENU;  //Move模式
-        Command_now.sub_mode = 0;             //子模式：位置控制模式
-        Command_now.pos_sp[0] = -size_square/2;
-        Command_now.pos_sp[1] = size_square/2;
-        Command_now.pos_sp[2] = height_square;
-        Command_now.yaw_sp = 0;
-        Command_now.comid = comid;
+        Command_Now.Mode = command_to_mavros::Move_ENU;  //Move模式
+        Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;             //子模式：位置控制模式
+        Command_Now.Reference_State.position_ref[0] = -size_square/2;
+        Command_Now.Reference_State.position_ref[1] = size_square/2;
+        Command_Now.Reference_State.position_ref[2] = height_square;
+        Command_Now.Reference_State.yaw_ref = 0;
+        Command_Now.Command_ID = comid;
         comid++;
 
-        move_pub.publish(Command_now);
+        move_pub.publish(Command_Now);
 
         rate.sleep();
 
@@ -208,16 +198,16 @@ int main(int argc, char **argv)
     while (i < sleep_time)
     {
 
-        Command_now.command = Move_ENU;  //Move模式
-        Command_now.sub_mode = 0;             //子模式：位置控制模式
-        Command_now.pos_sp[0] = -size_square/2;
-        Command_now.pos_sp[1] = -size_square/2;
-        Command_now.pos_sp[2] = height_square;
-        Command_now.yaw_sp = 0;
-        Command_now.comid = comid;
+        Command_Now.Mode = command_to_mavros::Move_ENU;  //Move模式
+        Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;             //子模式：位置控制模式
+        Command_Now.Reference_State.position_ref[0] = -size_square/2;
+        Command_Now.Reference_State.position_ref[1] = -size_square/2;
+        Command_Now.Reference_State.position_ref[2] = height_square;
+        Command_Now.Reference_State.yaw_ref = 0;
+        Command_Now.Command_ID = comid;
         comid++;
 
-        move_pub.publish(Command_now);
+        move_pub.publish(Command_Now);
 
         rate.sleep();
 
@@ -231,8 +221,8 @@ int main(int argc, char **argv)
 
 
 
-    Command_now.command = Land;
-    move_pub.publish(Command_now);
+    Command_Now.Mode = command_to_mavros::Land;
+    move_pub.publish(Command_Now);
 
     rate.sleep();
 

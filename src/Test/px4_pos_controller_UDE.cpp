@@ -15,7 +15,7 @@
 
 #include <command_to_mavros.h>
 #include <pos_controller_UDE.h>
-#include <px4_command/command.h>
+#include <px4_command/ControlCommand.h>
 #include <pos_controller_PID.h>
 
 #include <Eigen/Eigen>
@@ -24,7 +24,7 @@
 
 using namespace std;
 using namespace namespace_passivity;
-using namespace namespace_command_to_mavros;
+ 
 using namespace namespace_UDE;
 using namespace namespace_PID;
 //自定义的Command变量
@@ -41,16 +41,16 @@ enum Command
     Idle
 };
 //Command Now [from upper node]
-px4_command::command Command_Now;                      //无人机当前执行命令
+px4_command::ControlCommand Command_Now;                      //无人机当前执行命令
 
 //Command Last [from upper node]
-px4_command::command Command_Last;                     //无人机上一条执行命令
+px4_command::ControlCommand Command_Last;                     //无人机上一条执行命令
 
 float get_ros_time(ros::Time begin);
 void prinft_command_state();
 void rotation_yaw(float yaw_angle, float input[2], float output[2]);
 
-void Command_cb(const px4_command::command::ConstPtr& msg)
+void Command_cb(const px4_command::ControlCommand::ConstPtr& msg)
 {
     Command_Now = *msg;
 }
@@ -60,7 +60,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "px4_pos_controller_UDE");
     ros::NodeHandle nh("~");
 
-    ros::Subscriber Command_sub = nh.subscribe<px4_command::command>("/px4/command", 10, Command_cb);
+    ros::Subscriber Command_sub = nh.subscribe<px4_command::ControlCommand>("/px4/control_command", 10, Command_cb);
 
     int switch_ude;
 
@@ -128,8 +128,8 @@ int main(int argc, char **argv)
     //初始化命令-
     // 默认设置：move模式 子模式：位置控制 起飞到当前位置点上方
 
-    Command_Now.comid = 0;
-    Command_Now.command = Idle;
+    Command_Now.Command_ID = 0;
+    Command_Now.Mode = Idle;
 
 
     // 记录启控时间
@@ -161,37 +161,37 @@ int main(int argc, char **argv)
         }
 
         //无人机一旦接受到Land指令，则会屏蔽其他指令
-        if(Command_Last.command == Land)
+        if(Command_Last.Mode == Land)
         {
-            Command_Now.command = Land;
+            Command_Now.Mode = Land;
         }
 
-        switch (Command_Now.command)
+        switch (Command_Now.Mode)
         {
         case Move_ENU:
-            pos_sp = Eigen::Vector3d(Command_Now.pos_sp[0],Command_Now.pos_sp[1],Command_Now.pos_sp[2]);
-            vel_sp = Eigen::Vector3d(Command_Now.vel_sp[0],Command_Now.vel_sp[1],Command_Now.vel_sp[2]);
+            pos_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1],Command_Now.Reference_State.position_ref[2]);
+            vel_sp = Eigen::Vector3d(Command_Now.Reference_State.velocity_ref[0],Command_Now.Reference_State.velocity_ref[1],Command_Now.Reference_State.velocity_ref[2]);
 
             if(switch_ude == 0)
             {
-                accel_sp = pos_controller_ude.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, cur_time);
+                accel_sp = pos_controller_ude.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.Reference_State.Sub_mode , cur_time);
             }else if (switch_ude == 1)
             {
                 accel_sp = pos_controller_ps.pos_controller(command_fsc.pos_drone_fcu, pos_sp, cur_time);
             }
 
-            command_fsc.send_accel_setpoint(accel_sp, Command_Now.yaw_sp );
+            command_fsc.send_accel_setpoint(accel_sp, Command_Now.Reference_State.yaw_ref );
 
             break;
 
         case Move_Body:
             //只有在comid增加时才会进入解算
-            if( Command_Now.comid  >  Command_Last.comid )
+            if( Command_Now.Command_ID  >  Command_Last.comid )
             {
                 //xy velocity mode
-                if( Command_Now.sub_mode & 0b10 )
+                if( Command_Now.Reference_State.Sub_mode  & 0b10 )
                 {
-                    float d_vel_body[2] = {Command_Now.vel_sp[0], Command_Now.vel_sp[1]};         //the desired xy velocity in Body Frame
+                    float d_vel_body[2] = {Command_Now.Reference_State.velocity_ref[0], Command_Now.Reference_State.velocity_ref[1]};         //the desired xy velocity in Body Frame
                     float d_vel_enu[2];                                                           //the desired xy velocity in NED Frame
 
                     rotation_yaw(command_fsc.Euler_fcu[2], d_vel_body, d_vel_enu);
@@ -201,7 +201,7 @@ int main(int argc, char **argv)
                 //xy position mode
                 else
                 {
-                    float d_pos_body[2] = {Command_Now.pos_sp[0], Command_Now.pos_sp[1]};         //the desired xy position in Body Frame
+                    float d_pos_body[2] = {Command_Now.Reference_State.position_ref[0], Command_Now.Reference_State.position_ref[1]};         //the desired xy position in Body Frame
                     float d_pos_enu[2];                                                           //the desired xy position in enu Frame (The origin point is the drone)
                     rotation_yaw(command_fsc.Euler_fcu[2], d_pos_body, d_pos_enu);
 
@@ -210,21 +210,21 @@ int main(int argc, char **argv)
                 }
 
                 //z velocity mode
-                if( Command_Now.sub_mode & 0b01 )
+                if( Command_Now.Reference_State.Sub_mode  & 0b01 )
                 {
-                    vel_sp[2] = Command_Now.vel_sp[2];
+                    vel_sp[2] = Command_Now.Reference_State.velocity_ref[2];
                 }
                 //z posiiton mode
                 {
-                    pos_sp[2] = command_fsc.pos_drone_fcu[2] + Command_Now.pos_sp[2];
+                    pos_sp[2] = command_fsc.pos_drone_fcu[2] + Command_Now.Reference_State.position_ref[2];
                 }
 
-                yaw_sp = command_fsc.Euler_fcu[2]* 180/M_PI + Command_Now.yaw_sp;
+                yaw_sp = command_fsc.Euler_fcu[2]* 180/M_PI + Command_Now.Reference_State.yaw_ref;
             }
 
             if(switch_ude == 0)
             {
-                accel_sp = pos_controller_ude.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, cur_time);
+                accel_sp = pos_controller_ude.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.Reference_State.Sub_mode , cur_time);
             }else if (switch_ude == 1)
             {
                 accel_sp = pos_controller_ps.pos_controller(command_fsc.pos_drone_fcu, pos_sp, cur_time);
@@ -235,7 +235,7 @@ int main(int argc, char **argv)
             break;
 
         case Hold:
-            if (Command_Last.command != Hold)
+            if (Command_Last.Mode != Hold)
             {
                 command_fsc.Hold_position = Eigen::Vector3d(command_fsc.pos_drone_fcu[0],command_fsc.pos_drone_fcu[1],command_fsc.pos_drone_fcu[2]);
                 command_fsc.Hold_yaw = command_fsc.Euler_fcu[2]* 180/M_PI;
@@ -243,7 +243,7 @@ int main(int argc, char **argv)
 
             if(switch_ude == 0)
             {
-                accel_sp = pos_controller_ude.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, cur_time);
+                accel_sp = pos_controller_ude.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.Reference_State.Sub_mode , cur_time);
             }else if (switch_ude == 1)
             {
                 accel_sp = pos_controller_ps.pos_controller(command_fsc.pos_drone_fcu, command_fsc.Hold_position, cur_time);
@@ -255,7 +255,7 @@ int main(int argc, char **argv)
 
 
         case Land:
-            if (Command_Last.command != Land)
+            if (Command_Last.Mode != Land)
             {
                 pos_sp = Eigen::Vector3d(command_fsc.pos_drone_fcu[0],command_fsc.pos_drone_fcu[1],command_fsc.Takeoff_position[2]);
                 yaw_sp = command_fsc.Euler_fcu[2]* 180/M_PI;
@@ -285,7 +285,7 @@ int main(int argc, char **argv)
             {
                 if(switch_ude == 0)
                 {
-                    accel_sp = pos_controller_ude.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, cur_time);
+                    accel_sp = pos_controller_ude.pos_controller(command_fsc.pos_drone_fcu, command_fsc.vel_drone_fcu, pos_sp, vel_sp, Command_Now.Reference_State.Sub_mode , cur_time);
                 }else if (switch_ude == 1)
                 {
                     accel_sp = pos_controller_ps.pos_controller(command_fsc.pos_drone_fcu, pos_sp, cur_time);
@@ -353,7 +353,7 @@ float get_ros_time(ros::Time begin)
 void prinft_command_state()
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Command State<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-    switch(Command_Now.command)
+    switch(Command_Now.Mode)
     {
     case Move_ENU:
         cout << "Command: [ Move_ENU ] " <<endl;
@@ -379,30 +379,30 @@ void prinft_command_state()
     }
 
     int sub_mode;
-    sub_mode = Command_Now.sub_mode;
+    sub_mode = Command_Now.Reference_State.Sub_mode ;
 
     if((sub_mode & 0b10) == 0) //xy channel
     {
         cout << "Submode: xy position control "<<endl;
-        cout << "X_setpoint   : " << Command_Now.pos_sp[0] << " [ m ]"  << "  Y_setpoint : "<< Command_Now.pos_sp[1] << " [ m ]"<<endl;
+        cout << "X_setpoint   : " << Command_Now.Reference_State.position_ref[0] << " [ m ]"  << "  Y_setpoint : "<< Command_Now.Reference_State.position_ref[1] << " [ m ]"<<endl;
     }
     else{
         cout << "Submode: xy velocity control "<<endl;
-        cout << "X_setpoint   : " << Command_Now.vel_sp[0] << " [m/s]" << "  Y_setpoint : "<< Command_Now.vel_sp[1] << " [m/s]" <<endl;
+        cout << "X_setpoint   : " << Command_Now.Reference_State.velocity_ref[0] << " [m/s]" << "  Y_setpoint : "<< Command_Now.Reference_State.velocity_ref[1] << " [m/s]" <<endl;
     }
 
     if((sub_mode & 0b01) == 0) //z channel
     {
         cout << "Submode:  z position control "<<endl;
-        cout << "Z_setpoint   : "<< Command_Now.pos_sp[2] << " [ m ]" << endl;
+        cout << "Z_setpoint   : "<< Command_Now.Reference_State.position_ref[2] << " [ m ]" << endl;
     }
     else
     {
         cout << "Submode:  z velocity control "<<endl;
-        cout << "Z_setpoint   : "<< Command_Now.vel_sp[2] << " [m/s]" <<endl;
+        cout << "Z_setpoint   : "<< Command_Now.Reference_State.velocity_ref[2] << " [m/s]" <<endl;
     }
 
-    cout << "Yaw_setpoint : "  << Command_Now.yaw_sp << " [deg] " <<endl;
+    cout << "Yaw_setpoint : "  << Command_Now.Reference_State.yaw_ref << " [deg] " <<endl;
 }
 // 【坐标系旋转函数】- 机体系到enu系
 // input是机体系,output是惯性系，yaw_angle是当前偏航角

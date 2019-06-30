@@ -12,12 +12,19 @@
 
 #include <Eigen/Eigen>
 #include <math.h>
+#include <command_to_mavros.h>
+#include <pos_controller_utils.h>
 #include <math_utils.h>
+#include <LowPassFilter.h>
+#include <HighPassFilter.h>
 #include <px4_command/data_log.h>
+#include <px4_command/DroneState.h>
+#include <px4_command/TrajectoryPoint.h>
+#include <px4_command/AttitudeReference.h>
 
 
 using namespace std;
-
+ 
 namespace namespace_passivity{
 
 class pos_controller_passivity
@@ -33,105 +40,88 @@ class pos_controller_passivity
             pos_passivity_nh.param<float>("Quad/throttle_a", throttle_a, 20.0);
             pos_passivity_nh.param<float>("Quad/throttle_b", throttle_b, 0.0);
 
-            pos_passivity_nh.param<float>("Pos_passivity/Kp_xy", Kp(0), 1.0);
-            pos_passivity_nh.param<float>("Pos_passivity/Kp_xy", Kp(1), 1.0);
-            pos_passivity_nh.param<float>("Pos_passivity/Kp_z",  Kp(2), 1.0);
-            pos_passivity_nh.param<float>("Pos_passivity/Kd_xy", Kd(0), 2.0);
-            pos_passivity_nh.param<float>("Pos_passivity/Kd_xy", Kd(1), 2.0);
-            pos_passivity_nh.param<float>("Pos_passivity/Kd_z",  Kd(2), 2.0);
-            pos_passivity_nh.param<float>("Pos_passivity/T_ude_xy", T_ude(0), 1.0);
-            pos_passivity_nh.param<float>("Pos_passivity/T_ude_xy", T_ude(1), 1.0);
-            pos_passivity_nh.param<float>("Pos_passivity/T_ude_z",  T_ude(2), 1.0);
-            pos_passivity_nh.param<float>("Pos_passivity/T1", T1, 1.0);
-            pos_passivity_nh.param<float>("Pos_passivity/T2", T2, 1.0);
-            pos_passivity_nh.param<float>("Pos_passivity/INT_LIM_X", INT_LIM(0), 1.0);
-            pos_passivity_nh.param<float>("Pos_passivity/INT_LIM_Y", INT_LIM(1), 1.0);
-            pos_passivity_nh.param<float>("Pos_passivity/INT_LIM_Z", INT_LIM(2), 5.0);
+            pos_passivity_nh.param<float>("Pos_passivity/Kp_xy", Kp[0], 1.0);
+            pos_passivity_nh.param<float>("Pos_passivity/Kp_xy", Kp[1], 1.0);
+            pos_passivity_nh.param<float>("Pos_passivity/Kp_z",  Kp[2], 1.0);
+            pos_passivity_nh.param<float>("Pos_passivity/Kd_xy", Kd[0], 2.0);
+            pos_passivity_nh.param<float>("Pos_passivity/Kd_xy", Kd[1], 2.0);
+            pos_passivity_nh.param<float>("Pos_passivity/Kd_z",  Kd[2], 2.0);
+            pos_passivity_nh.param<float>("Pos_passivity/T_ude_xy", T_ude[0], 1.0);
+            pos_passivity_nh.param<float>("Pos_passivity/T_ude_xy", T_ude[1], 1.0);
+            pos_passivity_nh.param<float>("Pos_passivity/T_ude_z",  T_ude[2], 1.0);
+            pos_passivity_nh.param<float>("Pos_passivity/T_ps", T_ps, 1.0);
 
-            pos_passivity_nh.param<float>("Limit/XY_VEL_MAX", XY_VEL_MAX, 1.0);
-            pos_passivity_nh.param<float>("Limit/Z_VEL_MAX", Z_VEL_MAX, 1.0);
+            pos_passivity_nh.param<float>("Limit/pxy_error_max", pos_error_max[0], 0.6);
+            pos_passivity_nh.param<float>("Limit/pxy_error_max", pos_error_max[1], 0.6);
+            pos_passivity_nh.param<float>("Limit/pz_error_max" , pos_error_max[2], 1.0);
+            pos_passivity_nh.param<float>("Limit/vxy_error_max", vel_error_max[0], 0.3);
+            pos_passivity_nh.param<float>("Limit/vxy_error_max", vel_error_max[1], 0.3);
+            pos_passivity_nh.param<float>("Limit/vz_error_max" , vel_error_max[2], 1.0);
+            pos_passivity_nh.param<float>("Limit/pxy_int_max"  , int_max[0], 0.5);
+            pos_passivity_nh.param<float>("Limit/pxy_int_max"  , int_max[1], 0.5);
+            pos_passivity_nh.param<float>("Limit/pz_int_max"   , int_max[2], 0.5);  
             pos_passivity_nh.param<float>("Limit/THR_MIN", THR_MIN, 0.1);
             pos_passivity_nh.param<float>("Limit/THR_MAX", THR_MAX, 0.9);
             pos_passivity_nh.param<float>("Limit/tilt_max", tilt_max, 20.0);
+            pos_passivity_nh.param<float>("Limit/int_start_error"  , int_start_error, 0.3);
 
+            u_l        = Eigen::Vector3f(0.0,0.0,0.0);
+            u_d        = Eigen::Vector3f(0.0,0.0,0.0);
+            integral   = Eigen::Vector3f(0.0,0.0,0.0);
 
-            thrust_sp       = Eigen::Vector3d(0.0,0.0,0.0);
-            u_l             = Eigen::Vector3d(0.0,0.0,0.0);
-            u_d             = Eigen::Vector3d(0.0,0.0,0.0);
-            u_total         = Eigen::Vector3d(0.0,0.0,0.0);
-            integral_passivity    = Eigen::Vector3d(0.0,0.0,0.0);
-            error_pos       = Eigen::Vector3d(0.0,0.0,0.0);
-            error_vel       = Eigen::Vector3d(0.0,0.0,0.0);
-
-            z_last       = Eigen::Vector3d(0.0,0.0,0.0);
-            pos_last       = Eigen::Vector3d(0.0,0.0,0.0);
-            error_last     = Eigen::Vector3d(0.0,0.0,0.0);
-            y1_last       = Eigen::Vector3d(0.0,0.0,0.0);
-            y2_last       = Eigen::Vector3d(0.0,0.0,0.0);
-            y3_last       = Eigen::Vector3d(0.0,0.0,0.0);
-
-            delta_time      = 0.0;
-            flag_offboard   = 0;
-
-            state_sub = pos_passivity_nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &pos_controller_passivity::state_cb,this);
-
-            data_log_pub = pos_passivity_nh.advertise<px4_command::data_log>("/px4_command/data_log", 10);
+            y1_k       = Eigen::Vector3f(0.0,0.0,0.0);
+            y2_k       = Eigen::Vector3f(0.0,0.0,0.0);
+            y3_k       = Eigen::Vector3f(0.0,0.0,0.0);
 
             set_filter();
 
         }
 
-        //Mass of the quadrotor
+        //Quadrotor Parameter
         float Quad_MASS;
-
-        //passivity control parameter
-        Eigen::Vector3f Kp;
-
-        Eigen::Vector3f Kd;
-
-        Eigen::Vector3f T_ude;
-
-        float T1;
-
-        float T2;
-
-        //Limitation of passivity integral
-        Eigen::Vector3f INT_LIM;
-
-        //Limitation of the velocity
-        float XY_VEL_MAX;
-        float Z_VEL_MAX;
-
-        //Limitation of the thrust
-        float THR_MIN;
-        float THR_MAX;
-
-        //Limitation of the tilt angle (roll and pitch)  [degree]
-        float tilt_max;
-
         float throttle_a;
         float throttle_b;
 
-        Eigen::Vector3d error_pos,error_vel;
+        //passivity control parameter
+        Eigen::Vector3f Kp;
+        Eigen::Vector3f Kd;
+        Eigen::Vector3f T_ude;
+        float T_ps;
+
+        //Limitation
+        Eigen::Vector3f pos_error_max;
+        Eigen::Vector3f vel_error_max;
+        Eigen::Vector3f int_max;
+        float THR_MIN;
+        float THR_MAX;
+        float tilt_max;
+        float int_start_error;
 
         //u_l for nominal contorol(PD), u_d for passivity control(disturbance estimator)
-        Eigen::Vector3d u_l,u_d,u_total;
+        Eigen::Vector3f u_l,u_d;
+        Eigen::Vector3f integral;
 
-        Eigen::Vector3d z_last,pos_last,error_last,y1_last,y2_last,y3_last;
+        HighPassFilter HPF_pos_error_x;
+        HighPassFilter HPF_pos_error_y;
+        HighPassFilter HPF_pos_error_z;
 
-        Eigen::Vector3d integral_passivity;
+        HighPassFilter HPF_pos_x;
+        HighPassFilter HPF_pos_y;
+        HighPassFilter HPF_pos_z;
 
-        //Desired thurst of the drone[the output of this class]
-        Eigen::Vector3d thrust_sp;
+        LowPassFilter LPF_pos_error_x;
+        LowPassFilter LPF_pos_error_y;
+        LowPassFilter LPF_pos_error_z;
 
-        //The delta time between now and the last step
-        float delta_time;
+        LowPassFilter LPF_int_x;
+        LowPassFilter LPF_int_y;
+        LowPassFilter LPF_int_z;
 
-        //Current state of the drone
-        mavros_msgs::State current_state;
+        Eigen::Vector3f z_k;
 
-        //Flag of the offboard mode [1 for OFFBOARD mode , 0 for non-OFFBOARD mode]
-        int flag_offboard;
+        Eigen::Vector3f y1_k,y2_k,y3_k;
+
+        px4_command::AttitudeReference _AttitudeReference;
 
         //Printf the passivity parameter
         void printf_param();
@@ -141,164 +131,161 @@ class pos_controller_passivity
 
         void set_filter();
 
-        //Position control main function [Input: current pos, current vel, desired state(pos or vel), sub_mode, time_now; Output: desired thrust;]
-        Eigen::Vector3d pos_controller(Eigen::Vector3d pos, Eigen::Vector3d vel, Eigen::Vector3d pos_sp, float dt);
+        // Position control main function 
+        // [Input: Current state, Reference state, sub_mode, dt; Output: AttitudeReference;]
+        px4_command::AttitudeReference pos_controller(px4_command::DroneState _DroneState, px4_command::TrajectoryPoint _Reference_State, float dt);
 
     private:
 
         ros::NodeHandle pos_passivity_nh;
 
-        ros::Subscriber state_sub;
-        ros::Publisher data_log_pub;
-        //for log the control state
-        px4_command::data_log data_log;
-
-        void state_cb(const mavros_msgs::State::ConstPtr &msg)
-        {
-            current_state = *msg;
-
-            if(current_state.mode == "OFFBOARD")
-            {
-                flag_offboard = 1;
-            }else
-            {
-                flag_offboard = 0;
-            }
-
-        }
-
 };
 
 void pos_controller_passivity::set_filter()
-{
+{   
+    HPF_pos_error_x.set_Time_constant(T_ps);
+    HPF_pos_error_y.set_Time_constant(T_ps);
+    HPF_pos_error_z.set_Time_constant(T_ps);
 
+    HPF_pos_x.set_Time_constant(T_ude[0]);
+    HPF_pos_y.set_Time_constant(T_ude[1]);
+    HPF_pos_z.set_Time_constant(T_ude[2]);
+
+    LPF_pos_error_x.set_Time_constant(T_ps);
+    LPF_pos_error_y.set_Time_constant(T_ps);
+    LPF_pos_error_z.set_Time_constant(T_ps);
+
+    LPF_int_x.set_Time_constant(T_ude[0]);
+    LPF_int_x.set_Time_constant(T_ude[1]);
+    LPF_int_x.set_Time_constant(T_ude[2]);
 }
 
-
-Eigen::Vector3d pos_controller_passivity::pos_controller(Eigen::Vector3d pos, Eigen::Vector3d vel, Eigen::Vector3d pos_sp, float dt)
+px4_command::AttitudeReference pos_controller_passivity::pos_controller(
+    px4_command::DroneState _DroneState, 
+    px4_command::TrajectoryPoint _Reference_State, float dt)
 {
-    delta_time = dt;
+    // 计算误差项
+    Eigen::Vector3f pos_error = pos_controller_utils::cal_pos_error(_DroneState, _Reference_State);
+    Eigen::Vector3f vel_error = pos_controller_utils::cal_vel_error(_DroneState, _Reference_State);
 
-    error_pos = pos_sp - pos;
-    error_vel = -vel;
+    // 误差项限幅
+    for (int i=0; i<3; i++)
+    {
+        pos_error[i] = constrain_function(pos_error[i], pos_error_max[i]);
+        vel_error[i] = constrain_function(vel_error[i], vel_error_max[i]);
+    }
 
     //z_k
-    Eigen::Vector3d z_k;
-    z_k = 1.0f/(T1 + delta_time)*(T1 * z_last + error_pos - error_last);
-
-    /* limit rates */
-    // for (int i = 0; i < 3; i++)
-    // {
-    // 	z_k(i) = math::constrain(z_k(i), -0.2f, 0.2f);
-    // }
-
-    z_last = z_k;
-    error_last = error_pos;
+    z_k[0] = HPF_pos_error_x.apply(pos_error[0], dt);
+    z_k[1] = HPF_pos_error_y.apply(pos_error[1], dt);
+    z_k[2] = HPF_pos_error_z.apply(pos_error[2], dt);
 
     //u_l
     for (int i = 0; i < 3; i++)
     {
-       u_l(i) = Quad_MASS * (Kp(i) * error_pos(i) + Kd(i) * z_k(i));
+       u_l[i] = _Reference_State.acceleration_ref[i] + (Kp[i] * pos_error[i] + Kd[i] * z_k[i]);
     }
 
     //UDE term y1 y2 y3
-    Eigen::Vector3d y1_k;
+    y1_k[0] = HPF_pos_x.apply(_DroneState.position[0], dt);
+    y1_k[1] = HPF_pos_y.apply(_DroneState.position[1], dt);
+    y1_k[2] = HPF_pos_z.apply(_DroneState.position[2], dt);
+
+    y2_k[0] = LPF_pos_error_x.apply(pos_error[0], dt);
+    y2_k[1] = LPF_pos_error_y.apply(pos_error[1], dt);
+    y2_k[2] = LPF_pos_error_z.apply(pos_error[2], dt);
+
+    y3_k[0] = LPF_int_x.apply(Kp[0] * integral[0] + Kd[0] * y2_k[0], dt);
+    y3_k[1] = LPF_int_y.apply(Kp[1] * integral[1] + Kd[1] * y2_k[1], dt);
+    y3_k[2] = LPF_int_z.apply(Kp[2] * integral[2] + Kd[2] * y2_k[2], dt);
+
     for (int i = 0; i < 3; i++)
     {
-        y1_k(i) = 1.0f/(T_ude(i) + delta_time) * (T_ude(i) * y1_last(i) + pos(i) - pos_last(i));
+        u_d[i] = y1_k[i] - y3_k[i];
     }
 
-    pos_last = pos;
-    y1_last = y1_k;
-
-    Eigen::Vector3d y2_k;
-    for (int i = 0; i < 3; i++)
+    // 更新积分项
+    for (int i=0; i<3; i++)
     {
-        y2_k(i) = 1.0f/(T1 + delta_time) * (T1 * y2_last(i) + delta_time * error_pos(i));
-    }
+        integral[i] += pos_error[i] * dt;
 
-    y2_last = y2_k;
-
-   // y2_k = Eigen::Vector3d(0.0,0.0,0.0);
-    Eigen::Vector3d y3_k;
-    for (int i = 0; i < 3; i++)
-    {
-        y3_k(i) = 1.0f/(T_ude(i) + delta_time) * (T_ude(i) * y3_last(i) + delta_time * (Kp(i) * integral_passivity(i) + Kd(i)*y2_k(i)));
-    }
-
-    y3_last = y3_k;
-
-
-    for (int i = 0; i < 3; i++)
-    {
-        u_d(i) = Quad_MASS * (y1_k(i) - y3_k(i));
-    }
-
-    /* explicitly limit the integrator state */
-    for (int i = 0; i < 3; i++)
-    {
-        float integral = 0;
-        if(error_pos(i) < 2)
+        // If not in OFFBOARD mode, set all intergral to zero.
+        if(_DroneState.mode != "OFFBOARD")
         {
-            integral = integral_passivity(i) +  error_pos(i) * delta_time;
+            integral[i] = 0;
         }
 
-        if (u_d(i) > -INT_LIM(i) && u_d[i] < INT_LIM(i))
-        {
-                integral_passivity(i) = integral;
-        }
-
-        u_d(i) = constrain_function2(u_d(i), -INT_LIM(i), INT_LIM(i));
+        u_d[i] = constrain_function(u_d[i], int_max[i]);
     }
 
-    //ENU frame
-    u_total(0) = u_l(0) - u_d(0);
-    u_total(1) = u_l(1) - u_d(1);
-    u_total(2) = u_l(2) - u_d(2) + Quad_MASS * 9.8;
+    // 期望加速度
+    _AttitudeReference.desired_acceleration[0] = u_l[0] - u_d[0];
+    _AttitudeReference.desired_acceleration[1] = u_l[1] - u_d[1];
+    _AttitudeReference.desired_acceleration[2] = u_l[2] - u_d[2] + 9.8;
 
-    //Thrust to scale thrust[0,1]
-    Eigen::Vector3d thrust_sp_scale;
-    thrust_sp_scale(0) = (u_total(0) - throttle_b) / throttle_a;
-    thrust_sp_scale(1) = (u_total(1) - throttle_b) / throttle_a;
-    thrust_sp_scale(2) = (u_total(2) - throttle_b) / throttle_a;
+    // 期望推力 = 期望加速度 × 质量
+    // 归一化推力 ： 根据电机模型，反解出归一化推力
+    for (int i=0; i<3; i++)
+    {
+        _AttitudeReference.desired_thrust[i] = _AttitudeReference.desired_acceleration[i] * Quad_MASS;
+        _AttitudeReference.desired_thrust_normalized[i] = (_AttitudeReference.desired_thrust[i] - throttle_b) / throttle_a;
+    }
 
-    //Limit the Thrust
-    thrust_sp(2) = constrain_function2( thrust_sp_scale(2) , THR_MIN, THR_MAX);
-
+    // 推力限幅，根据最大倾斜角及最大油门
     // Get maximum allowed thrust in XY based on tilt angle and excess thrust.
-    float thrust_max_XY_tilt = fabs(thrust_sp(2)) * tanf(tilt_max/180.0*M_PI);
-    float thrust_max_XY = sqrtf(THR_MAX * THR_MAX - thrust_sp(2) * thrust_sp(2));
+    float thrust_max_XY_tilt = fabs(_AttitudeReference.desired_thrust_normalized[2]) * tanf(tilt_max/180.0*M_PI);
+    float thrust_max_XY = sqrtf(THR_MAX * THR_MAX - pow(_AttitudeReference.desired_thrust_normalized[2],2));
     thrust_max_XY = min(thrust_max_XY_tilt, thrust_max_XY);
 
-    // Saturate thrust in XY-direction.
-    thrust_sp(0) = thrust_sp_scale(0);
-    thrust_sp(1) = thrust_sp_scale(1);
-
-    if ((thrust_sp_scale(0) * thrust_sp_scale(0) + thrust_sp_scale(1) * thrust_sp_scale(1)) > thrust_max_XY * thrust_max_XY) {
-            float mag = sqrtf((thrust_sp_scale(0) * thrust_sp_scale(0) + thrust_sp_scale(1) * thrust_sp_scale(1)));
-            thrust_sp(0) = thrust_sp_scale(0) / mag * thrust_max_XY;
-            thrust_sp(1) = thrust_sp_scale(1) / mag * thrust_max_XY;
+    if ((pow(_AttitudeReference.desired_thrust_normalized[0],2) + pow(_AttitudeReference.desired_thrust_normalized[1],2)) > thrust_max_XY * thrust_max_XY) {
+        float mag = sqrtf((pow(_AttitudeReference.desired_thrust_normalized[0],2) + pow(_AttitudeReference.desired_thrust_normalized[1],2)));
+        _AttitudeReference.desired_thrust_normalized[0] = _AttitudeReference.desired_thrust_normalized[0] / mag * thrust_max_XY;
+        _AttitudeReference.desired_thrust_normalized[1] = _AttitudeReference.desired_thrust_normalized[1] / mag * thrust_max_XY;
     }
 
-    //If not in OFFBOARD mode, set all intergral to zero.
-    if(flag_offboard == 0)
-    {
-        integral_passivity = Eigen::Vector3d(0.0,0.0,0.0);
-    }
+    //期望姿态角 及 期望姿态角四元数 调用库函数进行计算
+    Eigen::Vector3d thr_sp = Eigen::Vector3d(_AttitudeReference.desired_thrust_normalized[0], _AttitudeReference.desired_thrust_normalized[1], _AttitudeReference.desired_thrust_normalized[2]);
 
-    for (int i = 0; i < 3; i++)
-    {
-        data_log.pos[i] = pos(i);
-        data_log.vel[i] = vel(i);
-        data_log.pos_sp[i] = pos_sp(i);
-        data_log.u_l[i] = u_l(i);
-        data_log.u_d[i] = u_d(i);
-        data_log.u_total[i] = u_total(i);
-        data_log.thrust_sp[i] = thrust_sp(i);
-    }
-    data_log_pub.publish(data_log);
+    Eigen::Quaterniond q_sp = pos_controller_utils::thrustToAttitude(thr_sp, _Reference_State.yaw_ref);
 
-    return thrust_sp;
+    Eigen::Vector3d att_sp = quaternion_to_euler(q_sp);
+
+    _AttitudeReference.desired_att_q.w = q_sp.w();
+    _AttitudeReference.desired_att_q.x = q_sp.x();
+    _AttitudeReference.desired_att_q.y = q_sp.y();
+    _AttitudeReference.desired_att_q.z = q_sp.z();
+
+    _AttitudeReference.desired_attitude[0] = att_sp[0];  
+    _AttitudeReference.desired_attitude[1] = att_sp[1]; 
+    _AttitudeReference.desired_attitude[2] = att_sp[2]; 
+
+    //期望油门
+    _AttitudeReference.desired_throttle = thr_sp.norm();  
+
+        cout <<">>>>>>>>>>>>>>>>>>>>>>PID Position Controller<<<<<<<<<<<<<<<<<<<<<" <<endl;
+
+    //固定的浮点显示
+    cout.setf(ios::fixed);
+    //左对齐
+    cout.setf(ios::left);
+    // 强制显示小数点
+    cout.setf(ios::showpoint);
+    // 强制显示符号
+    cout.setf(ios::showpos);
+
+    cout<<setprecision(2);
+
+    cout << "e_p [X Y Z] : " << pos_error[0] << " [m] "<< pos_error[1]<<" [m] "<<pos_error[2]<<" [m] "<<endl;
+    cout << "e_v [X Y Z] : " << vel_error[0] << " [m/s] "<< vel_error[1]<<" [m/s] "<<vel_error[2]<<" [m/s] "<<endl;
+    cout << "acc_ref [X Y Z] : " << _Reference_State.acceleration_ref[0] << " [m/s^2] "<< _Reference_State.acceleration_ref[1]<<" [m/s^2] "<<_Reference_State.acceleration_ref[2]<<" [m/s^2] "<<endl;
+    
+    cout << "desired_acceleration [X Y Z] : " << _AttitudeReference.desired_acceleration[0] << " [m/s^2] "<< _AttitudeReference.desired_acceleration[1]<<" [Nm/s^2] "<<_AttitudeReference.desired_acceleration[2]<<" [m/s^2] "<<endl;
+    cout << "desired_thrust [X Y Z] : " << _AttitudeReference.desired_thrust[0] << " [N] "<< _AttitudeReference.desired_thrust[1]<<" [N] "<<_AttitudeReference.desired_thrust[2]<<" [N] "<<endl;
+    cout << "desired_thrust_normalized [X Y Z] : " << _AttitudeReference.desired_thrust_normalized[0] << " [N] "<< _AttitudeReference.desired_thrust_normalized[1]<<" [N] "<<_AttitudeReference.desired_thrust_normalized[2]<<" [N] "<<endl;
+    cout << "desired_attitude [R P Y] : " << _AttitudeReference.desired_attitude[0] * 180/M_PI <<" [deg] "<<_AttitudeReference.desired_attitude[1] * 180/M_PI << " [deg] "<< _AttitudeReference.desired_attitude[2] * 180/M_PI<<" [deg] "<<endl;
+    cout << "desired_throttle [0-1] : " << _AttitudeReference.desired_throttle <<endl;
+
+    return _AttitudeReference;
 }
 
 void pos_controller_passivity::printf_result()
@@ -316,24 +303,19 @@ void pos_controller_passivity::printf_result()
 
     cout<<setprecision(2);
 
-    cout << "delta_time : " << delta_time<< " [s] " <<endl;
-
     cout << "u_l [X Y Z] : " << u_l[0] << " [N] "<< u_l[1]<<" [N] "<<u_l[2]<<" [N] "<<endl;
-    cout << "z_k [X Y Z] : " << z_last[0] << " [N] "<< z_last[1]<<" [N] "<<z_last[2]<<" [N] "<<endl;
+    cout << "z_k [X Y Z] : " << z_k[0] << " [N] "<< z_k[1]<<" [N] "<<z_k[2]<<" [N] "<<endl;
 
-    cout << "y1 [X Y Z] : " << y1_last[0] << " [N] "<< y1_last[1]<<" [N] "<<y1_last[2]<<" [N] "<<endl;
+    cout << "y1 [X Y Z] : " << y1_k[0] << " [N] "<< y1_k[1]<<" [N] "<<y1_k[2]<<" [N] "<<endl;
 
-    cout << "y2 [X Y Z] : " << y2_last[0] << " [N] "<< y2_last[1]<<" [N] "<<y2_last[2]<<" [N] "<<endl;
+    cout << "y2 [X Y Z] : " << y2_k[0] << " [N] "<< y2_k[1]<<" [N] "<<y2_k[2]<<" [N] "<<endl;
 
-    cout << "y3 [X Y Z] : " << y3_last[0] << " [N] "<< y3_last[1]<<" [N] "<<y3_last[2]<<" [N] "<<endl;
+    cout << "y3 [X Y Z] : " << y3_k[0] << " [N] "<< y3_k[1]<<" [N] "<<y3_k[2]<<" [N] "<<endl;
 
     cout << "u_l [X Y Z] : " << u_l[0] << " [N] "<< u_l[1]<<" [N] "<<u_l[2]<<" [N] "<<endl;
 
     cout << "u_d [X Y Z] : " << u_d[0] << " [N] "<< u_d[1]<<" [N] "<<u_d[2]<<" [N] "<<endl;
 
-    cout << "u_total [X Y Z] : " << u_total[0] << " [N] "<< u_total[1]<<" [N] "<<u_total[2]<<" [N] "<<endl;
-
-    cout << "thrust_sp [X Y Z] : " << thrust_sp[0] << " [m/s^2] "<< thrust_sp[1]<<" [m/s^2] "<<thrust_sp[2]<<" [m/s^2] "<<endl;
 }
 
 // 【打印参数函数】
@@ -342,35 +324,33 @@ void pos_controller_passivity::printf_param()
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>passivity Parameter <<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
     cout <<"Quad_MASS : "<< Quad_MASS << endl;
+    cout <<"throttle_a : "<< throttle_a << endl;
+    cout <<"throttle_b : "<< throttle_b << endl;
 
-    cout <<"Kp_X : "<< Kp(0) << endl;
-    cout <<"Kp_Y : "<< Kp(1) << endl;
-    cout <<"Kp_Z : "<< Kp(2) << endl;
+    cout <<"Kp_X : "<< Kp[0] << endl;
+    cout <<"Kp_Y : "<< Kp[1] << endl;
+    cout <<"Kp_Z : "<< Kp[2] << endl;
 
-    cout <<"Kd_X : "<< Kd(0) << endl;
-    cout <<"Kd_Y : "<< Kd(1) << endl;
-    cout <<"Kd_Z : "<< Kd(2) << endl;
+    cout <<"Kd_X : "<< Kd[0] << endl;
+    cout <<"Kd_Y : "<< Kd[1] << endl;
+    cout <<"Kd_Z : "<< Kd[2] << endl;
 
-    cout <<"passivity_T_X : "<< T_ude(0) << endl;
-    cout <<"passivity_T_Y : "<< T_ude(1) << endl;
-    cout <<"passivity_T_Z : "<< T_ude(2) << endl;
-    cout <<"T1 : "<< T1 << endl;
-    cout <<"T2 : "<< T2 << endl;
+    cout <<"passivity_T_X : "<< T_ude[0] << endl;
+    cout <<"passivity_T_Y : "<< T_ude[1] << endl;
+    cout <<"passivity_T_Z : "<< T_ude[2] << endl;
+    cout <<"T_ps : "<< T_ps << endl;
 
-    cout <<"XY_VEL_MAX : "<< XY_VEL_MAX << endl;
-    cout <<"Z_VEL_MAX : "<< Z_VEL_MAX << endl;
-
-    cout <<"INT_LIM_X : "<< INT_LIM(0) << endl;
-    cout <<"INT_LIM_Y : "<< INT_LIM(1) << endl;
-    cout <<"INT_LIM_Z : "<< INT_LIM(2) << endl;
-
+    cout <<"Limit:  " <<endl;
+    cout <<"pxy_error_max : "<< pos_error_max[0] << endl;
+    cout <<"pz_error_max :  "<< pos_error_max[2] << endl;
+    cout <<"vxy_error_max : "<< vel_error_max[0] << endl;
+    cout <<"vz_error_max :  "<< vel_error_max[2] << endl;
+    cout <<"pxy_int_max : "<< int_max[0] << endl;
+    cout <<"pz_int_max : "<< int_max[2] << endl;
     cout <<"THR_MIN : "<< THR_MIN << endl;
     cout <<"THR_MAX : "<< THR_MAX << endl;
-
     cout <<"tilt_max : "<< tilt_max << endl;
-    cout <<"throttle_a : "<< throttle_a << endl;
-
-    cout <<"throttle_b : "<< throttle_b << endl;
+    cout <<"int_start_error : "<< int_start_error << endl;
 
 }
 

@@ -3,29 +3,24 @@
 *
 * Author: Qyp
 *
-* Update Time: 2019.5.1
+* Update Time: 2019.6.29
 *
-* Introduction:  Position Controller using PID (P for pos loop, pid for vel loop)
-*         1. Similiar to the position controller in PX4 (1.8.2)
-*         2. Ref to : https://github.com/PX4/Firmware/blob/master/src/modules/mc_pos_control/PositionControl.cpp
-*         3. Here we didn't consider the mass of the drone, we treat accel_sp is the thrust_sp.
-*         4. thrustToAttitude ref to https://github.com/PX4/Firmware/blob/master/src/modules/mc_pos_control/Utility/ControlMath.cpp
-*         5. For the derrive of the velocity error, we use a low-pass filter as same in PX4.
-*                   Ref to: https://github.com/PX4/Firmware/blob/master/src/lib/controllib/BlockDerivative.cpp
-*                           https://github.com/PX4/Firmware/blob/master/src/lib/controllib/BlockLowPass.cpp
-*         6. 没有考虑积分器清零的情况，在降落时 或者突然换方向机动时，积分器需要清0
-*         7. 推力到欧拉角基本与PX4吻合，但是在极端情况下不吻合。如：z轴期望值为-100时。
+* Introduction:  Position Controller using normal PID 
+*                 output = a_ff + K_p * pos_error + K_d * vel_error + K_i * pos_error * dt;
 ***************************************************************************************************************************/
 #ifndef POS_CONTROLLER_PID_H
 #define POS_CONTROLLER_PID_H
 
-#include <Eigen/Eigen>
 #include <math.h>
-#include <math_utils.h>
+#include <command_to_mavros.h>
+#include <pos_controller_utils.h>
 #include <px4_command/data_log.h>
-using namespace std;
+#include <px4_command/DroneState.h>
+#include <px4_command/TrajectoryPoint.h>
+#include <px4_command/AttitudeReference.h>
 
-namespace namespace_PID {
+
+using namespace std;
 
 class pos_controller_PID
 {
@@ -36,320 +31,169 @@ class pos_controller_PID
         pos_controller_PID(void):
             pos_pid_nh("~")
         {
-            pos_pid_nh.param<float>("Pos_pid/Kp_xy", Kp_xy, 1.0);
-            pos_pid_nh.param<float>("Pos_pid/Kp_z", Kp_z, 1.0);
-            pos_pid_nh.param<float>("Pos_pid/Kp_vxvy", Kp_vxvy, 0.1);
-            pos_pid_nh.param<float>("Pos_pid/Kp_vz", Kp_vz, 0.1);
-            pos_pid_nh.param<float>("Pos_pid/Ki_vxvy", Ki_vxvy, 0.02);
-            pos_pid_nh.param<float>("Pos_pid/Ki_vz", Ki_vz, 0.02);
-            pos_pid_nh.param<float>("Pos_pid/Kd_vxvy", Kd_vxvy, 0.01);
-            pos_pid_nh.param<float>("Pos_pid/Kd_vz", Kd_vz, 0.01);
-            pos_pid_nh.param<float>("Pos_pid/Hover_throttle", Hover_throttle, 0.5);
-            pos_pid_nh.param<float>("Pos_pid/MPC_VELD_LP", MPC_VELD_LP, 5.0);
+            pos_pid_nh.param<float>("Quad/mass", Quad_MASS, 1.0);
+            pos_pid_nh.param<float>("Quad/throttle_a", throttle_a, 20.0);
+            pos_pid_nh.param<float>("Quad/throttle_b", throttle_b, 0.0);
 
-            pos_pid_nh.param<float>("Limit/XY_VEL_MAX", MPC_XY_VEL_MAX, 1.0);
-            pos_pid_nh.param<float>("Limit/Z_VEL_MAX", MPC_Z_VEL_MAX, 0.5);
-            pos_pid_nh.param<float>("Limit/THR_MIN", MPC_THR_MIN, 0.1);
-            pos_pid_nh.param<float>("Limit/THR_MAX", MPC_THR_MAX, 0.9);
-            pos_pid_nh.param<float>("Limit/tilt_max", tilt_max, 5.0);
+            pos_pid_nh.param<float>("Pos_pid/Kp_xy", Kp[0], 1.0);
+            pos_pid_nh.param<float>("Pos_pid/Kp_xy", Kp[1], 1.0);
+            pos_pid_nh.param<float>("Pos_pid/Kp_z" , Kp[2], 2.0);
+            pos_pid_nh.param<float>("Pos_pid/Kd_xy", Kd[0], 0.5);
+            pos_pid_nh.param<float>("Pos_pid/Kd_xy", Kd[1], 0.5);
+            pos_pid_nh.param<float>("Pos_pid/Kd_z" , Kd[2], 0.5);
+            pos_pid_nh.param<float>("Pos_pid/Ki_xy", Ki[0], 0.2);
+            pos_pid_nh.param<float>("Pos_pid/Ki_xy", Ki[1], 0.2);
+            pos_pid_nh.param<float>("Pos_pid/Ki_z" , Ki[2], 0.2);
+            
+            pos_pid_nh.param<float>("Limit/pxy_error_max", pos_error_max[0], 0.6);
+            pos_pid_nh.param<float>("Limit/pxy_error_max", pos_error_max[1], 0.6);
+            pos_pid_nh.param<float>("Limit/pz_error_max" , pos_error_max[2], 1.0);
+            pos_pid_nh.param<float>("Limit/vxy_error_max", vel_error_max[0], 0.3);
+            pos_pid_nh.param<float>("Limit/vxy_error_max", vel_error_max[1], 0.3);
+            pos_pid_nh.param<float>("Limit/vz_error_max" , vel_error_max[2], 1.0);
+            pos_pid_nh.param<float>("Limit/pxy_int_max"  , int_max[0], 0.5);
+            pos_pid_nh.param<float>("Limit/pxy_int_max"  , int_max[1], 0.5);
+            pos_pid_nh.param<float>("Limit/pz_int_max"   , int_max[2], 0.5);
+            pos_pid_nh.param<float>("Limit/THR_MIN", THR_MIN, 0.1);
+            pos_pid_nh.param<float>("Limit/THR_MAX", THR_MAX, 0.9);
+            pos_pid_nh.param<float>("Limit/tilt_max", tilt_max, 20.0);
+            pos_pid_nh.param<float>("Limit/int_start_error"  , int_start_error, 0.3);
 
-
-
-            pos_drone       = Eigen::Vector3d(0.0,0.0,0.0);
-            vel_drone       = Eigen::Vector3d(0.0,0.0,0.0);
-            vel_setpoint    = Eigen::Vector3d(0.0,0.0,0.0);
-            thrust_sp       = Eigen::Vector3d(0.0,0.0,0.0);
-            vel_P_output    = Eigen::Vector3d(0.0,0.0,0.0);
-            thurst_int      = Eigen::Vector3d(0.0,0.0,0.0);
-            vel_D_output    = Eigen::Vector3d(0.0,0.0,0.0);
-            error_vel_dot_last  = Eigen::Vector3d(0.0,0.0,0.0);
-            error_vel_last      = Eigen::Vector3d(0.0,0.0,0.0);
-            delta_time      = 0.02;
-            flag_offboard   = 0;
-
-            state_sub = pos_pid_nh.subscribe<mavros_msgs::State>("/mavros/state", 10, &pos_controller_PID::state_cb,this);
-            data_log_pub = pos_pid_nh.advertise<px4_command::data_log>("/px4_command/data_log", 10);
-
+            integral = Eigen::Vector3f(0.0,0.0,0.0);
         }
 
+        //Quadrotor Parameter
+        float Quad_MASS;
+        float throttle_a;
+        float throttle_b;
+
         //PID parameter for the control law
-        float Kp_xy;
-        float Kp_z;
-        float Kp_vxvy;
-        float Kp_vz;
-        float Ki_vxvy;
-        float Ki_vz;
-        float Kd_vxvy;
-        float Kd_vz;
+        Eigen::Vector3f Kp;
+        Eigen::Vector3f Kd;
+        Eigen::Vector3f Ki;
 
-        //Limitation of the velocity
-        float MPC_XY_VEL_MAX;
-        float MPC_Z_VEL_MAX;
-
-        //Hover thrust of drone (decided by the mass of the drone)
-        float Hover_throttle;
-
-        //Limitation of the thrust
-        float MPC_THR_MIN;
-        float MPC_THR_MAX;
-
-        //Limitation of the tilt angle (roll and pitch)  [degree]
+        //Limitation
+        Eigen::Vector3f pos_error_max;
+        Eigen::Vector3f vel_error_max;
+        Eigen::Vector3f int_max;
+        float THR_MIN;
+        float THR_MAX;
         float tilt_max;
+        float int_start_error;
 
-        //Current position and velocity of the drone
-        Eigen::Vector3d pos_drone;
-        Eigen::Vector3d vel_drone;
+        //积分项
+        Eigen::Vector3f integral;
 
-        //Desired position and velocity of the drone
-        Eigen::Vector3d vel_setpoint;
-
-        //Desired thurst of the drone[the output of this class]
-        Eigen::Vector3d thrust_sp;
-
-        //Output of the vel loop in PID [thurst_int is the I]
-        Eigen::Vector3d vel_P_output;
-        Eigen::Vector3d thurst_int;
-        Eigen::Vector3d vel_D_output;
-
-        float MPC_VELD_LP;
-
-        //The delta time between now and the last step
-        float delta_time;
-
-        //Derriv of the velocity error in last step [used for the D-output in vel loop]
-        Eigen::Vector3d error_vel_dot_last;
-        Eigen::Vector3d error_vel_last;
-
-        //Current state of the drone
-        mavros_msgs::State current_state;
-
-        //Flag of the offboard mode [1 for OFFBOARD mode , 0 for non-OFFBOARD mode]
-        int flag_offboard;
-
-        // Output of thrustToAttitude
-        Eigen::Vector3d euler_sp;
+        //输出
+        px4_command::AttitudeReference _AttitudeReference;
 
         //Printf the PID parameter
         void printf_param();
 
-        //Printf the control result
         void printf_result();
 
-        //Position control main function [Input: current pos, current vel, desired state(pos or vel), sub_mode, time_now; Output: desired thrust;]
-        Eigen::Vector3d pos_controller(Eigen::Vector3d pos, Eigen::Vector3d vel, Eigen::Vector3d pos_sp, Eigen::Vector3d vel_sp, int sub_mode, float dt);
-
-        //Position control loop [Input: current pos, desired pos; Output: desired vel]
-        void _positionController(Eigen::Vector3d pos_sp, Eigen::Vector3d vel_sp, int sub_mode);
-
-        //Velocity control loop [Input: current vel, desired vel; Output: desired thrust]
-        void _velocityController();
-
-        Eigen::Vector3d cal_vel_error_deriv(Eigen::Vector3d error_now);
+        // Position control main function 
+        // [Input: Current state, Reference state, sub_mode, dt; Output: AttitudeReference;]
+        px4_command::AttitudeReference pos_controller(px4_command::DroneState _DroneState, px4_command::TrajectoryPoint _Reference_State, float dt);
 
     private:
-
         ros::NodeHandle pos_pid_nh;
-
-        ros::Subscriber state_sub;
-        ros::Publisher data_log_pub;
-
-        //for log the control state
-        px4_command::data_log data_log;
-
-        void state_cb(const mavros_msgs::State::ConstPtr &msg)
-        {
-            current_state = *msg;
-
-            if(current_state.mode == "OFFBOARD")
-            {
-                flag_offboard = 1;
-            }else
-            {
-                flag_offboard = 0;
-            }
-
-        }
 
 };
 
-
-Eigen::Vector3d pos_controller_PID::pos_controller(Eigen::Vector3d pos, Eigen::Vector3d vel, Eigen::Vector3d pos_sp, Eigen::Vector3d vel_sp, int sub_mode, float dt)
+px4_command::AttitudeReference pos_controller_PID::pos_controller(
+    px4_command::DroneState _DroneState, 
+    px4_command::TrajectoryPoint _Reference_State, float dt)
 {
-    pos_drone = pos;
-    vel_drone = vel;
+    // 计算误差项
+    Eigen::Vector3f pos_error = pos_controller_utils::cal_pos_error(_DroneState, _Reference_State);
+    Eigen::Vector3f vel_error = pos_controller_utils::cal_vel_error(_DroneState, _Reference_State);
 
-    delta_time = dt;
-
-    _positionController(pos_sp, vel_sp, sub_mode);
-
-    _velocityController();
-
-    for (int i = 0; i < 3; i++)
+    // 误差项限幅
+    for (int i=0; i<3; i++)
     {
-        data_log.pos[i] = pos(i);
-        data_log.vel[i] = vel(i);
-        data_log.pos_sp[i] = pos_sp(i);
-        data_log.vel_sp[i] = vel_sp(i);
+        pos_error[i] = constrain_function(pos_error[i], pos_error_max[i]);
+        vel_error[i] = constrain_function(vel_error[i], vel_error_max[i]);
     }
 
-    data_log_pub.publish(data_log);
-
-    return thrust_sp;
-}
-
-
-void pos_controller_PID::_positionController(Eigen::Vector3d pos_sp, Eigen::Vector3d vel_sp, int sub_mode)
-{
-    //# sub_mode 2-bit value:
-    //# 0 for position, 1 for vel, 1st for xy, 2nd for z.
-    //#                   xy position     xy velocity
-    //# z position       	0b00(0)       0b10(2)
-    //# z velocity		0b01(1)       0b11(3)
-
-    if((sub_mode & 0b10) == 0) //xy channel
+    // 更新积分项
+    for (int i=0; i<3; i++)
     {
-        vel_setpoint(0) = Kp_xy * (pos_sp(0) - pos_drone(0));
-        vel_setpoint(1) = Kp_xy * (pos_sp(1) - pos_drone(1));
+        if(abs(pos_error[i]) < int_start_error)
+        {
+            integral[i] += Ki[i] * pos_error[i] * dt;
+            integral[i] = constrain_function(integral[i], int_max[i]);
+        }else
+        {
+            integral[i] = 0;
+        }
+
+        // If not in OFFBOARD mode, set all intergral to zero.
+        if(_DroneState.mode != "OFFBOARD")
+        {
+            integral[i] = 0;
+        }
     }
-    else
+
+    // 期望加速度 = 加速度前馈 + PID
+    for (int i=0; i<3; i++)
     {
-        vel_setpoint(0) = vel_sp(0);
-        vel_setpoint(1) = vel_sp(1);
+        _AttitudeReference.desired_acceleration[i] = _Reference_State.acceleration_ref[i] + Kp[i] * pos_error[i] + Kd[i] * vel_error[i] + integral[i];
     }
+    
+    _AttitudeReference.desired_acceleration[2] = _AttitudeReference.desired_acceleration[2] + 9.8;
 
-    if((sub_mode & 0b01) == 0) //z channel
+    // cout << "ff [X Y Z] : " << _Reference_State.acceleration_ref[0] << " [m/s] "<< _Reference_State.acceleration_ref[1]<<" [m/s] "<<_Reference_State.acceleration_ref[2]<<" [m/s] "<<endl;
+ 
+
+    // cout << "Vel_P_output [X Y Z] : " << Kp[0] * pos_error[0] << " [m/s] "<< Kp[1] * pos_error[1]<<" [m/s] "<<Kp[2] * pos_error[2]<<" [m/s] "<<endl;
+
+    // cout << "Vel_I_output [X Y Z] : " << integral[0] << " [m/s] "<< integral[1]<<" [m/s] "<<integral[2]<<" [m/s] "<<endl;
+
+    // cout << "Vel_D_output [X Y Z] : " << Kd[0] * vel_error[0] << " [m/s] "<< Kd[1] * vel_error[1]<<" [m/s] "<<Kd[2] * vel_error[2]<<" [m/s] "<<endl;
+
+
+    // 期望推力 = 期望加速度 × 质量
+    // 归一化推力 ： 根据电机模型，反解出归一化推力
+    for (int i=0; i<3; i++)
     {
-        vel_setpoint(2) = Kp_z  * (pos_sp(2) - pos_drone(2));
-    }
-    else
-    {
-        vel_setpoint(2) = vel_sp(2);
+        _AttitudeReference.desired_thrust[i] = _AttitudeReference.desired_acceleration[i] * Quad_MASS;
+        _AttitudeReference.desired_thrust_normalized[i] = (_AttitudeReference.desired_thrust[i] - throttle_b) / throttle_a;
     }
 
-    // Limit the velocity setpoint
-    vel_setpoint(0) = constrain_function2(vel_setpoint(0), -MPC_XY_VEL_MAX, MPC_XY_VEL_MAX);
-    vel_setpoint(1) = constrain_function2(vel_setpoint(1), -MPC_XY_VEL_MAX, MPC_XY_VEL_MAX);
-    vel_setpoint(2) = constrain_function2(vel_setpoint(2), -MPC_Z_VEL_MAX, MPC_Z_VEL_MAX);
-}
-
-void pos_controller_PID::_velocityController()
-{
-    // Generate desired thrust setpoint.
-    // PID
-    // u_des = P(error_vel) + D(error_vel_dot) + I(vel_integral)
-    // Umin <= u_des <= Umax
-    //
-    // Anti-Windup:
-    // u_des = _thrust_sp; y = _vel_sp; r = _vel
-    // u_des >= Umax and r - y >= 0 => Saturation = true
-    // u_des >= Umax and r - y <= 0 => Saturation = false
-    // u_des <= Umin and r - y <= 0 => Saturation = true
-    // u_des <= Umin and r - y >= 0 => Saturation = false
-    //
-    // 	Notes:
-    // - control output in Z-direction has priority over XY-direction
-    // - the equilibrium point for the PID is at hover-thrust
-
-    // - the desired thrust in Z-direction is limited by the thrust limits
-    // - the desired thrust in XY-direction is limited by the thrust excess after
-    // 	 consideration of the desired thrust in Z-direction. In addition, the thrust in
-    // 	 XY-direction is also limited by the maximum tilt.
-
-    Eigen::Vector3d error_vel = vel_setpoint - vel_drone;
-
-    vel_P_output(0) = Kp_vxvy * error_vel(0);
-    vel_P_output(1) = Kp_vxvy * error_vel(1);
-    vel_P_output(2) = Kp_vz  * error_vel(2);
-
-    Eigen::Vector3d vel_error_deriv = cal_vel_error_deriv(error_vel);
-
-    vel_D_output(0) = Kd_vxvy * vel_error_deriv(0);
-    vel_D_output(1) = Kd_vxvy * vel_error_deriv(1);
-    vel_D_output(2) = Kd_vz  * vel_error_deriv(2);
-
-
-    // Consider thrust in Z-direction. [Here Hover_throttle is added]
-    float thrust_desired_Z  = vel_P_output(2) + thurst_int(2) + vel_D_output(2) + Hover_throttle;
-
-    // Apply Anti-Windup in Z-direction.
-    // 两种情况：期望推力大于最大推力，且速度误差朝上；期望推力小于最小推力，且速度误差朝下
-    bool stop_integral_Z = ( thrust_desired_Z  >= MPC_THR_MAX && error_vel(2) >= 0.0f) ||
-                           ( thrust_desired_Z  <= MPC_THR_MIN && error_vel(2) <= 0.0f);
-    if (!stop_integral_Z) {
-            thurst_int(2) += Ki_vz  * error_vel(2) * delta_time;
-
-            // limit thrust integral
-            thurst_int(2) = min(fabs(thurst_int(2)), MPC_THR_MAX ) * sign_function(thurst_int(2));
-    }
-
-    // Saturate thrust setpoint in Z-direction.
-    thrust_sp(2) = constrain_function2( thrust_desired_Z , MPC_THR_MIN, MPC_THR_MAX);
-
-    // PID-velocity controller for XY-direction.
-    float thrust_desired_X;
-    float thrust_desired_Y;
-    thrust_desired_X  = vel_P_output(0) + thurst_int(0) + vel_D_output(0);
-    thrust_desired_Y  = vel_P_output(1) + thurst_int(1) + vel_D_output(1);
-
+    // 推力限幅，根据最大倾斜角及最大油门
     // Get maximum allowed thrust in XY based on tilt angle and excess thrust.
-    float thrust_max_XY_tilt = fabs(thrust_sp(2)) * tanf(tilt_max/180.0*M_PI);
-    float thrust_max_XY = sqrtf(MPC_THR_MAX * MPC_THR_MAX - thrust_sp(2) * thrust_sp(2));
+    float thrust_max_XY_tilt = fabs(_AttitudeReference.desired_thrust_normalized[2]) * tanf(tilt_max/180.0*M_PI);
+    float thrust_max_XY = sqrtf(THR_MAX * THR_MAX - pow(_AttitudeReference.desired_thrust_normalized[2],2));
     thrust_max_XY = min(thrust_max_XY_tilt, thrust_max_XY);
 
-    // Saturate thrust in XY-direction.
-    thrust_sp(0) = thrust_desired_X;
-    thrust_sp(1) = thrust_desired_Y;
-
-
-    if ((thrust_desired_X * thrust_desired_X + thrust_desired_Y * thrust_desired_Y) > thrust_max_XY * thrust_max_XY) {
-            float mag = sqrtf((thrust_desired_X * thrust_desired_X + thrust_desired_Y * thrust_desired_Y));
-            thrust_sp(0) = thrust_desired_X / mag * thrust_max_XY;
-            thrust_sp(1) = thrust_desired_Y / mag * thrust_max_XY;
+    if ((pow(_AttitudeReference.desired_thrust_normalized[0],2) + pow(_AttitudeReference.desired_thrust_normalized[1],2)) > thrust_max_XY * thrust_max_XY) {
+        float mag = sqrtf((pow(_AttitudeReference.desired_thrust_normalized[0],2) + pow(_AttitudeReference.desired_thrust_normalized[1],2)));
+        _AttitudeReference.desired_thrust_normalized[0] = _AttitudeReference.desired_thrust_normalized[0] / mag * thrust_max_XY;
+        _AttitudeReference.desired_thrust_normalized[1] = _AttitudeReference.desired_thrust_normalized[1] / mag * thrust_max_XY;
     }
 
-    // Use tracking Anti-Windup for XY-direction: during saturation, the integrator is used to unsaturate the output
-    // see Anti-Reset Windup for PID controllers, L.Rundqwist, 1990
-    // Actually, I dont understand here.
-    float arw_gain = 2.f / Kp_vxvy;
+    //期望姿态角 及 期望姿态角四元数 调用库函数进行计算
+    Eigen::Vector3d thr_sp = Eigen::Vector3d(_AttitudeReference.desired_thrust_normalized[0], _AttitudeReference.desired_thrust_normalized[1], _AttitudeReference.desired_thrust_normalized[2]);
 
-    float vel_err_lim_x,vel_err_lim_y;
-    vel_err_lim_x = error_vel(0) - (thrust_desired_X - thrust_sp(0)) * arw_gain;
-    vel_err_lim_y = error_vel(1) - (thrust_desired_Y - thrust_sp(1)) * arw_gain;
+    Eigen::Quaterniond q_sp = pos_controller_utils::thrustToAttitude(thr_sp, _Reference_State.yaw_ref);
 
-    // Update integral
-    thurst_int(0) += Ki_vxvy * vel_err_lim_x * delta_time;
-    thurst_int(1) += Ki_vxvy * vel_err_lim_y * delta_time;
+    Eigen::Vector3d att_sp = quaternion_to_euler(q_sp);
 
-    //If not in OFFBOARD mode, set all intergral to zero.
-    if(flag_offboard == 0)
-    {
-        thurst_int = Eigen::Vector3d(0.0,0.0,0.0);
-    }
-}
+    _AttitudeReference.desired_att_q.w = q_sp.w();
+    _AttitudeReference.desired_att_q.x = q_sp.x();
+    _AttitudeReference.desired_att_q.y = q_sp.y();
+    _AttitudeReference.desired_att_q.z = q_sp.z();
 
-Eigen::Vector3d pos_controller_PID::cal_vel_error_deriv(Eigen::Vector3d error_now)
-{
-    Eigen::Vector3d error_vel_dot_now;
-    error_vel_dot_now = (error_now - error_vel_last)/delta_time;
+    _AttitudeReference.desired_attitude[0] = att_sp[0];  
+    _AttitudeReference.desired_attitude[1] = att_sp[1]; 
+    _AttitudeReference.desired_attitude[2] = att_sp[2]; 
 
-    error_vel_last = error_now;
-    float a,b;
-    b = 2 * M_PI * MPC_VELD_LP * delta_time;
-    a = b / (1 + b);
-
-    Eigen::Vector3d output;
-
-    output = a * error_vel_dot_now + (1 - a) * error_vel_dot_last ;
-
-    error_vel_dot_last = output;
-
-    return output;
-}
+    //期望油门
+    _AttitudeReference.desired_throttle = thr_sp.norm();  
 
 
-void pos_controller_PID::printf_result()
-{
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Position Controller<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    cout <<">>>>>>>>>>>>>>>>>>>>>>PID Position Controller<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
     //固定的浮点显示
     cout.setf(ios::fixed);
@@ -362,17 +206,26 @@ void pos_controller_PID::printf_result()
 
     cout<<setprecision(2);
 
-//    cout << "delta_time : " << delta_time<< " [s] " <<endl;
+    cout << "Pos_ref [XYZ]: " << _Reference_State.position_ref[0] << " [ m ]" << _Reference_State.position_ref[1] << " [ m ]"<< _Reference_State.position_ref[2] << " [ m ]" << endl;
+    cout << "Vel_ref [XYZ]: " << _Reference_State.velocity_ref[0] << " [m/s]" << _Reference_State.velocity_ref[1] << " [m/s]" << _Reference_State.velocity_ref[2] << " [m/s]" <<endl;
+    cout << "Acc_ref [XYZ]: " << _Reference_State.acceleration_ref[0] << " [m/s^2]" << _Reference_State.acceleration_ref[1] << " [m/s^2]" << _Reference_State.acceleration_ref[2] << " [m/s^2]" <<endl;
+    cout << "Yaw_setpoint : " << _Reference_State.yaw_ref * 180/M_PI << " [deg] " <<endl;
 
-    cout << "Velocity_sp  [X Y Z] : " << vel_setpoint[0] << " [m/s] "<< vel_setpoint[1]<<" [m/s] "<<vel_setpoint[2]<<" [m/s] "<<endl;
+    cout << "e_p [X Y Z] : " << pos_error[0] << " [m] "<< pos_error[1]<<" [m] "<<pos_error[2]<<" [m] "<<endl;
+    cout << "e_v [X Y Z] : " << vel_error[0] << " [m/s] "<< vel_error[1]<<" [m/s] "<<vel_error[2]<<" [m/s] "<<endl;
+    cout << "acc_ref [X Y Z] : " << _Reference_State.acceleration_ref[0] << " [m/s^2] "<< _Reference_State.acceleration_ref[1]<<" [m/s^2] "<<_Reference_State.acceleration_ref[2]<<" [m/s^2] "<<endl;
+    
+    cout << "desired_acceleration [X Y Z] : " << _AttitudeReference.desired_acceleration[0] << " [m/s^2] "<< _AttitudeReference.desired_acceleration[1]<<" [Nm/s^2] "<<_AttitudeReference.desired_acceleration[2]<<" [m/s^2] "<<endl;
+    cout << "desired_thrust [X Y Z] : " << _AttitudeReference.desired_thrust[0] << " [N] "<< _AttitudeReference.desired_thrust[1]<<" [N] "<<_AttitudeReference.desired_thrust[2]<<" [N] "<<endl;
+    cout << "desired_thrust_normalized [X Y Z] : " << _AttitudeReference.desired_thrust_normalized[0] << " [N] "<< _AttitudeReference.desired_thrust_normalized[1]<<" [N] "<<_AttitudeReference.desired_thrust_normalized[2]<<" [N] "<<endl;
+    cout << "desired_attitude [R P Y] : " << _AttitudeReference.desired_attitude[0] * 180/M_PI <<" [deg] "<<_AttitudeReference.desired_attitude[1] * 180/M_PI << " [deg] "<< _AttitudeReference.desired_attitude[2] * 180/M_PI<<" [deg] "<<endl;
+    cout << "desired_throttle [0-1] : " << _AttitudeReference.desired_throttle <<endl;
+    return _AttitudeReference;
+}
 
-//    cout << "Vel_P_output [X Y Z] : " << vel_P_output[0] << " [m/s] "<< vel_P_output[1]<<" [m/s] "<<vel_P_output[2]<<" [m/s] "<<endl;
+void pos_controller_PID::printf_result()
+{
 
-//    cout << "Vel_I_output [X Y Z] : " << thurst_int[0] << " [m/s] "<< thurst_int[1]<<" [m/s] "<<thurst_int[2]<<" [m/s] "<<endl;
-
-//    cout << "Vel_D_output [X Y Z] : " << vel_D_output[0] << " [m/s] "<< vel_D_output[1]<<" [m/s] "<<vel_D_output[2]<<" [m/s] "<<endl;
-
-    cout << "thrust_sp    [X Y Z] : " << thrust_sp[0] << " [m/s^2] "<< thrust_sp[1]<<" [m/s^2] "<<thrust_sp[2]<<" [m/s^2] "<<endl;
 }
 
 // 【打印参数函数】
@@ -380,28 +233,34 @@ void pos_controller_PID::printf_param()
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>PID Parameter <<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
-    cout <<"Position Loop:  " <<endl;
-    cout <<"Kp_xy : "<< Kp_xy << endl;
-    cout <<"Kp_z : "<< Kp_z << endl;
-    cout <<"Velocity Loop:  " <<endl;
-    cout <<"Kp_vxvy : "<< Kp_vxvy << endl;
-    cout <<"Kp_vz : "<< Kp_vz << endl;
-    cout <<"Ki_vxvy : "<< Ki_vxvy << endl;
-    cout <<"Ki_vz : "<< Ki_vz << endl;
-    cout <<"Kd_vxvy : "<< Kd_vxvy << endl;
-    cout <<"Kd_vz : "<< Kd_vz << endl;
+    cout <<"Quad_MASS : "<< Quad_MASS << endl;
+    cout <<"throttle_a : "<< throttle_a << endl;
+    cout <<"throttle_b : "<< throttle_b << endl;
+
+    cout <<"Kp_x : "<< Kp[0] << endl;
+    cout <<"Kp_y : "<< Kp[1] << endl;
+    cout <<"Kp_z : "<< Kp[2] << endl;
+
+    cout <<"Kd_x : "<< Kd[0] << endl;
+    cout <<"Kd_y : "<< Kd[1] << endl;
+    cout <<"Kd_z : "<< Kd[2] << endl;
+
+    cout <<"Ki_x : "<< Ki[0] << endl;
+    cout <<"Ki_y : "<< Ki[1] << endl;
+    cout <<"Ki_z : "<< Ki[2] << endl;
 
     cout <<"Limit:  " <<endl;
-    cout <<"MPC_XY_VEL_MAX : "<< MPC_XY_VEL_MAX << endl;
-    cout <<"MPC_Z_VEL_MAX : "<< MPC_Z_VEL_MAX << endl;
+    cout <<"pxy_error_max : "<< pos_error_max[0] << endl;
+    cout <<"pz_error_max :  "<< pos_error_max[2] << endl;
+    cout <<"vxy_error_max : "<< vel_error_max[0] << endl;
+    cout <<"vz_error_max :  "<< vel_error_max[2] << endl;
+    cout <<"pxy_int_max : "<< int_max[0] << endl;
+    cout <<"pz_int_max : "<< int_max[2] << endl;
+    cout <<"THR_MIN : "<< THR_MIN << endl;
+    cout <<"THR_MAX : "<< THR_MAX << endl;
     cout <<"tilt_max : "<< tilt_max << endl;
-    cout <<"MPC_THR_MIN : "<< MPC_THR_MIN << endl;
-    cout <<"MPC_THR_MAX : "<< MPC_THR_MAX << endl;
-    cout <<"Hover_throttle : "<< Hover_throttle << endl;
+    cout <<"int_start_error : "<< int_start_error << endl;
 
 }
 
-
-
-}
 #endif

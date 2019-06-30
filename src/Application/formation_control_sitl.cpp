@@ -6,7 +6,7 @@
 * Update Time: 2019.6.16
 ***************************************************************************************************************************/
 #include <ros/ros.h>
-#include <px4_command/command.h>
+#include <px4_command/ControlCommand.h>
 #include <mavros_msgs/CommandBool.h>
 #include <mavros_msgs/SetMode.h>
 #include <mavros_msgs/State.h>
@@ -18,24 +18,9 @@
 #include <sensor_msgs/Imu.h>
 #include <bitset>
 #include <Eigen/Eigen>
-
+#include <command_to_mavros.h>
 using namespace std;
-
-
-//注意：代码中，参与运算的角度均是以rad为单位，但是涉及到显示时或者需要手动输入时均以deg为单位。
-//自定义的Command变量
-//相应的命令分别为 待机,起飞，移动(惯性系ENU)，移动(机体系)，悬停，降落，上锁，紧急降落
-enum Command
-{
-    Idle,
-    Takeoff,
-    Move_ENU,
-    Move_Body,
-    Hold,
-    Land,
-    Disarm,
-    Failsafe_land,
-};
+ 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>变量声明<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 mavros_msgs::State current_state_uav1;
@@ -68,8 +53,8 @@ mavros_msgs::PositionTarget pos_setpoint3;
 
 Eigen::Vector3d Takeoff_position = Eigen::Vector3d(0.0,0.0,0.0);
 
-px4_command::command Command_Now;                      //无人机当前执行命令
-px4_command::command Command_Last;                     //无人机上一条执行命令
+px4_command::ControlCommand Command_Now;                      //无人机当前执行命令
+px4_command::ControlCommand Command_Last;                     //无人机上一条执行命令
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>函数声明<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 float get_ros_time(ros::Time begin);
@@ -77,7 +62,7 @@ void prinft_command_state();
 void rotation_yaw(float yaw_angle, float input[2], float output[2]);
 void prinft_drone_state(float current_time);
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>回调函数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-void Command_cb(const px4_command::command::ConstPtr& msg)
+void Command_cb(const px4_command::ControlCommand::ConstPtr& msg)
 {
     Command_Now = *msg;
 }
@@ -130,7 +115,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "formation_control_sitl");
     ros::NodeHandle nh("~");
 
-    ros::Subscriber Command_sub = nh.subscribe<px4_command::command>("/px4/command", 10, Command_cb);
+    ros::Subscriber Command_sub = nh.subscribe<px4_command::ControlCommand>("/px4/control_command", 10, Command_cb);
 
     ros::Subscriber uav1_state_sub = nh.subscribe<mavros_msgs::State>("/uav1/mavros/state", 10, uav1_state_sub_cb);
     ros::Subscriber uav1_position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/uav1/mavros/local_position/pose", 100, uav1_position_sub_cb);
@@ -197,16 +182,16 @@ int main(int argc, char **argv)
 
     //初始化命令-
     // 默认设置：Idle模式 电机怠速旋转 等待来自上层的控制指令
-    Command_Now.comid = 0;
-    Command_Now.command = Idle;
-    Command_Now.sub_mode = 0;
-    Command_Now.pos_sp[0] = 0;
-    Command_Now.pos_sp[1] = 0;
-    Command_Now.pos_sp[2] = 0;
-    Command_Now.vel_sp[0] = 0;
-    Command_Now.vel_sp[1] = 0;
-    Command_Now.vel_sp[2] = 0;
-    Command_Now.yaw_sp = 0;
+    Command_Now.Command_ID = 0;
+    Command_Now.Mode = command_to_mavros::Idle;
+    Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;
+    Command_Now.Reference_State.position_ref[0] = 0;
+    Command_Now.Reference_State.position_ref[1] = 0;
+    Command_Now.Reference_State.position_ref[2] = 0;
+    Command_Now.Reference_State.velocity_ref[0] = 0;
+    Command_Now.Reference_State.velocity_ref[1] = 0;
+    Command_Now.Reference_State.velocity_ref[2] = 0;
+    Command_Now.Reference_State.yaw_ref = 0;
 
 
     // 记录启控时间
@@ -230,10 +215,10 @@ int main(int argc, char **argv)
         prinft_command_state();
 
 
-        switch (Command_Now.command)
+        switch (Command_Now.Mode)
         {
         // 【Idle】 怠速旋转，此时可以切入offboard模式，但不会起飞。
-        case Idle:
+        case command_to_mavros::Idle:
             //Here pls ref to mavlink_receiver.cpp
             pos_setpoint1.type_mask = 0x4000;
             pos_setpoint2.type_mask = 0x4000;
@@ -289,9 +274,9 @@ int main(int argc, char **argv)
             break;
 
         // 【Move_ENU】 ENU系移动。只有PID算法中才有追踪速度的选项，其他控制只能追踪位置
-        case Move_ENU:
-            pos_sp = Eigen::Vector3d(Command_Now.pos_sp[0],Command_Now.pos_sp[1],Command_Now.pos_sp[2]);
-            yaw_sp = Command_Now.yaw_sp;
+        case command_to_mavros::Move_ENU:
+            pos_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1],Command_Now.Reference_State.position_ref[2]);
+            yaw_sp = Command_Now.Reference_State.yaw_ref;
 
             pos_setpoint1.type_mask = 0b100111111000;  // 100 111 111 000  xyz + yaw
             pos_setpoint2.type_mask = 0b100111111000;  // 100 111 111 000  xyz + yaw
@@ -324,13 +309,13 @@ int main(int argc, char **argv)
             break;
 
         // 【Land】 降落。当前位置原地降落，降落后会自动上锁，且切换为mannual模式
-        case Land:
+        case command_to_mavros::Land:
 
         // 【Disarm】 紧急上锁。直接上锁，不建议使用，危险。
-        case Disarm:
+        case command_to_mavros::Disarm:
 
         // 【Failsafe_land】 暂空。可进行自定义
-        case Failsafe_land:
+        case command_to_mavros::Failsafe_land:
 
 
 
@@ -361,90 +346,90 @@ void prinft_command_state()
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Command State<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
     int sub_mode;
-    sub_mode = Command_Now.sub_mode;
+    sub_mode = Command_Now.Reference_State.Sub_mode ;
 
-    switch(Command_Now.command)
+    switch(Command_Now.Mode)
     {
-    case Move_ENU:
+    case command_to_mavros::Move_ENU:
         cout << "Command: [ Move_ENU ] " <<endl;
 
         if((sub_mode & 0b10) == 0) //xy channel
         {
             cout << "Submode: xy position control "<<endl;
-            cout << "X_setpoint   : " << Command_Now.pos_sp[0] << " [ m ]"  << "  Y_setpoint : "<< Command_Now.pos_sp[1] << " [ m ]"<<endl;
+            cout << "X_setpoint   : " << Command_Now.Reference_State.position_ref[0] << " [ m ]"  << "  Y_setpoint : "<< Command_Now.Reference_State.position_ref[1] << " [ m ]"<<endl;
         }
         else{
             cout << "Submode: xy velocity control "<<endl;
-            cout << "X_setpoint   : " << Command_Now.vel_sp[0] << " [m/s]" << "  Y_setpoint : "<< Command_Now.vel_sp[1] << " [m/s]" <<endl;
+            cout << "X_setpoint   : " << Command_Now.Reference_State.velocity_ref[0] << " [m/s]" << "  Y_setpoint : "<< Command_Now.Reference_State.velocity_ref[1] << " [m/s]" <<endl;
         }
 
         if((sub_mode & 0b01) == 0) //z channel
         {
             cout << "Submode:  z position control "<<endl;
-            cout << "Z_setpoint   : "<< Command_Now.pos_sp[2] << " [ m ]" << endl;
+            cout << "Z_setpoint   : "<< Command_Now.Reference_State.position_ref[2] << " [ m ]" << endl;
         }
         else
         {
             cout << "Submode:  z velocity control "<<endl;
-            cout << "Z_setpoint   : "<< Command_Now.vel_sp[2] << " [m/s]" <<endl;
+            cout << "Z_setpoint   : "<< Command_Now.Reference_State.velocity_ref[2] << " [m/s]" <<endl;
         }
 
-        cout << "Yaw_setpoint : "  << Command_Now.yaw_sp* 180/M_PI << " [deg] " <<endl;
+        cout << "Yaw_setpoint : "  << Command_Now.Reference_State.yaw_ref* 180/M_PI << " [deg] " <<endl;
 
         break;
-    case Move_Body:
+    case command_to_mavros::Move_Body:
         cout << "Command: [ Move_Body ] " <<endl;
 
         if((sub_mode & 0b10) == 0) //xy channel
         {
             cout << "Submode: xy position control "<<endl;
-            cout << "X_setpoint   : " << Command_Now.pos_sp[0] << " [ m ]"  << "  Y_setpoint : "<< Command_Now.pos_sp[1] << " [ m ]"<<endl;
+            cout << "X_setpoint   : " << Command_Now.Reference_State.position_ref[0] << " [ m ]"  << "  Y_setpoint : "<< Command_Now.Reference_State.position_ref[1] << " [ m ]"<<endl;
         }
         else{
             cout << "Submode: xy velocity control "<<endl;
-            cout << "X_setpoint   : " << Command_Now.vel_sp[0] << " [m/s]" << "  Y_setpoint : "<< Command_Now.vel_sp[1] << " [m/s]" <<endl;
+            cout << "X_setpoint   : " << Command_Now.Reference_State.velocity_ref[0] << " [m/s]" << "  Y_setpoint : "<< Command_Now.Reference_State.velocity_ref[1] << " [m/s]" <<endl;
         }
 
         if((sub_mode & 0b01) == 0) //z channel
         {
             cout << "Submode:  z position control "<<endl;
-            cout << "Z_setpoint   : "<< Command_Now.pos_sp[2] << " [ m ]" << endl;
+            cout << "Z_setpoint   : "<< Command_Now.Reference_State.position_ref[2] << " [ m ]" << endl;
         }
         else
         {
             cout << "Submode:  z velocity control "<<endl;
-            cout << "Z_setpoint   : "<< Command_Now.vel_sp[2] << " [m/s]" <<endl;
+            cout << "Z_setpoint   : "<< Command_Now.Reference_State.velocity_ref[2] << " [m/s]" <<endl;
         }
 
-        cout << "Yaw_setpoint : "  << Command_Now.yaw_sp * 180/M_PI<< " [deg] " <<endl;
+        cout << "Yaw_setpoint : "  << Command_Now.Reference_State.yaw_ref * 180/M_PI<< " [deg] " <<endl;
 
         break;
 
-    case Hold:
+    case command_to_mavros::Hold:
         cout << "Command: [ Hold ] " <<endl;
         cout << "Hold Position [X Y Z] : " << pos_sp[0] << " [ m ] "<< pos_sp[1]<<" [ m ] "<< pos_sp[2]<<" [ m ] "<<endl;
         cout << "Yaw_setpoint : "  << yaw_sp* 180/M_PI << " [deg] " <<endl;
         break;
 
-    case Land:
+    case command_to_mavros::Land:
         cout << "Command: [ Land ] " <<endl;
         cout << "Land Position [X Y Z] : " << pos_sp[0] << " [ m ] "<< pos_sp[1]<<" [ m ] "<< pos_sp[2]<<" [ m ] "<<endl;
         cout << "Yaw_setpoint : "  << yaw_sp* 180/M_PI << " [deg] " <<endl;
         break;
 
-    case Disarm:
+    case command_to_mavros::Disarm:
         cout << "Command: [ Disarm ] " <<endl;
         break;
 
-    case Failsafe_land:
+    case command_to_mavros::Failsafe_land:
         cout << "Command: [ Failsafe_land ] " <<endl;
         break;
 
-    case Idle:
+    case command_to_mavros::Idle:
         cout << "Command: [ Idle ] " <<endl;
         break;
 
-    case Takeoff:
+    case command_to_mavros::Takeoff:
         cout << "Command: [ Takeoff ] " <<endl;
         cout << "Takeoff Position [X Y Z] : " << pos_sp[0] << " [ m ] "<< pos_sp[1]<<" [ m ] "<< pos_sp[2]<<" [ m ] "<<endl;
         cout << "Yaw_setpoint : "  << yaw_sp* 180/M_PI << " [deg] " <<endl;

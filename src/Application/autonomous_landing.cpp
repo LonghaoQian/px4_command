@@ -16,32 +16,21 @@
 
 //ros头文件
 #include <ros/ros.h>
+#include <command_to_mavros.h>
 
 //topic 头文件
 #include <iostream>
-#include <px4_command/command.h>
-
+#include <px4_command/ControlCommand.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Point.h>
 
 
 using namespace std;
+ 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>全 局 变 量<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-enum Command
-{
-    Idle,
-    Takeoff,
-    Move_ENU,
-    Move_Body,
-    Hold,
-    Land,
-    Disarm,
-    Failsafe_land,
-};
-
 int Num_StateMachine = 0;                                       //状态机编号
 int Num_StateMachine_Last = 0;                                  //上一时刻 状态机编号
-int comid = 1;                                                  //Command_now的id号
+int comid = 1;                                                  //Command_Now的id号
 //-----------------------------------------视觉相关----------------------------------------------------
 float flag_vision = 0;                                          //视觉FLAG 是否识别到目标 1代表能识别到目标，0代表不能
 geometry_msgs::Point relative_position;                         //机体固连坐标系下 降落板的位置
@@ -65,7 +54,7 @@ float land_max_z;
 int num_count_lost = 0;
 float Thres_vision_lost = 30;
 //---------------------------------------Output---------------------------------------------
-px4_command::command Command_now;                               //发送给position_control.cpp的命令
+px4_command::ControlCommand Command_Now;                               //发送给position_control.cpp的命令
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>函数声明<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 float satfunc(float data, float Max, float Thres);                           //限幅函数
 void track_land();
@@ -110,7 +99,7 @@ int main(int argc, char **argv)
     ros::Subscriber vision_flag_sub = nh.subscribe<geometry_msgs::Pose>("/vision/vision_flag", 10, vision_flag);
 
     // 【发布】发送给position_control.cpp的命令
-    ros::Publisher command_pub = nh.advertise<px4_command::command>("/px4/command", 10);
+    ros::Publisher command_pub = nh.advertise<px4_command::ControlCommand>("/px4/control_command", 10);
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>参数读取<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     //降落追踪控制算法 的比例参数
@@ -226,9 +215,9 @@ int main(int argc, char **argv)
 
             // 惯性系移动
             case 1:
-                Command_now.command = Move_ENU;
+                Command_Now.Mode = command_to_mavros::Move_ENU;
                 generate_com(0, state_desired);
-                command_pub.publish(Command_now);
+                command_pub.publish(Command_Now);
 
                 Num_StateMachine_Last = Num_StateMachine;
                 Num_StateMachine = 0;
@@ -236,9 +225,9 @@ int main(int argc, char **argv)
 
             // 机体系移动
             case 2:
-                Command_now.command = Move_Body;
+                Command_Now.Mode = command_to_mavros::Move_Body;
                 generate_com(0, state_desired);
-                command_pub.publish(Command_now);
+                command_pub.publish(Command_Now);
 
                 Num_StateMachine_Last = Num_StateMachine;
                 Num_StateMachine = 0;
@@ -246,8 +235,8 @@ int main(int argc, char **argv)
 
             //Land
             case 3:
-                Command_now.command = Land;
-                command_pub.publish(Command_now);
+                Command_Now.Mode = command_to_mavros::Land;
+                command_pub.publish(Command_Now);
 
                 Num_StateMachine_Last = Num_StateMachine;
                 break;
@@ -331,31 +320,31 @@ int main(int argc, char **argv)
                 }
 
                 //发布控制量
-                command_pub.publish(Command_now);
+                command_pub.publish(Command_Now);
                 Num_StateMachine_Last = Num_StateMachine;
 
                 break;
 
         case 5:
-            Command_now.command = Disarm;
-            command_pub.publish(Command_now);
+            Command_Now.Mode = command_to_mavros::Disarm;
+            command_pub.publish(Command_Now);
             Num_StateMachine_Last = Num_StateMachine;
 
             break;
 
         case 6:
 
-            Command_now.command = Hold;
-            Command_now.sub_mode = 1;  //xy pos z vel
-            Command_now.comid = comid;
-            Command_now.pos_sp[0] = 0;
-            Command_now.pos_sp[1] = 0;
-            Command_now.vel_sp[2] = 0.2;
-            Command_now.yaw_sp = 0;
+            Command_Now.Mode = command_to_mavros::Hold;
+            Command_Now.Reference_State.Sub_mode  = command_to_mavros::XY_POS_Z_VEL;  //xy pos z vel
+            Command_Now.Command_ID = comid;
+            Command_Now.Reference_State.position_ref[0] = 0;
+            Command_Now.Reference_State.position_ref[1] = 0;
+            Command_Now.Reference_State.velocity_ref[2] = 0.2;
+            Command_Now.Reference_State.yaw_ref = 0;
             comid++;
 
             Num_StateMachine_Last = Num_StateMachine;
-            command_pub.publish(Command_now);
+            command_pub.publish(Command_Now);
 
             cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>Search State<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
             //重新获得视觉信息，计数
@@ -392,8 +381,8 @@ int main(int argc, char **argv)
 //自主降落追踪算法
 void track_land()
 {
-    Command_now.command = Move_Body;
-    Command_now.comid = comid;
+    Command_Now.Mode = command_to_mavros::Move_Body;
+    Command_Now.Command_ID = comid;
     comid++;
 
     //小技巧：
@@ -402,21 +391,21 @@ void track_land()
     //relative_position.z = (height_on_pad  - pos_drone.position.z);
 
     //xyz速度控制模式
-    Command_now.sub_mode = 3; // xy velocity z velocity
+    Command_Now.Reference_State.Sub_mode  = command_to_mavros::XY_VEL_Z_VEL; // xy velocity z velocity
     //如果要去追踪一个动态的降落板，则需要反馈其速度
-    Command_now.vel_sp[0] =  kpx_land * relative_position.x;
-    Command_now.vel_sp[1] =  - kpy_land * relative_position.y;
+    Command_Now.Reference_State.velocity_ref[0] =  kpx_land * relative_position.x;
+    Command_Now.Reference_State.velocity_ref[1] =  - kpy_land * relative_position.y;
     //z轴的期望位置是 降落板上方的某一个高度
     //之所以这么做是因为飞机飞得太低，视觉系统无法捕捉降落板
-    Command_now.vel_sp[2] =  - kpz_land * (relative_position.z - fly_min_z);
+    Command_Now.Reference_State.velocity_ref[2] =  - kpz_land * (relative_position.z - fly_min_z);
 
     //不追踪偏航角，则锁死偏航角为0
-    Command_now.yaw_sp =0;
+    Command_Now.Reference_State.yaw_ref =0;
 
     //饱和函数
-    satfunc(Command_now.vel_sp[0], Max_velx_land, Thres_velx_land);
-    satfunc(Command_now.vel_sp[1], Max_vely_land, Thres_vely_land);
-    satfunc(Command_now.vel_sp[2], Max_velz_land, Thres_velz_land);
+    satfunc(Command_Now.Reference_State.velocity_ref[0], Max_velx_land, Thres_velx_land);
+    satfunc(Command_Now.Reference_State.velocity_ref[1], Max_vely_land, Thres_vely_land);
+    satfunc(Command_Now.Reference_State.velocity_ref[2], Max_velz_land, Thres_velz_land);
 }
 
 //饱和函数
@@ -441,7 +430,7 @@ float satfunc(float data, float Max, float Thres)
 void generate_com(int sub_mode, float state_desired[4])
 {
     static int comid = 1;
-    Command_now.sub_mode = sub_mode;
+    Command_Now.Reference_State.Sub_mode  = sub_mode;
 
 //# sub_mode 2-bit value:
 //# 0 for position, 1 for vel, 1st for xy, 2nd for z.
@@ -451,27 +440,27 @@ void generate_com(int sub_mode, float state_desired[4])
 
     if((sub_mode & 0b10) == 0) //xy channel
     {
-        Command_now.pos_sp[0] = state_desired[0];
-        Command_now.pos_sp[1] = state_desired[1];
+        Command_Now.Reference_State.position_ref[0] = state_desired[0];
+        Command_Now.Reference_State.position_ref[1] = state_desired[1];
     }
     else
     {
-        Command_now.vel_sp[0] = state_desired[0];
-        Command_now.vel_sp[1] = state_desired[1];
+        Command_Now.Reference_State.velocity_ref[0] = state_desired[0];
+        Command_Now.Reference_State.velocity_ref[1] = state_desired[1];
     }
 
     if((sub_mode & 0b01) == 0) //z channel
     {
-        Command_now.pos_sp[2] = state_desired[2];
+        Command_Now.Reference_State.position_ref[2] = state_desired[2];
     }
     else
     {
-        Command_now.vel_sp[2] = state_desired[2];
+        Command_Now.Reference_State.velocity_ref[2] = state_desired[2];
     }
 
 
-    Command_now.yaw_sp = state_desired[3];
-    Command_now.comid = comid;
+    Command_Now.Reference_State.yaw_ref = state_desired[3];
+    Command_Now.Command_ID = comid;
     comid++;
 }
 
@@ -486,5 +475,5 @@ void printf_land()
     cout << "relative_yaw: " << relative_yaw/3.1415926 *180 << " [du] "<<endl;
 
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>Land Control State<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-    cout << "command: " << Command_now.vel_sp[0] << " [m/s] "<< Command_now.vel_sp[1] << " [m/s] "<< Command_now.vel_sp[2] << " [m/s] "<<endl;
+    cout << "command: " << Command_Now.Reference_State.velocity_ref[0] << " [m/s] "<< Command_Now.Reference_State.velocity_ref[1] << " [m/s] "<< Command_Now.Reference_State.velocity_ref[2] << " [m/s] "<<endl;
 }

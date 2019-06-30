@@ -27,26 +27,16 @@
 #include <iostream>
 #include <stdio.h>
 #include <std_msgs/Bool.h>
-#include <px4_command/command.h>
+#include <px4_command/ControlCommand.h>
 #include <mavros_msgs/OverrideRCIn.h>
 #include <geometry_msgs/PoseStamped.h>
-
+#include <command_to_mavros.h>
 #include <Eigen/Eigen>
 
 using namespace std;
+ 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>全 局 变 量<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-enum Command
-{
-    Idle,
-    Takeoff,
-    Move_ENU,
-    Move_Body,
-    Hold,
-    Land,
-    Disarm,
-    Failsafe_land,
-};
-px4_command::command Command_now;
+px4_command::ControlCommand Command_Now;
 //---------------------------------------正方形参数---------------------------------------------
 float fly_height;
 float target_x,target_y;
@@ -93,7 +83,7 @@ int main(int argc, char **argv)
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 100, pos_cb);
 
     // 【发布】发送给position_control.cpp的命令
-    ros::Publisher move_pub = nh.advertise<px4_command::command>("/px4/command", 10);
+    ros::Publisher move_pub = nh.advertise<px4_command::ControlCommand>("/px4/control_command", 10);
 
     // Drop cmd send to mavros
     ros::Publisher drop_pub = nh.advertise<mavros_msgs::OverrideRCIn>("/mavros/rc/override", 10);
@@ -152,16 +142,16 @@ int main(int argc, char **argv)
     //Takeoff - fly to point 1
     while (switch_flag == 0)
     {
-        Command_now.command = Move_ENU;         //Move模式
-        Command_now.sub_mode = 0;               //子模式：位置控制模式
-        Command_now.pos_sp[0] = point1[0];
-        Command_now.pos_sp[1] = point1[1];
-        Command_now.pos_sp[2] = point1[2];
-        Command_now.yaw_sp = 0;
-        Command_now.comid = comid;
+        Command_Now.Mode = command_to_mavros::Move_ENU;         //Move模式
+        Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;               //子模式：位置控制模式
+        Command_Now.Reference_State.position_ref[0] = point1[0];
+        Command_Now.Reference_State.position_ref[1] = point1[1];
+        Command_Now.Reference_State.position_ref[2] = point1[2];
+        Command_Now.Reference_State.yaw_ref = 0;
+        Command_Now.Command_ID = comid;
         comid++;
 
-        move_pub.publish(Command_now);
+        move_pub.publish(Command_Now);
 
         distance_to_target = cal_distance(drone_pos,point1);
 
@@ -190,16 +180,16 @@ int main(int argc, char **argv)
     //Fly to target - to point 2
     while (switch_flag == 0)
     {
-        Command_now.command = Move_ENU;         //Move模式
-        Command_now.sub_mode = 0;               //子模式：位置控制模式
-        Command_now.pos_sp[0] = point2[0];
-        Command_now.pos_sp[1] = point2[1];
-        Command_now.pos_sp[2] = point2[2];
-        Command_now.yaw_sp = 0;
-        Command_now.comid = comid;
+        Command_Now.Mode = command_to_mavros::Move_ENU;         //Move模式
+        Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;               //子模式：位置控制模式
+        Command_Now.Reference_State.position_ref[0] = point2[0];
+        Command_Now.Reference_State.position_ref[1] = point2[1];
+        Command_Now.Reference_State.position_ref[2] = point2[2];
+        Command_Now.Reference_State.yaw_ref = 0;
+        Command_Now.Command_ID = comid;
         comid++;
 
-        move_pub.publish(Command_now);
+        move_pub.publish(Command_Now);
 
         distance_to_target = cal_distance(drone_pos,point2);
 
@@ -230,16 +220,16 @@ int main(int argc, char **argv)
 
     while (switch_flag == 0)
     {
-        Command_now.command = Move_ENU;         //Move模式
-        Command_now.sub_mode = 0;               //子模式：位置控制模式
-        Command_now.pos_sp[0] = point3[0];
-        Command_now.pos_sp[1] = point3[1];
-        Command_now.pos_sp[2] = point3[2];
-        Command_now.yaw_sp = 0;
-        Command_now.comid = comid;
+        Command_Now.Mode = command_to_mavros::Move_ENU;         //Move模式
+        Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;               //子模式：位置控制模式
+        Command_Now.Reference_State.position_ref[0] = point3[0];
+        Command_Now.Reference_State.position_ref[1] = point3[1];
+        Command_Now.Reference_State.position_ref[2] = point3[2];
+        Command_Now.Reference_State.yaw_ref = 0;
+        Command_Now.Command_ID = comid;
         comid++;
 
-        move_pub.publish(Command_now);
+        move_pub.publish(Command_Now);
 
         distance_to_target = cal_distance(drone_pos,point3);
 
@@ -286,16 +276,16 @@ int main(int argc, char **argv)
     //Finsh drop and increase the altitude,fly to point2
     while (switch_flag == 0)
     {
-        Command_now.command = Move_ENU;         //Move模式
-        Command_now.sub_mode = 0;               //子模式：位置控制模式
-        Command_now.pos_sp[0] = point2[0];
-        Command_now.pos_sp[1] = point2[1];
-        Command_now.pos_sp[2] = point2[2];
-        Command_now.yaw_sp = 0;
-        Command_now.comid = comid;
+        Command_Now.Mode = command_to_mavros::Move_ENU;         //Move模式
+        Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;               //子模式：位置控制模式
+        Command_Now.Reference_State.position_ref[0] = point2[0];
+        Command_Now.Reference_State.position_ref[1] = point2[1];
+        Command_Now.Reference_State.position_ref[2] = point2[2];
+        Command_Now.Reference_State.yaw_ref = 0;
+        Command_Now.Command_ID = comid;
         comid++;
 
-        move_pub.publish(Command_now);
+        move_pub.publish(Command_Now);
 
         distance_to_target = cal_distance(drone_pos,point2);
 
@@ -325,16 +315,16 @@ int main(int argc, char **argv)
     //Go back to the takeoff point - point1
     while (switch_flag == 0)
     {
-        Command_now.command = Move_ENU;         //Move模式
-        Command_now.sub_mode = 0;               //子模式：位置控制模式
-        Command_now.pos_sp[0] = point1[0];
-        Command_now.pos_sp[1] = point1[1];
-        Command_now.pos_sp[2] = point1[2];
-        Command_now.yaw_sp = 0;
-        Command_now.comid = comid;
+        Command_Now.Mode = command_to_mavros::Move_ENU;         //Move模式
+        Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;               //子模式：位置控制模式
+        Command_Now.Reference_State.position_ref[0] = point1[0];
+        Command_Now.Reference_State.position_ref[1] = point1[1];
+        Command_Now.Reference_State.position_ref[2] = point1[2];
+        Command_Now.Reference_State.yaw_ref = 0;
+        Command_Now.Command_ID = comid;
         comid++;
 
-        move_pub.publish(Command_now);
+        move_pub.publish(Command_Now);
 
         distance_to_target = cal_distance(drone_pos,point1);
 
@@ -362,8 +352,8 @@ int main(int argc, char **argv)
     // Land
     while (time_sec < 5)
     {
-        Command_now.command = Land;
-        move_pub.publish(Command_now);
+        Command_Now.Mode = command_to_mavros::Land;
+        move_pub.publish(Command_Now);
 
         cout << "Finsh the payload drop mission, Landing..."<<endl;
 

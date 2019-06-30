@@ -13,10 +13,10 @@
 ***************************************************************************************************************************/
 //ROS 头文件
 #include <ros/ros.h>
-
+#include <command_to_mavros.h>
 //topic 头文件
 #include <iostream>
-#include <px4_command/command.h>
+#include <px4_command/ControlCommand.h>
 #include <std_msgs/Bool.h>
 #include <geometry_msgs/Pose.h>
 #include <sensor_msgs/LaserScan.h>
@@ -31,20 +31,8 @@
  */
 
 using namespace std;
-
+ 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>全 局 变 量<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-enum Command
-{
-    Idle,
-    Takeoff,
-    Move_ENU,
-    Move_Body,
-    Hold,
-    Land,
-    Disarm,
-    Failsafe_land,
-};
-
 #define RAD2DEG(x) ((x)*180./M_PI)
 //--------------------------------------------输入--------------------------------------------------
 sensor_msgs::LaserScan Laser;                                   //激光雷达点云数据
@@ -73,7 +61,7 @@ int flag_land;                                                  //降落标志�
 std_msgs::Bool flag_collision_avoidance;                       //是否进入避障模式标志位
 float vel_sp_body[2];                                           //总速度
 float vel_sp_max;                                               //总速度限幅
-px4_command::command Command_now;                               //发送给position_control.cpp的命令
+px4_command::ControlCommand Command_Now;                               //发送给position_control.cpp的命令
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>声 明 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void cal_min_distance();
 float satfunc(float data, float Max);
@@ -137,7 +125,7 @@ int main(int argc, char **argv)
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::Pose>("/drone/pos", 100, pos_cb);
 
     // 【发布】发送给position_control.cpp的命令
-    ros::Publisher command_pub = nh.advertise<px4_command::command>("/px4/command", 10);
+    ros::Publisher command_pub = nh.advertise<px4_command::ControlCommand>("/px4/control_command", 10);
 
     //读取参数表中的参数
     nh.param<float>("target_x", target_x, 1.0);
@@ -282,25 +270,25 @@ int main(int argc, char **argv)
         }
 
         //5. 发布Command指令给position_controller.cpp
-        Command_now.command = Move_Body;     //机体系下移动
-        Command_now.comid = comid;
+        Command_Now.Mode = command_to_mavros::Move_Body;     //机体系下移动
+        Command_Now.Command_ID = comid;
         comid++;
-        Command_now.sub_mode = 2; // xy 速度控制模式 z 位置控制模式
-        Command_now.vel_sp[0] =  vel_sp_body[0];
-        Command_now.vel_sp[1] =  - vel_sp_body[1];  //ENU frame
-        Command_now.pos_sp[2] =  0;
-        Command_now.yaw_sp = 0 ;
+        Command_Now.Reference_State.Sub_mode  = command_to_mavros::XY_VEL_Z_POS; // xy 速度控制模式 z 位置控制模式
+        Command_Now.Reference_State.velocity_ref[0] =  vel_sp_body[0];
+        Command_Now.Reference_State.velocity_ref[1] =  - vel_sp_body[1];  //ENU frame
+        Command_Now.Reference_State.position_ref[2] =  0;
+        Command_Now.Reference_State.yaw_ref = 0 ;
 
         float abs_distance;
         abs_distance = sqrt((pos_drone.position.x - target_x) * (pos_drone.position.x - target_x) + (pos_drone.position.y - target_y) * (pos_drone.position.y - target_y));
 
         if(abs_distance < 0.3 || flag_land == 1)
         {
-            Command_now.command = 3;     //Land
+            Command_Now.Mode = 3;     //Land
             flag_land = 1;
         }
 
-        command_pub.publish(Command_now);
+        command_pub.publish(Command_Now);
 
         //打印
         printf();

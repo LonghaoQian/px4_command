@@ -10,24 +10,14 @@
 #include <ros/ros.h>
 
 #include <iostream>
-#include <px4_command/command.h>
+#include <px4_command/ControlCommand.h>
+#include <command_to_mavros.h>
 
 using namespace std;
-enum Command
-{
-    Idle,
-    Takeoff,
-    Move_ENU,
-    Move_Body,
-    Hold,
-    Land,
-    Disarm,
-    Failsafe_land,
-};
-
+ 
 ros::Publisher move_pub;
 int Num_StateMachine;
-px4_command::command Command_now;
+px4_command::ControlCommand Command_Now;
 void generate_com(int sub_mode, float state_desired[4]);
 
 int main(int argc, char **argv)
@@ -35,7 +25,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "move");
     ros::NodeHandle nh;
 
-    move_pub = nh.advertise<px4_command::command>("/px4/command", 10);
+    move_pub = nh.advertise<px4_command::ControlCommand>("/px4/control_command", 10);
 
 
     int flag_1;
@@ -52,7 +42,7 @@ int main(int argc, char **argv)
             // input
             case 0:
                 cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>--------<<<<<<<<<<<<<<<<<<<<<<<<<<< "<< endl;
-                cout << "Input the flag:  0 for Move_ENU，1 for Move_Body，2 for Land,3 for Disarm ,4 for Hold, 5 for Failsafe Land, 6 for Idle,7 for Takeoff to default height"<<endl;
+                cout << "Input the flag:  0 for Move_ENU，1 for Move_Body，2 for Land,3 for Disarm ,4 for Hold, 5 for Failsafe Land, 6 for Idle,7 for Takeoff to default height, 8 for trajectory tracking"<<endl;
                 cin >> flag_1;
 
                 if (flag_1 == 2)
@@ -88,6 +78,12 @@ int main(int argc, char **argv)
                 if (flag_1 == 7)
                 {
                     Num_StateMachine = 8;
+                    break;
+                }
+
+                if (flag_1 == 8)
+                {
+                    Num_StateMachine = 9;
                     break;
                 }
 
@@ -127,59 +123,67 @@ int main(int argc, char **argv)
 
         //Land
         case 1:
-            Command_now.command = Land;
-            move_pub.publish(Command_now);
+            Command_Now.Mode = command_to_mavros::Land;
+            move_pub.publish(Command_Now);
             Num_StateMachine = 0;
             break;
 
         //Disarm
         case 2:
-            Command_now.command = Disarm;
-            move_pub.publish(Command_now);
+            Command_Now.Mode = command_to_mavros::Disarm;
+            move_pub.publish(Command_Now);
             Num_StateMachine = 0;
             break;
 
         //Move_ENU
         case 3:
-            Command_now.command = Move_ENU;
+            Command_Now.Mode = command_to_mavros::Move_ENU;
             generate_com(sub_mode, state_desired);
-            move_pub.publish(Command_now);
+            move_pub.publish(Command_Now);
             Num_StateMachine = 0;
             break;
 
         //Move_Body
         case 4:
-            Command_now.command = Move_Body;
+            Command_Now.Mode = command_to_mavros::Move_Body;
             generate_com(sub_mode, state_desired);
-            move_pub.publish(Command_now);
+            move_pub.publish(Command_Now);
             Num_StateMachine = 0;
             break;
 
         //Hold
         case 5:
-            Command_now.command = Hold;
-            move_pub.publish(Command_now);
+            Command_Now.Mode = command_to_mavros::Hold;
+            move_pub.publish(Command_Now);
             Num_StateMachine = 0;
             break;
 
         //Failsafe_Land
         case 6:
-            Command_now.command = Failsafe_land;
-            move_pub.publish(Command_now);
+            Command_Now.Mode = command_to_mavros::Failsafe_land;
+            move_pub.publish(Command_Now);
             Num_StateMachine = 0;
             break;
 
-        //Custom
+        //Idle
         case 7:
-            Command_now.command = Idle;
-            move_pub.publish(Command_now);
+            Command_Now.Mode = command_to_mavros::Idle;
+            move_pub.publish(Command_Now);
+            Num_StateMachine = 0;
+            break;
+
+        //Takeoff
+        case 8:
+            Command_Now.Mode = command_to_mavros::Takeoff;
+            move_pub.publish(Command_Now);
             Num_StateMachine = 0;
             break;
 
         //Custom
-        case 8:
-            Command_now.command = Takeoff;
-            move_pub.publish(Command_now);
+        case 9:
+            Command_Now.Mode = command_to_mavros::Trajectory_Tracking;
+            Command_Now.Reference_State.Sub_mode  = 0;
+            move_pub.publish(Command_Now);
             Num_StateMachine = 0;
             break;
 
@@ -197,7 +201,7 @@ int main(int argc, char **argv)
 void generate_com(int sub_mode, float state_desired[4]){
 
     static int comid = 1;
-    Command_now.sub_mode = sub_mode;
+    Command_Now.Reference_State.Sub_mode  = sub_mode;
 
 //# sub_mode 2-bit value:
 //# 0 for position, 1 for vel, 1st for xy, 2nd for z.
@@ -207,26 +211,36 @@ void generate_com(int sub_mode, float state_desired[4]){
 
     if((sub_mode & 0b10) == 0) //xy channel
     {
-        Command_now.pos_sp[0] = state_desired[0];
-        Command_now.pos_sp[1] = state_desired[1];
+        Command_Now.Reference_State.position_ref[0] = state_desired[0];
+        Command_Now.Reference_State.position_ref[1] = state_desired[1];
+        Command_Now.Reference_State.velocity_ref[0] = 0;
+        Command_Now.Reference_State.velocity_ref[1] = 0;
     }
     else
     {
-        Command_now.vel_sp[0] = state_desired[0];
-        Command_now.vel_sp[1] = state_desired[1];
+        Command_Now.Reference_State.position_ref[0] = 0;
+        Command_Now.Reference_State.position_ref[1] = 0;
+        Command_Now.Reference_State.velocity_ref[0] = state_desired[0];
+        Command_Now.Reference_State.velocity_ref[1] = state_desired[1];
     }
 
     if((sub_mode & 0b01) == 0) //z channel
     {
-        Command_now.pos_sp[2] = state_desired[2];
+        Command_Now.Reference_State.position_ref[2] = state_desired[2];
+        Command_Now.Reference_State.velocity_ref[2] = 0;
     }
     else
     {
-        Command_now.vel_sp[2] = state_desired[2];
+        Command_Now.Reference_State.position_ref[2] = 0;
+        Command_Now.Reference_State.velocity_ref[2] = state_desired[2];
     }
 
+    Command_Now.Reference_State.acceleration_ref[0] = 0;
+    Command_Now.Reference_State.acceleration_ref[1] = 0;
+    Command_Now.Reference_State.acceleration_ref[2] = 0;
 
-    Command_now.yaw_sp = state_desired[3]/180.0*M_PI;
-    Command_now.comid = comid;
+
+    Command_Now.Reference_State.yaw_ref = state_desired[3]/180.0*M_PI;
+    Command_Now.Command_ID = comid;
     comid++;
 }
