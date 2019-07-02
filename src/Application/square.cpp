@@ -74,7 +74,7 @@ int main(int argc, char **argv)
     i = 0;
     while (i < sleep_time)
     {
-
+        Command_Now.header.stamp = ros::Time::now();
         Command_Now.Mode = command_to_mavros::Move_ENU;  //Move模式
         Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;             //子模式：位置控制模式
         Command_Now.Reference_State.position_ref[0] = 0;
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
     i = 0;
     while (i < sleep_time)
     {
-
+        Command_Now.header.stamp = ros::Time::now();
         Command_Now.Mode = command_to_mavros::Move_ENU;  //Move模式
         Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;             //子模式：位置控制模式
         Command_Now.Reference_State.position_ref[0] = -size_square/2;
@@ -149,7 +149,8 @@ int main(int argc, char **argv)
     i = 0;
     while (i < sleep_time)
     {
-
+        Command_Now.header.stamp = ros::Time::now();
+        
         Command_Now.Mode = command_to_mavros::Move_ENU;  //Move模式
         Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;             //子模式：位置控制模式
         Command_Now.Reference_State.position_ref[0] = size_square/2;
@@ -197,7 +198,7 @@ int main(int argc, char **argv)
     i = 0;
     while (i < sleep_time)
     {
-
+        Command_Now.header.stamp = ros::Time::now();
         Command_Now.Mode = command_to_mavros::Move_ENU;  //Move模式
         Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;             //子模式：位置控制模式
         Command_Now.Reference_State.position_ref[0] = -size_square/2;
@@ -220,7 +221,7 @@ int main(int argc, char **argv)
     //降落
 
 
-
+    Command_Now.header.stamp = ros::Time::now();
     Command_Now.Mode = command_to_mavros::Land;
     move_pub.publish(Command_Now);
 

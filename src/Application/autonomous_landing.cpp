@@ -215,6 +215,7 @@ int main(int argc, char **argv)
 
             // 惯性系移动
             case 1:
+                Command_Now.header.stamp = ros::Time::now();
                 Command_Now.Mode = command_to_mavros::Move_ENU;
                 generate_com(0, state_desired);
                 command_pub.publish(Command_Now);
@@ -225,6 +226,7 @@ int main(int argc, char **argv)
 
             // 机体系移动
             case 2:
+                Command_Now.header.stamp = ros::Time::now();
                 Command_Now.Mode = command_to_mavros::Move_Body;
                 generate_com(0, state_desired);
                 command_pub.publish(Command_Now);
@@ -235,6 +237,7 @@ int main(int argc, char **argv)
 
             //Land
             case 3:
+                Command_Now.header.stamp = ros::Time::now();
                 Command_Now.Mode = command_to_mavros::Land;
                 command_pub.publish(Command_Now);
 
@@ -320,12 +323,14 @@ int main(int argc, char **argv)
                 }
 
                 //发布控制量
+                Command_Now.header.stamp = ros::Time::now();
                 command_pub.publish(Command_Now);
                 Num_StateMachine_Last = Num_StateMachine;
 
                 break;
 
         case 5:
+            Command_Now.header.stamp = ros::Time::now();
             Command_Now.Mode = command_to_mavros::Disarm;
             command_pub.publish(Command_Now);
             Num_StateMachine_Last = Num_StateMachine;
@@ -333,7 +338,7 @@ int main(int argc, char **argv)
             break;
 
         case 6:
-
+            Command_Now.header.stamp = ros::Time::now();
             Command_Now.Mode = command_to_mavros::Hold;
             Command_Now.Reference_State.Sub_mode  = command_to_mavros::XY_POS_Z_VEL;  //xy pos z vel
             Command_Now.Command_ID = comid;

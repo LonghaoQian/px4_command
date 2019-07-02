@@ -212,6 +212,7 @@ int main(int argc, char **argv)
 
             // 惯性系移动
             case 1:
+                Command_Now.header.stamp = ros::Time::now();
                 Command_Now.Mode = command_to_mavros::Move_ENU;
                 generate_com(0, state_desired);
                 command_pub.publish(Command_Now);
@@ -222,6 +223,7 @@ int main(int argc, char **argv)
 
             // 机体系移动
             case 2:
+                Command_Now.header.stamp = ros::Time::now();
                 Command_Now.Mode = command_to_mavros::Move_Body;
                 generate_com(0, state_desired);
                 command_pub.publish(Command_Now);
@@ -232,6 +234,7 @@ int main(int argc, char **argv)
 
             //Land
             case 3:
+                Command_Now.header.stamp = ros::Time::now();
                 Command_Now.Mode = command_to_mavros::Land;
                 command_pub.publish(Command_Now);
 
@@ -299,6 +302,7 @@ int main(int argc, char **argv)
                 }
 
                 //Publish
+                Command_Now.header.stamp = ros::Time::now();
                 command_pub.publish(Command_Now);
 
                 Num_StateMachine_Last = Num_StateMachine;

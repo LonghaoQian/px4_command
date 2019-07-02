@@ -220,6 +220,7 @@ int main(int argc, char **argv)
 
     while (switch_flag == 0)
     {
+        Command_Now.header.stamp = ros::Time::now();
         Command_Now.Mode = command_to_mavros::Move_ENU;         //Move模式
         Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;               //子模式：位置控制模式
         Command_Now.Reference_State.position_ref[0] = point3[0];
@@ -276,6 +277,7 @@ int main(int argc, char **argv)
     //Finsh drop and increase the altitude,fly to point2
     while (switch_flag == 0)
     {
+        Command_Now.header.stamp = ros::Time::now();
         Command_Now.Mode = command_to_mavros::Move_ENU;         //Move模式
         Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;               //子模式：位置控制模式
         Command_Now.Reference_State.position_ref[0] = point2[0];
@@ -315,6 +317,7 @@ int main(int argc, char **argv)
     //Go back to the takeoff point - point1
     while (switch_flag == 0)
     {
+        Command_Now.header.stamp = ros::Time::now();
         Command_Now.Mode = command_to_mavros::Move_ENU;         //Move模式
         Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;               //子模式：位置控制模式
         Command_Now.Reference_State.position_ref[0] = point1[0];
@@ -352,6 +355,7 @@ int main(int argc, char **argv)
     // Land
     while (time_sec < 5)
     {
+        Command_Now.header.stamp = ros::Time::now();
         Command_Now.Mode = command_to_mavros::Land;
         move_pub.publish(Command_Now);
 

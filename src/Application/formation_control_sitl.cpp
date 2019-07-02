@@ -220,6 +220,9 @@ int main(int argc, char **argv)
         // 【Idle】 怠速旋转，此时可以切入offboard模式，但不会起飞。
         case command_to_mavros::Idle:
             //Here pls ref to mavlink_receiver.cpp
+            pos_setpoint1.header.stamp = ros::Time::now();
+            pos_setpoint2.header.stamp = ros::Time::now();
+            pos_setpoint3.header.stamp = ros::Time::now();
             pos_setpoint1.type_mask = 0x4000;
             pos_setpoint2.type_mask = 0x4000;
             pos_setpoint3.type_mask = 0x4000;
@@ -277,6 +280,10 @@ int main(int argc, char **argv)
         case command_to_mavros::Move_ENU:
             pos_sp = Eigen::Vector3d(Command_Now.Reference_State.position_ref[0],Command_Now.Reference_State.position_ref[1],Command_Now.Reference_State.position_ref[2]);
             yaw_sp = Command_Now.Reference_State.yaw_ref;
+
+            pos_setpoint1.header.stamp = ros::Time::now();
+            pos_setpoint2.header.stamp = ros::Time::now();
+            pos_setpoint3.header.stamp = ros::Time::now();
 
             pos_setpoint1.type_mask = 0b100111111000;  // 100 111 111 000  xyz + yaw
             pos_setpoint2.type_mask = 0b100111111000;  // 100 111 111 000  xyz + yaw

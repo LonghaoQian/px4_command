@@ -38,6 +38,8 @@ class Circle_Trajectory
             Circle_Trajectory_nh.param<float>("Circle_Trajectory/direction", direction, 1.0);
  
             time_from_start  = 0.0;
+
+            circle_trjectory_ref_pub = Circle_Trajectory_nh.advertise<px4_command::TrajectoryPoint>("/px4_command/circle_trjectory_ref", 10);
         }
         
         // Parameter
@@ -66,6 +68,8 @@ class Circle_Trajectory
 
         ros::NodeHandle Circle_Trajectory_nh;
 
+        ros::Publisher circle_trjectory_ref_pub;
+
 };
 
 
@@ -78,6 +82,8 @@ px4_command::TrajectoryPoint Circle_Trajectory::Circle_trajectory_generation(flo
 
     // cout << "omega : " << omega  * 180/M_PI <<" [deg/s] " <<endl;
     // cout << "angle : " << angle  * 180/M_PI <<" [deg] " <<endl;
+
+    Circle_trajectory.header.stamp = ros::Time::now();
 
     Circle_trajectory.time_from_start = time_from_start;
 
@@ -104,6 +110,8 @@ px4_command::TrajectoryPoint Circle_Trajectory::Circle_trajectory_generation(flo
     Circle_trajectory.yaw_ref = 0;
     Circle_trajectory.yaw_rate_ref = 0;
     Circle_trajectory.yaw_acceleration_ref = 0;
+
+    circle_trjectory_ref_pub.publish(Circle_trajectory);
     return Circle_trajectory;
 }
 

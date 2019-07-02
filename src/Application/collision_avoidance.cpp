@@ -270,6 +270,7 @@ int main(int argc, char **argv)
         }
 
         //5. 发布Command指令给position_controller.cpp
+        Command_Now.header.stamp = ros::Time::now();
         Command_Now.Mode = command_to_mavros::Move_Body;     //机体系下移动
         Command_Now.Command_ID = comid;
         comid++;

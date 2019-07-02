@@ -123,6 +123,7 @@ int main(int argc, char **argv)
 
         //Land
         case 1:
+            Command_Now.header.stamp = ros::Time::now();
             Command_Now.Mode = command_to_mavros::Land;
             move_pub.publish(Command_Now);
             Num_StateMachine = 0;
@@ -130,6 +131,7 @@ int main(int argc, char **argv)
 
         //Disarm
         case 2:
+            Command_Now.header.stamp = ros::Time::now();
             Command_Now.Mode = command_to_mavros::Disarm;
             move_pub.publish(Command_Now);
             Num_StateMachine = 0;
@@ -137,6 +139,7 @@ int main(int argc, char **argv)
 
         //Move_ENU
         case 3:
+            Command_Now.header.stamp = ros::Time::now();
             Command_Now.Mode = command_to_mavros::Move_ENU;
             generate_com(sub_mode, state_desired);
             move_pub.publish(Command_Now);
@@ -145,6 +148,7 @@ int main(int argc, char **argv)
 
         //Move_Body
         case 4:
+            Command_Now.header.stamp = ros::Time::now();
             Command_Now.Mode = command_to_mavros::Move_Body;
             generate_com(sub_mode, state_desired);
             move_pub.publish(Command_Now);
@@ -153,6 +157,7 @@ int main(int argc, char **argv)
 
         //Hold
         case 5:
+            Command_Now.header.stamp = ros::Time::now();
             Command_Now.Mode = command_to_mavros::Hold;
             move_pub.publish(Command_Now);
             Num_StateMachine = 0;
@@ -160,6 +165,7 @@ int main(int argc, char **argv)
 
         //Failsafe_Land
         case 6:
+            Command_Now.header.stamp = ros::Time::now();
             Command_Now.Mode = command_to_mavros::Failsafe_land;
             move_pub.publish(Command_Now);
             Num_StateMachine = 0;
@@ -167,6 +173,7 @@ int main(int argc, char **argv)
 
         //Idle
         case 7:
+            Command_Now.header.stamp = ros::Time::now();
             Command_Now.Mode = command_to_mavros::Idle;
             move_pub.publish(Command_Now);
             Num_StateMachine = 0;
@@ -174,13 +181,15 @@ int main(int argc, char **argv)
 
         //Takeoff
         case 8:
+            Command_Now.header.stamp = ros::Time::now();
             Command_Now.Mode = command_to_mavros::Takeoff;
             move_pub.publish(Command_Now);
             Num_StateMachine = 0;
             break;
 
-        //Custom
+        //Trajectory_Tracking
         case 9:
+            Command_Now.header.stamp = ros::Time::now();
             Command_Now.Mode = command_to_mavros::Trajectory_Tracking;
             Command_Now.Reference_State.Sub_mode  = 0;
             move_pub.publish(Command_Now);
@@ -198,7 +207,8 @@ int main(int argc, char **argv)
 // float32[3] pos_sp
 // float32[3] vel_sp
 // float32 yaw_sp
-void generate_com(int sub_mode, float state_desired[4]){
+void generate_com(int sub_mode, float state_desired[4])
+{
 
     static int comid = 1;
     Command_Now.Reference_State.Sub_mode  = sub_mode;
