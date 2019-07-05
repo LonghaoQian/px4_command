@@ -95,7 +95,6 @@ class pos_controller_cascade_PID
         float tilt_max;
 
         //输出
-        px4_command::AttitudeReference _AttitudeReference;
 
         //Desired position and velocity of the drone
         Eigen::Vector3d vel_setpoint;
@@ -131,7 +130,7 @@ class pos_controller_cascade_PID
 
         // Position control main function 
         // [Input: Current state, Reference state, _Reference_State.Sub_mode, dt; Output: AttitudeReference;]
-        px4_command::AttitudeReference pos_controller(px4_command::DroneState _DroneState, px4_command::TrajectoryPoint _Reference_State, float dt);
+        Eigen::Vector3d pos_controller(px4_command::DroneState _DroneState, px4_command::TrajectoryPoint _Reference_State, float dt);
 
         //Position control loop [Input: current pos, desired pos; Output: desired vel]
         Eigen::Vector3d _positionController(px4_command::DroneState _DroneState, px4_command::TrajectoryPoint _Reference_State);
@@ -146,7 +145,7 @@ class pos_controller_cascade_PID
         ros::NodeHandle pos_cascade_pid_nh;
 };
 
-px4_command::AttitudeReference pos_controller_cascade_PID::pos_controller
+Eigen::Vector3d pos_controller_cascade_PID::pos_controller
     (px4_command::DroneState _DroneState, 
      px4_command::TrajectoryPoint _Reference_State, float dt)
 {
@@ -156,24 +155,7 @@ px4_command::AttitudeReference pos_controller_cascade_PID::pos_controller
 
     thrust_sp    = _velocityController(_DroneState, _Reference_State, delta_time);
 
-    //期望姿态角 及 期望姿态角四元数 调用库函数进行计算
-    Eigen::Quaterniond q_sp = pos_controller_utils::thrustToAttitude(thrust_sp, _Reference_State.yaw_ref);
-
-    Eigen::Vector3d att_sp = quaternion_to_euler(q_sp);
-
-    _AttitudeReference.desired_att_q.w = q_sp.w();
-    _AttitudeReference.desired_att_q.x = q_sp.x();
-    _AttitudeReference.desired_att_q.y = q_sp.y();
-    _AttitudeReference.desired_att_q.z = q_sp.z();
-
-    _AttitudeReference.desired_attitude[0] = att_sp[0];  
-    _AttitudeReference.desired_attitude[1] = att_sp[1]; 
-    _AttitudeReference.desired_attitude[2] = att_sp[2]; 
-
-    //期望油门
-    _AttitudeReference.desired_throttle = thrust_sp.norm();  
-
-    return _AttitudeReference;
+    return thrust_sp;
 }
 
 
@@ -354,15 +336,15 @@ void pos_controller_cascade_PID::printf_result()
 
     cout<<setprecision(2);
 
-    cout << "delta_time : " << delta_time<< " [s] " <<endl;
+    // cout << "delta_time : " << delta_time<< " [s] " <<endl;
 
-    cout << "Velocity_sp  [X Y Z] : " << vel_setpoint[0] << " [m/s] "<< vel_setpoint[1]<<" [m/s] "<<vel_setpoint[2]<<" [m/s] "<<endl;
+    // cout << "Velocity_sp  [X Y Z] : " << vel_setpoint[0] << " [m/s] "<< vel_setpoint[1]<<" [m/s] "<<vel_setpoint[2]<<" [m/s] "<<endl;
 
-    cout << "Vel_P_output [X Y Z] : " << vel_P_output[0] << " [m/s] "<< vel_P_output[1]<<" [m/s] "<<vel_P_output[2]<<" [m/s] "<<endl;
+    // cout << "Vel_P_output [X Y Z] : " << vel_P_output[0] << " [m/s] "<< vel_P_output[1]<<" [m/s] "<<vel_P_output[2]<<" [m/s] "<<endl;
 
-    cout << "Vel_I_output [X Y Z] : " << thurst_int[0] << " [m/s] "<< thurst_int[1]<<" [m/s] "<<thurst_int[2]<<" [m/s] "<<endl;
+    // cout << "Vel_I_output [X Y Z] : " << thurst_int[0] << " [m/s] "<< thurst_int[1]<<" [m/s] "<<thurst_int[2]<<" [m/s] "<<endl;
 
-    cout << "Vel_D_output [X Y Z] : " << vel_D_output[0] << " [m/s] "<< vel_D_output[1]<<" [m/s] "<<vel_D_output[2]<<" [m/s] "<<endl;
+    // cout << "Vel_D_output [X Y Z] : " << vel_D_output[0] << " [m/s] "<< vel_D_output[1]<<" [m/s] "<<vel_D_output[2]<<" [m/s] "<<endl;
 
     cout << "thrust_sp    [X Y Z] : " << thrust_sp[0] << " [m/s^2] "<< thrust_sp[1]<<" [m/s^2] "<<thrust_sp[2]<<" [m/s^2] "<<endl;
 }

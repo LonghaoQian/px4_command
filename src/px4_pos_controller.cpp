@@ -26,7 +26,7 @@
 #include <px4_command/DroneState.h>
 #include <px4_command/TrajectoryPoint.h>
 #include <px4_command/AttitudeReference.h>
-
+#include <pos_controller_utils.h>
 #include <px4_command/Trajectory.h>
 
 
@@ -34,22 +34,20 @@
 
 using namespace std;
 
-using namespace namespace_UDE;
-using namespace namespace_passivity;
-using namespace namespace_NE;
-
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>变量声明<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 px4_command::ControlCommand Command_Now;                      //无人机当前执行命令
 px4_command::ControlCommand Command_Last;                     //无人机上一条执行命令
 
 px4_command::TrajectoryPoint _Reference_State;               //参考状态
 px4_command::DroneState _DroneState;                         //无人机状态量
+
+Eigen::Vector3d accel_sp;
 px4_command::AttitudeReference _AttitudeReference;           //位置控制器输出，即姿态环参考量
 
 float Takeoff_height;
 float Disarm_height;
 float Use_mocap_raw;
-
+float Use_accel;
 //变量声明 - 其他变量
 //Geigraphical fence 地理围栏
 Eigen::Vector2f geo_fence_x;
@@ -94,6 +92,7 @@ int main(int argc, char **argv)
     nh.param<float>("Takeoff_height", Takeoff_height, 1.0);
     nh.param<float>("Disarm_height", Disarm_height, 0.15);
     nh.param<float>("Use_mocap_raw", Use_mocap_raw, 0.0);
+    nh.param<float>("Use_accel", Use_accel, 0.0);
     nh.param<float>("geo_fence/x_min", geo_fence_x[0], -100.0);
     nh.param<float>("geo_fence/x_max", geo_fence_x[1], 100.0);
     nh.param<float>("geo_fence/y_min", geo_fence_y[0], -100.0);
@@ -231,7 +230,7 @@ int main(int argc, char **argv)
             pos_controller_cascade_pid.printf_result();
         }else if(switch_ude == 1)
         {
-            //pos_controller_pid.printf_result();
+            pos_controller_pid.printf_result();
         }else if(switch_ude == 2)
         {
             pos_controller_ude.printf_result();
@@ -279,23 +278,30 @@ int main(int argc, char **argv)
 
             if(switch_ude == 0)
             {
-                _AttitudeReference = pos_controller_cascade_pid.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_cascade_pid.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 1)
             {
-                _AttitudeReference = pos_controller_pid.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_pid.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 2)
             {
-                _AttitudeReference = pos_controller_ude.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_ude.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 3)
             {
-                _AttitudeReference = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 4)
             {
-                _AttitudeReference = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
 
-            _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
-
+            if(Use_accel < 0.5)
+            {
+                _command_to_mavros.send_accel_setpoint(accel_sp,_Reference_State.yaw_ref);
+            }else
+            {
+                _AttitudeReference = pos_controller_utils::thrustToAttitude(accel_sp, _Reference_State.yaw_ref);
+                _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
+            }
+            
             break;
 
         // 【Move_ENU】 ENU系移动。只有PID算法中才有追踪速度的选项，其他控制只能追踪位置
@@ -304,23 +310,29 @@ int main(int argc, char **argv)
 
             if(switch_ude == 0)
             {
-                _AttitudeReference = pos_controller_cascade_pid.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_cascade_pid.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 1)
             {
-                _AttitudeReference = pos_controller_pid.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_pid.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 2)
             {
-                _AttitudeReference = pos_controller_ude.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_ude.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 3)
             {
-                _AttitudeReference = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 4)
             {
-                _AttitudeReference = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
 
-            _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
-
+            if(Use_accel < 0.5)
+            {
+                _command_to_mavros.send_accel_setpoint(accel_sp,_Reference_State.yaw_ref);
+            }else
+            {
+                _AttitudeReference = pos_controller_utils::thrustToAttitude(accel_sp, _Reference_State.yaw_ref);
+                _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
+            }
             break;
 
         // 【Move_Body】 机体系移动。
@@ -380,22 +392,28 @@ int main(int argc, char **argv)
 
             if(switch_ude == 0)
             {
-                _AttitudeReference = pos_controller_cascade_pid.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_cascade_pid.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 1)
             {
-                _AttitudeReference = pos_controller_pid.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_pid.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 2)
             {
-                _AttitudeReference = pos_controller_ude.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_ude.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 3)
             {
-                _AttitudeReference = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 4)
             {
-                _AttitudeReference = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
-
-            _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
+            if(Use_accel < 0.5)
+            {
+                _command_to_mavros.send_accel_setpoint(accel_sp,_Reference_State.yaw_ref);
+            }else
+            {
+                _AttitudeReference = pos_controller_utils::thrustToAttitude(accel_sp, _Reference_State.yaw_ref);
+                _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
+            }
 
             break;
 
@@ -418,23 +436,29 @@ int main(int argc, char **argv)
 
             if(switch_ude == 0)
             {
-                _AttitudeReference = pos_controller_cascade_pid.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_cascade_pid.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 1)
             {
-                _AttitudeReference = pos_controller_pid.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_pid.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 2)
             {
-                _AttitudeReference = pos_controller_ude.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_ude.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 3)
             {
-                _AttitudeReference = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 4)
             {
-                _AttitudeReference = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
 
-            _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
-
+            if(Use_accel < 0.5)
+            {
+                _command_to_mavros.send_accel_setpoint(accel_sp,_Reference_State.yaw_ref);
+            }else
+            {
+                _AttitudeReference = pos_controller_utils::thrustToAttitude(accel_sp, _Reference_State.yaw_ref);
+                _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
+            }
             break;
 
         // 【Land】 降落。当前位置原地降落，降落后会自动上锁，且切换为mannual模式
@@ -478,23 +502,31 @@ int main(int argc, char **argv)
             {
                 if(switch_ude == 0)
                 {
-                    _AttitudeReference = pos_controller_cascade_pid.pos_controller(_DroneState, _Reference_State, dt);
+                    accel_sp = pos_controller_cascade_pid.pos_controller(_DroneState, _Reference_State, dt);
                 }else if(switch_ude == 1)
                 {
-                    _AttitudeReference = pos_controller_pid.pos_controller(_DroneState, _Reference_State, dt);
+                    accel_sp = pos_controller_pid.pos_controller(_DroneState, _Reference_State, dt);
                 }else if(switch_ude == 2)
                 {
-                    _AttitudeReference = pos_controller_ude.pos_controller(_DroneState, _Reference_State, dt);
+                    accel_sp = pos_controller_ude.pos_controller(_DroneState, _Reference_State, dt);
                 }else if(switch_ude == 3)
                 {
-                    _AttitudeReference = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
+                    accel_sp = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
                 }else if(switch_ude == 4)
                 {
-                    _AttitudeReference = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
+                    accel_sp = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
                 }
 
-                _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
-            }
+
+                if(Use_accel < 0.5)
+                {
+                    _command_to_mavros.send_accel_setpoint(accel_sp,_Reference_State.yaw_ref);
+                }else
+                {
+                    _AttitudeReference = pos_controller_utils::thrustToAttitude(accel_sp, _Reference_State.yaw_ref);
+                    _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
+                }
+             }
 
 
             break;
@@ -541,23 +573,30 @@ int main(int argc, char **argv)
 
             if(switch_ude == 0)
             {
-                _AttitudeReference = pos_controller_cascade_pid.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_cascade_pid.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 1)
             {
-                _AttitudeReference = pos_controller_pid.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_pid.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 2)
             {
-                _AttitudeReference = pos_controller_ude.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_ude.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 3)
             {
-                _AttitudeReference = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 4)
             {
-                _AttitudeReference = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
+                accel_sp = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
 
-            _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
-
+            if(Use_accel < 0.5)
+            {
+                _command_to_mavros.send_accel_setpoint(accel_sp,_Reference_State.yaw_ref);
+            }else
+            {
+                _AttitudeReference = pos_controller_utils::thrustToAttitude(accel_sp, _Reference_State.yaw_ref);
+                _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
+            }
+            
             // Quit 
             if (time_trajectory >= _Circle_Trajectory.time_total)
             {

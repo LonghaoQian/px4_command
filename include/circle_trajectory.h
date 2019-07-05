@@ -103,17 +103,17 @@ px4_command::TrajectoryPoint Circle_Trajectory::Circle_trajectory_generation(flo
     Circle_trajectory.acceleration_ref[1] = - radius * pow(omega, 2.0) * sin_angle;
     Circle_trajectory.acceleration_ref[2] = 0;
 
-    Circle_trajectory.jerk_ref[0] = radius * pow(omega, 3.0) * sin_angle;
-    Circle_trajectory.jerk_ref[1] = - radius * pow(omega, 3.0) * cos_angle;
-    Circle_trajectory.jerk_ref[2] = 0;
+    // Circle_trajectory.jerk_ref[0] = radius * pow(omega, 3.0) * sin_angle;
+    // Circle_trajectory.jerk_ref[1] = - radius * pow(omega, 3.0) * cos_angle;
+    // Circle_trajectory.jerk_ref[2] = 0;
 
-    Circle_trajectory.snap_ref[0] = radius * pow(omega, 4.0) * cos_angle;
-    Circle_trajectory.snap_ref[1] = radius * pow(omega, 4.0) * sin_angle;
-    Circle_trajectory.snap_ref[2] = 0;
+    // Circle_trajectory.snap_ref[0] = radius * pow(omega, 4.0) * cos_angle;
+    // Circle_trajectory.snap_ref[1] = radius * pow(omega, 4.0) * sin_angle;
+    // Circle_trajectory.snap_ref[2] = 0;
 
     Circle_trajectory.yaw_ref = 0;
-    Circle_trajectory.yaw_rate_ref = 0;
-    Circle_trajectory.yaw_acceleration_ref = 0;
+    // Circle_trajectory.yaw_rate_ref = 0;
+    // Circle_trajectory.yaw_acceleration_ref = 0;
 
     circle_trjectory_ref_pub.publish(Circle_trajectory);
     return Circle_trajectory;
@@ -143,9 +143,9 @@ void Circle_Trajectory::printf_result()
 
     cout << "acceleration [X Y Z] : " << Circle_trajectory.acceleration_ref[0] << " [m/s^2] "<< Circle_trajectory.acceleration_ref[1]<<" [m/s^2] "<< Circle_trajectory.acceleration_ref[2]<<" [m/s^2] "<<endl;
 
-    cout << "jerk [X Y Z] : " << Circle_trajectory.jerk_ref[0] << " [m/s^3] "<< Circle_trajectory.jerk_ref[1]<<" [m/s^3] "<<Circle_trajectory.jerk_ref[2]<<" [m/s^3] "<<endl;
+    // cout << "jerk [X Y Z] : " << Circle_trajectory.jerk_ref[0] << " [m/s^3] "<< Circle_trajectory.jerk_ref[1]<<" [m/s^3] "<<Circle_trajectory.jerk_ref[2]<<" [m/s^3] "<<endl;
 
-    cout << "snap [X Y Z] : " << Circle_trajectory.snap_ref[0] << " [m/s^4] "<< Circle_trajectory.snap_ref[1]<<" [m/s^4] "<<Circle_trajectory.snap_ref[2]<<" [m/s^4] "<<endl;
+    // cout << "snap [X Y Z] : " << Circle_trajectory.snap_ref[0] << " [m/s^4] "<< Circle_trajectory.snap_ref[1]<<" [m/s^4] "<<Circle_trajectory.snap_ref[2]<<" [m/s^4] "<<endl;
 
 }
 

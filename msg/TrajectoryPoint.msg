@@ -23,10 +23,10 @@ uint8 XY_VEL_Z_VEL = 3
 float32[3] position_ref          ## [m]
 float32[3] velocity_ref          ## [m/s]
 float32[3] acceleration_ref      ## [m/s^2]
-float32[3] jerk_ref              ## [m/s^3]
-float32[3] snap_ref              ## [m/s^4]
+## float32[3] jerk_ref              ## [m/s^3]
+## float32[3] snap_ref              ## [m/s^4]
 
 ## 角度参考量：偏航角、偏航角速度、偏航角加速度
 float32 yaw_ref                  ## [rad]
-float32 yaw_rate_ref             ## [rad/s] 
-float32 yaw_acceleration_ref     ## [rad/s] 
+## float32 yaw_rate_ref             ## [rad/s] 
+## float32 yaw_acceleration_ref     ## [rad/s] 

@@ -1,6 +1,6 @@
 ## 飞机参数
 Quad:
-  mass: 1.0
+  mass: 0.8
   throttle_a: 20.0
   throttle_b: 0.0
 
@@ -31,25 +31,26 @@ geo_fence:
 
 ## 限制参数 for 轨迹追踪
 Limit:
-  pxy_error_max: 100.0
-  vxy_error_max: 100.0
-  pz_error_max: 100.0
-  vz_error_max: 100.0
-  pxy_int_max : 100.0
-  pz_int_max : 100.0
-  tilt_max: 30.0
+  pxy_error_max: 1.0
+  vxy_error_max: 1.0
+  pz_error_max: 1.0
+  vz_error_max: 1.0
+  pxy_int_max : 10.0
+  pz_int_max : 10.0
+  tilt_max: 10.0
   THR_MIN: 0.1
   THR_MAX: 0.9
-  int_start_error: 100.0
+  int_start_error: 10.0
 
-  XY_VEL_MAX : 10
-  Z_VEL_MAX : 10 
+  XY_VEL_MAX : 1.0
+  Z_VEL_MAX : 0.5 
   
   
 ## 起飞高度
 Takeoff_height : 0.8
 Disarm_height : 0.15
 Use_mocap_raw : 0
+Use_accel : 1.0
 
 # 位置环参数 - cascade pid
 Pos_cascade_pid:

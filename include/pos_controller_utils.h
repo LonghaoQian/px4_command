@@ -60,15 +60,15 @@ Eigen::Vector3f cal_vel_error(px4_command::DroneState _DroneState, px4_command::
 }
 
 
-
-
 //Throttle to Attitude
 //Thrust to Attitude
 //Input: desired thrust (desired throttle [0,1]) and yaw_sp(rad)
 //Output: desired attitude (quaternion)
 
-Eigen::Quaterniond thrustToAttitude(Eigen::Vector3d thr_sp, float yaw_sp)
+px4_command::AttitudeReference thrustToAttitude(Eigen::Vector3d thr_sp, float yaw_sp)
 {
+    px4_command::AttitudeReference _AttitudeReference;
+
     Eigen::Vector3d att_sp;
     att_sp[2] = yaw_sp;
 
@@ -131,7 +131,19 @@ Eigen::Quaterniond thrustToAttitude(Eigen::Vector3d thr_sp, float yaw_sp)
 //    cout << "     : "<< R_sp(1, 0) <<" " << R_sp(1, 1) <<" "<< R_sp(1, 2) << endl;
 //    cout << "     : "<< R_sp(2, 0) <<" " << R_sp(2, 1) <<" "<< R_sp(2, 2) << endl;
 
-    return q_sp;
+    _AttitudeReference.desired_att_q.w = q_sp.w();
+    _AttitudeReference.desired_att_q.x = q_sp.x();
+    _AttitudeReference.desired_att_q.y = q_sp.y();
+    _AttitudeReference.desired_att_q.z = q_sp.z();
+
+    _AttitudeReference.desired_attitude[0] = att_sp[0];  
+    _AttitudeReference.desired_attitude[1] = att_sp[1]; 
+    _AttitudeReference.desired_attitude[2] = att_sp[2]; 
+
+    //期望油门
+    _AttitudeReference.desired_throttle = thr_sp_length;  
+
+    return _AttitudeReference;
 }
 
 }

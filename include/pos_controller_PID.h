@@ -60,6 +60,7 @@ class pos_controller_PID
             pos_pid_nh.param<float>("Limit/int_start_error"  , int_start_error, 0.3);
 
             integral = Eigen::Vector3f(0.0,0.0,0.0);
+            thrust_sp = Eigen::Vector3d(0.0,0.0,0.0);
         }
 
         //Quadrotor Parameter
@@ -85,7 +86,7 @@ class pos_controller_PID
         Eigen::Vector3f integral;
 
         //输出
-        px4_command::AttitudeReference _AttitudeReference;
+        Eigen::Vector3d thrust_sp;
 
         //Printf the PID parameter
         void printf_param();
@@ -94,17 +95,20 @@ class pos_controller_PID
 
         // Position control main function 
         // [Input: Current state, Reference state, sub_mode, dt; Output: AttitudeReference;]
-        px4_command::AttitudeReference pos_controller(px4_command::DroneState _DroneState, px4_command::TrajectoryPoint _Reference_State, float dt);
+        Eigen::Vector3d pos_controller(px4_command::DroneState _DroneState, px4_command::TrajectoryPoint _Reference_State, float dt);
 
     private:
         ros::NodeHandle pos_pid_nh;
 
 };
 
-px4_command::AttitudeReference pos_controller_PID::pos_controller(
+Eigen::Vector3d pos_controller_PID::pos_controller(
     px4_command::DroneState _DroneState, 
     px4_command::TrajectoryPoint _Reference_State, float dt)
 {
+    Eigen::Vector3d accel_sp;
+    Eigen::Vector3d thrust_sp;
+
     // 计算误差项
     Eigen::Vector3f pos_error = pos_controller_utils::cal_pos_error(_DroneState, _Reference_State);
     Eigen::Vector3f vel_error = pos_controller_utils::cal_vel_error(_DroneState, _Reference_State);
@@ -119,12 +123,12 @@ px4_command::AttitudeReference pos_controller_PID::pos_controller(
     // 期望加速度 = 加速度前馈 + PID
     for (int i=0; i<3; i++)
     {
-        _AttitudeReference.desired_acceleration[i] = _Reference_State.acceleration_ref[i] + Kp[i] * pos_error[i] + Kd[i] * vel_error[i] + Ki[i] * integral[i];
+        accel_sp[i] = _Reference_State.acceleration_ref[i] + Kp[i] * pos_error[i] + Kd[i] * vel_error[i] + Ki[i] * integral[i];
     }
     
-    _AttitudeReference.desired_acceleration[2] = _AttitudeReference.desired_acceleration[2] + 9.8;
+    accel_sp[2] = accel_sp[2] + 9.8;
 
-        // 更新积分项
+    // 更新积分项
     for (int i=0; i<3; i++)
     {
         if(abs(pos_error[i]) < int_start_error)
@@ -157,43 +161,58 @@ px4_command::AttitudeReference pos_controller_PID::pos_controller(
     // 归一化推力 ： 根据电机模型，反解出归一化推力
     for (int i=0; i<3; i++)
     {
-        _AttitudeReference.desired_thrust[i] = _AttitudeReference.desired_acceleration[i] * Quad_MASS;
-        _AttitudeReference.desired_thrust_normalized[i] = (_AttitudeReference.desired_thrust[i] - throttle_b) / throttle_a;
+        thrust_sp[i] = (accel_sp[i] * Quad_MASS - throttle_b) / throttle_a;
     }
 
     // 推力限幅，根据最大倾斜角及最大油门
     // Get maximum allowed thrust in XY based on tilt angle and excess thrust.
-    float thrust_max_XY_tilt = fabs(_AttitudeReference.desired_thrust_normalized[2]) * tanf(tilt_max/180.0*M_PI);
-    float thrust_max_XY = sqrtf(THR_MAX * THR_MAX - pow(_AttitudeReference.desired_thrust_normalized[2],2));
+    float thrust_max_XY_tilt = fabs(thrust_sp[2]) * tanf(tilt_max/180.0*M_PI);
+    float thrust_max_XY = sqrtf(THR_MAX * THR_MAX - pow(thrust_sp[2],2));
     thrust_max_XY = min(thrust_max_XY_tilt, thrust_max_XY);
 
-    if ((pow(_AttitudeReference.desired_thrust_normalized[0],2) + pow(_AttitudeReference.desired_thrust_normalized[1],2)) > thrust_max_XY * thrust_max_XY) {
-        float mag = sqrtf((pow(_AttitudeReference.desired_thrust_normalized[0],2) + pow(_AttitudeReference.desired_thrust_normalized[1],2)));
-        _AttitudeReference.desired_thrust_normalized[0] = _AttitudeReference.desired_thrust_normalized[0] / mag * thrust_max_XY;
-        _AttitudeReference.desired_thrust_normalized[1] = _AttitudeReference.desired_thrust_normalized[1] / mag * thrust_max_XY;
+    if ((pow(thrust_sp[0],2) + pow(thrust_sp[1],2)) > thrust_max_XY * thrust_max_XY) {
+        float mag = sqrtf((pow(thrust_sp[0],2) + pow(thrust_sp[1],2)));
+        thrust_sp[0] = thrust_sp[0] / mag * thrust_max_XY;
+        thrust_sp[1] = thrust_sp[1] / mag * thrust_max_XY;
     }
 
-    //期望姿态角 及 期望姿态角四元数 调用库函数进行计算
-    Eigen::Vector3d thr_sp = Eigen::Vector3d(_AttitudeReference.desired_thrust_normalized[0], _AttitudeReference.desired_thrust_normalized[1], _AttitudeReference.desired_thrust_normalized[2]);
-
-    Eigen::Quaterniond q_sp = pos_controller_utils::thrustToAttitude(thr_sp, _Reference_State.yaw_ref);
-
-    Eigen::Vector3d att_sp = quaternion_to_euler(q_sp);
-
-    _AttitudeReference.desired_att_q.w = q_sp.w();
-    _AttitudeReference.desired_att_q.x = q_sp.x();
-    _AttitudeReference.desired_att_q.y = q_sp.y();
-    _AttitudeReference.desired_att_q.z = q_sp.z();
-
-    _AttitudeReference.desired_attitude[0] = att_sp[0];  
-    _AttitudeReference.desired_attitude[1] = att_sp[1]; 
-    _AttitudeReference.desired_attitude[2] = att_sp[2]; 
-
-    //期望油门
-    _AttitudeReference.desired_throttle = thr_sp.norm();  
+    return thrust_sp;
 
 
-    cout <<">>>>>>>>>>>>>>>>>>>>>>PID Position Controller<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    // cout <<">>>>>>>>>>>>>>>>>>>>>>PID Position Controller<<<<<<<<<<<<<<<<<<<<<" <<endl;
+
+    // //固定的浮点显示
+    // cout.setf(ios::fixed);
+    // //左对齐
+    // cout.setf(ios::left);
+    // // 强制显示小数点
+    // cout.setf(ios::showpoint);
+    // // 强制显示符号
+    // cout.setf(ios::showpos);
+
+    // cout<<setprecision(2);
+
+    // cout << "Pos_ref [XYZ]: " << _Reference_State.position_ref[0] << " [ m ]" << _Reference_State.position_ref[1] << " [ m ]"<< _Reference_State.position_ref[2] << " [ m ]" << endl;
+    // cout << "Vel_ref [XYZ]: " << _Reference_State.velocity_ref[0] << " [m/s]" << _Reference_State.velocity_ref[1] << " [m/s]" << _Reference_State.velocity_ref[2] << " [m/s]" <<endl;
+    // cout << "Acc_ref [XYZ]: " << _Reference_State.acceleration_ref[0] << " [m/s^2]" << _Reference_State.acceleration_ref[1] << " [m/s^2]" << _Reference_State.acceleration_ref[2] << " [m/s^2]" <<endl;
+    // cout << "Yaw_setpoint : " << _Reference_State.yaw_ref * 180/M_PI << " [deg] " <<endl;
+
+    // cout << "e_p [X Y Z] : " << pos_error[0] << " [m] "<< pos_error[1]<<" [m] "<<pos_error[2]<<" [m] "<<endl;
+    // cout << "e_v [X Y Z] : " << vel_error[0] << " [m/s] "<< vel_error[1]<<" [m/s] "<<vel_error[2]<<" [m/s] "<<endl;
+    // cout << "acc_ref [X Y Z] : " << _Reference_State.acceleration_ref[0] << " [m/s^2] "<< _Reference_State.acceleration_ref[1]<<" [m/s^2] "<<_Reference_State.acceleration_ref[2]<<" [m/s^2] "<<endl;
+    
+    // cout << "desired_acceleration [X Y Z] : " << _AttitudeReference.desired_acceleration[0] << " [m/s^2] "<< _AttitudeReference.desired_acceleration[1]<<" [Nm/s^2] "<<_AttitudeReference.desired_acceleration[2]<<" [m/s^2] "<<endl;
+    // cout << "desired_thrust [X Y Z] : " << _AttitudeReference.desired_thrust[0] << " [N] "<< _AttitudeReference.desired_thrust[1]<<" [N] "<<_AttitudeReference.desired_thrust[2]<<" [N] "<<endl;
+    // cout << "desired_thrust_normalized [X Y Z] : " << _AttitudeReference.desired_thrust_normalized[0] << " [N] "<< _AttitudeReference.desired_thrust_normalized[1]<<" [N] "<<_AttitudeReference.desired_thrust_normalized[2]<<" [N] "<<endl;
+    // cout << "desired_attitude [R P Y] : " << _AttitudeReference.desired_attitude[0] * 180/M_PI <<" [deg] "<<_AttitudeReference.desired_attitude[1] * 180/M_PI << " [deg] "<< _AttitudeReference.desired_attitude[2] * 180/M_PI<<" [deg] "<<endl;
+    // cout << "desired_throttle [0-1] : " << _AttitudeReference.desired_throttle <<endl;
+}
+
+void pos_controller_PID::printf_result()
+{
+
+
+    cout <<">>>>>>>>>>>>>>>>>>>>PID Position Controller<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
     //固定的浮点显示
     cout.setf(ios::fixed);
@@ -206,25 +225,7 @@ px4_command::AttitudeReference pos_controller_PID::pos_controller(
 
     cout<<setprecision(2);
 
-    cout << "Pos_ref [XYZ]: " << _Reference_State.position_ref[0] << " [ m ]" << _Reference_State.position_ref[1] << " [ m ]"<< _Reference_State.position_ref[2] << " [ m ]" << endl;
-    cout << "Vel_ref [XYZ]: " << _Reference_State.velocity_ref[0] << " [m/s]" << _Reference_State.velocity_ref[1] << " [m/s]" << _Reference_State.velocity_ref[2] << " [m/s]" <<endl;
-    cout << "Acc_ref [XYZ]: " << _Reference_State.acceleration_ref[0] << " [m/s^2]" << _Reference_State.acceleration_ref[1] << " [m/s^2]" << _Reference_State.acceleration_ref[2] << " [m/s^2]" <<endl;
-    cout << "Yaw_setpoint : " << _Reference_State.yaw_ref * 180/M_PI << " [deg] " <<endl;
-
-    cout << "e_p [X Y Z] : " << pos_error[0] << " [m] "<< pos_error[1]<<" [m] "<<pos_error[2]<<" [m] "<<endl;
-    cout << "e_v [X Y Z] : " << vel_error[0] << " [m/s] "<< vel_error[1]<<" [m/s] "<<vel_error[2]<<" [m/s] "<<endl;
-    cout << "acc_ref [X Y Z] : " << _Reference_State.acceleration_ref[0] << " [m/s^2] "<< _Reference_State.acceleration_ref[1]<<" [m/s^2] "<<_Reference_State.acceleration_ref[2]<<" [m/s^2] "<<endl;
-    
-    cout << "desired_acceleration [X Y Z] : " << _AttitudeReference.desired_acceleration[0] << " [m/s^2] "<< _AttitudeReference.desired_acceleration[1]<<" [Nm/s^2] "<<_AttitudeReference.desired_acceleration[2]<<" [m/s^2] "<<endl;
-    cout << "desired_thrust [X Y Z] : " << _AttitudeReference.desired_thrust[0] << " [N] "<< _AttitudeReference.desired_thrust[1]<<" [N] "<<_AttitudeReference.desired_thrust[2]<<" [N] "<<endl;
-    cout << "desired_thrust_normalized [X Y Z] : " << _AttitudeReference.desired_thrust_normalized[0] << " [N] "<< _AttitudeReference.desired_thrust_normalized[1]<<" [N] "<<_AttitudeReference.desired_thrust_normalized[2]<<" [N] "<<endl;
-    cout << "desired_attitude [R P Y] : " << _AttitudeReference.desired_attitude[0] * 180/M_PI <<" [deg] "<<_AttitudeReference.desired_attitude[1] * 180/M_PI << " [deg] "<< _AttitudeReference.desired_attitude[2] * 180/M_PI<<" [deg] "<<endl;
-    cout << "desired_throttle [0-1] : " << _AttitudeReference.desired_throttle <<endl;
-    return _AttitudeReference;
-}
-
-void pos_controller_PID::printf_result()
-{
+        cout << "thrust_sp    [X Y Z] : " << thrust_sp[0] << " [m/s^2] "<< thrust_sp[1]<<" [m/s^2] "<<thrust_sp[2]<<" [m/s^2] "<<endl;
 
 }
 

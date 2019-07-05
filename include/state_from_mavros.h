@@ -71,13 +71,6 @@ class state_from_mavros
         ros::Subscriber position_sub;
         ros::Subscriber velocity_sub;
         ros::Subscriber attitude_sub;
-        ros::Subscriber position_target_sub;
-        ros::Subscriber attitude_target_sub;
-        ros::Subscriber actuator_target_sub;
-
-        ros::Publisher setpoint_raw_local_pub;
-        ros::Publisher setpoint_raw_attitude_pub;
-        ros::Publisher actuator_setpoint_pub;
 
         void state_cb(const mavros_msgs::State::ConstPtr &msg)
         {
