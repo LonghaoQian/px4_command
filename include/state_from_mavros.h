@@ -46,11 +46,11 @@ class state_from_mavros
 
         // 【订阅】无人机当前位置 坐标系:ENU系 （此处注意，所有状态量在飞控中均为NED系，但在ros中mavros将其转换为ENU系处理。所以，在ROS中，所有和mavros交互的量都为ENU系）
         //  本话题来自飞控(通过Mavros功能包 /plugins/local_position.cpp读取), 对应Mavlink消息为LOCAL_POSITION_NED (#32), 对应的飞控中的uORB消息为vehicle_local_position.msg
-        position_sub = state_nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 100, &state_from_mavros::pos_cb,this);
+        position_sub = state_nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 10, &state_from_mavros::pos_cb,this);
 
         // 【订阅】无人机当前速度 坐标系:ENU系
         //  本话题来自飞控(通过Mavros功能包 /plugins/local_position.cpp读取), 对应Mavlink消息为LOCAL_POSITION_NED (#32), 对应的飞控中的uORB消息为vehicle_local_position.msg
-        velocity_sub = state_nh.subscribe<geometry_msgs::TwistStamped>("/mavros/local_position/velocity_local", 100, &state_from_mavros::vel_cb,this);
+        velocity_sub = state_nh.subscribe<geometry_msgs::TwistStamped>("/mavros/local_position/velocity_local", 10, &state_from_mavros::vel_cb,this);
 
         // 【订阅】无人机当前欧拉角 坐标系:ENU系
         //  本话题来自飞控(通过Mavros功能包 /plugins/imu.cpp读取), 对应Mavlink消息为ATTITUDE (#30), 对应的飞控中的uORB消息为vehicle_attitude.msg
@@ -118,7 +118,7 @@ class state_from_mavros
 
 void state_from_mavros::prinft_drone_state(px4_command::DroneState Drone_state)
 {
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Drone State<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Drone Current State <<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
     //固定的浮点显示
     cout.setf(ios::fixed);
     //setprecision(n) 设显示小数精度为n位

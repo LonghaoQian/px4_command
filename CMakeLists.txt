@@ -97,6 +97,15 @@ target_link_libraries(px4_sender
   ${catkin_LIBRARIES}
 )
 
+
+add_executable(ground_station
+  src/ground_station.cpp
+)
+add_dependencies(ground_station px4_command_gencpp)
+target_link_libraries(ground_station
+  ${catkin_LIBRARIES}
+)
+
 ###### Test File ##########
 
 

@@ -86,7 +86,10 @@ int main(int argc, char **argv)
     // 本话题来自根据需求自定义的上层模块，比如track_land.cpp 比如move.cpp
     ros::Subscriber Command_sub = nh.subscribe<px4_command::ControlCommand>("/px4/control_command", 10, Command_cb);
     // 订阅】来自mocap的数据 
-    ros::Subscriber optitrack_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/UAV/pose", 1000, optitrack_cb);
+    ros::Subscriber optitrack_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/UAV/pose", 100, optitrack_cb);
+
+
+    ros::Publisher command_pub = nh.advertise<px4_command::AttitudeReference>("/px4_command/output", 10);
 
     // 参数读取
     nh.param<float>("Takeoff_height", Takeoff_height, 1.0);
@@ -153,8 +156,6 @@ int main(int argc, char **argv)
         return -1;
     }
 
-
-
     // 先读取一些飞控的数据
     for(int i=0;i<50;i++)
     {
@@ -207,6 +208,7 @@ int main(int argc, char **argv)
         last_time = cur_time;
 
         // 获取当前无人机状态
+        _DroneState.header.stamp = ros::Time::now();
         _DroneState.time_from_start = cur_time;
 
         _DroneState = _state_from_mavros._DroneState;
@@ -255,6 +257,8 @@ int main(int argc, char **argv)
             Command_Now.Mode = command_to_mavros::Land;
         }
 
+        command_pub.publish(_AttitudeReference);
+
         switch (Command_Now.Mode)
         {
         // 【Idle】 怠速旋转，此时可以切入offboard模式，但不会起飞。
@@ -293,6 +297,10 @@ int main(int argc, char **argv)
                 accel_sp = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
 
+            _AttitudeReference.thrust_sp[0] = accel_sp[0];
+            _AttitudeReference.thrust_sp[1] = accel_sp[1];
+            _AttitudeReference.thrust_sp[2] = accel_sp[2];
+
             if(Use_accel < 0.5)
             {
                 _command_to_mavros.send_accel_setpoint(accel_sp,_Reference_State.yaw_ref);
@@ -324,6 +332,10 @@ int main(int argc, char **argv)
             {
                 accel_sp = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
+
+            _AttitudeReference.thrust_sp[0] = accel_sp[0];
+            _AttitudeReference.thrust_sp[1] = accel_sp[1];
+            _AttitudeReference.thrust_sp[2] = accel_sp[2];
 
             if(Use_accel < 0.5)
             {
@@ -406,6 +418,11 @@ int main(int argc, char **argv)
             {
                 accel_sp = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
+
+            _AttitudeReference.thrust_sp[0] = accel_sp[0];
+            _AttitudeReference.thrust_sp[1] = accel_sp[1];
+            _AttitudeReference.thrust_sp[2] = accel_sp[2];
+
             if(Use_accel < 0.5)
             {
                 _command_to_mavros.send_accel_setpoint(accel_sp,_Reference_State.yaw_ref);
@@ -450,6 +467,10 @@ int main(int argc, char **argv)
             {
                 accel_sp = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
+
+            _AttitudeReference.thrust_sp[0] = accel_sp[0];
+            _AttitudeReference.thrust_sp[1] = accel_sp[1];
+            _AttitudeReference.thrust_sp[2] = accel_sp[2];
 
             if(Use_accel < 0.5)
             {
@@ -516,6 +537,10 @@ int main(int argc, char **argv)
                 {
                     accel_sp = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
                 }
+
+                _AttitudeReference.thrust_sp[0] = accel_sp[0];
+                _AttitudeReference.thrust_sp[1] = accel_sp[1];
+                _AttitudeReference.thrust_sp[2] = accel_sp[2];
 
 
                 if(Use_accel < 0.5)
@@ -587,6 +612,10 @@ int main(int argc, char **argv)
             {
                 accel_sp = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
+
+            _AttitudeReference.thrust_sp[0] = accel_sp[0];
+            _AttitudeReference.thrust_sp[1] = accel_sp[1];
+            _AttitudeReference.thrust_sp[2] = accel_sp[2];
 
             if(Use_accel < 0.5)
             {
