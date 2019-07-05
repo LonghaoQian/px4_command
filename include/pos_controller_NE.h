@@ -190,7 +190,7 @@ px4_command::AttitudeReference pos_controller_NE::pos_controller(
     //u_l
     for (int i = 0; i < 3; i++)
     {
-       u_l[i] = _Reference_State.acceleration_ref[i] + Quad_MASS * (Kp[i] * pos_error[i] + Kd[i] * ( vel_error[i] + NoiseEstimator[i]));
+       u_l[i] = _Reference_State.acceleration_ref[i] +  Kp[i] * pos_error[i] + Kd[i] * ( vel_error[i] + NoiseEstimator[i]);
     }
 
     //UDE term
@@ -208,13 +208,13 @@ px4_command::AttitudeReference pos_controller_NE::pos_controller(
 
     for (int i = 0; i < 3; i++)
     {
-        u_d[i] = Quad_MASS /T_ude[i] *( _DroneState.velocity[i] - output_LLF[i] - integral[i] );
+        u_d[i] = 1.0 / T_ude[i] * ( _DroneState.velocity[i] - output_LLF[i] - integral[i] );
     }
 
     // 更新积分项
     for (int i=0; i<3; i++)
     {
-        integral[i] = integral[i] +  (Kp[i] * pos_error[i] + Kd[i] * vel_error[i]) * dt;
+        integral[i] = integral[i] +  ( _Reference_State.acceleration_ref[i] +  Kp[i] * pos_error[i] + Kd[i] * vel_error[i]) * dt;
 
         // If not in OFFBOARD mode, set all intergral to zero.
         if(_DroneState.mode != "OFFBOARD")

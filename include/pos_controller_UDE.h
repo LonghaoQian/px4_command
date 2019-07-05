@@ -135,7 +135,7 @@ px4_command::AttitudeReference pos_controller_UDE::pos_controller(
     for (int i = 0; i < 3; i++)
     {
         u_l[i] = _Reference_State.acceleration_ref[i] + Kp[i] * pos_error[i] + Kd[i] * vel_error[i];
-        u_d[i] = 1.0 / T_ude[i] * (Kd[i] * pos_error[i] + vel_error[i] + Kp[i] * integral[i]);
+        u_d[i] = - 1.0 / T_ude[i] * (Kd[i] * pos_error[i] + vel_error[i] + Kp[i] * integral[i]);
     }
 
     // 更新积分项
@@ -158,9 +158,9 @@ px4_command::AttitudeReference pos_controller_UDE::pos_controller(
     }
 
     // 期望加速度
-    _AttitudeReference.desired_acceleration[0] = u_l[0] + u_d[0];
-    _AttitudeReference.desired_acceleration[1] = u_l[1] + u_d[1];
-    _AttitudeReference.desired_acceleration[2] = u_l[2] + u_d[2] + 9.8;
+    _AttitudeReference.desired_acceleration[0] = u_l[0] - u_d[0];
+    _AttitudeReference.desired_acceleration[1] = u_l[1] - u_d[1];
+    _AttitudeReference.desired_acceleration[2] = u_l[2] - u_d[2] + 9.8;
 
     // 期望推力 = 期望加速度 × 质量
     // 归一化推力 ： 根据电机模型，反解出归一化推力

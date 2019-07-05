@@ -195,9 +195,9 @@ px4_command::AttitudeReference pos_controller_passivity::pos_controller(
     y2_k[1] = LPF_pos_error_y.apply(pos_error[1], dt);
     y2_k[2] = LPF_pos_error_z.apply(pos_error[2], dt);
 
-    y3_k[0] = LPF_int_x.apply(Kp[0] * integral[0] + Kd[0] * y2_k[0], dt);
-    y3_k[1] = LPF_int_y.apply(Kp[1] * integral[1] + Kd[1] * y2_k[1], dt);
-    y3_k[2] = LPF_int_z.apply(Kp[2] * integral[2] + Kd[2] * y2_k[2], dt);
+    y3_k[0] = LPF_int_x.apply(_Reference_State.acceleration_ref[0] + Kp[0] * integral[0] + Kd[0] * y2_k[0], dt);
+    y3_k[1] = LPF_int_y.apply(_Reference_State.acceleration_ref[1] + Kp[1] * integral[1] + Kd[1] * y2_k[1], dt);
+    y3_k[2] = LPF_int_z.apply(_Reference_State.acceleration_ref[2] + Kp[2] * integral[2] + Kd[2] * y2_k[2], dt);
 
     for (int i = 0; i < 3; i++)
     {

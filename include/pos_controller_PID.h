@@ -116,12 +116,20 @@ px4_command::AttitudeReference pos_controller_PID::pos_controller(
         vel_error[i] = constrain_function(vel_error[i], vel_error_max[i]);
     }
 
-    // 更新积分项
+    // 期望加速度 = 加速度前馈 + PID
+    for (int i=0; i<3; i++)
+    {
+        _AttitudeReference.desired_acceleration[i] = _Reference_State.acceleration_ref[i] + Kp[i] * pos_error[i] + Kd[i] * vel_error[i] + Ki[i] * integral[i];
+    }
+    
+    _AttitudeReference.desired_acceleration[2] = _AttitudeReference.desired_acceleration[2] + 9.8;
+
+        // 更新积分项
     for (int i=0; i<3; i++)
     {
         if(abs(pos_error[i]) < int_start_error)
         {
-            integral[i] += Ki[i] * pos_error[i] * dt;
+            integral[i] += pos_error[i] * dt;
             integral[i] = constrain_function(integral[i], int_max[i]);
         }else
         {
@@ -134,14 +142,6 @@ px4_command::AttitudeReference pos_controller_PID::pos_controller(
             integral[i] = 0;
         }
     }
-
-    // 期望加速度 = 加速度前馈 + PID
-    for (int i=0; i<3; i++)
-    {
-        _AttitudeReference.desired_acceleration[i] = _Reference_State.acceleration_ref[i] + Kp[i] * pos_error[i] + Kd[i] * vel_error[i] + integral[i];
-    }
-    
-    _AttitudeReference.desired_acceleration[2] = _AttitudeReference.desired_acceleration[2] + 9.8;
 
     // cout << "ff [X Y Z] : " << _Reference_State.acceleration_ref[0] << " [m/s] "<< _Reference_State.acceleration_ref[1]<<" [m/s] "<<_Reference_State.acceleration_ref[2]<<" [m/s] "<<endl;
  

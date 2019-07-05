@@ -18,6 +18,8 @@
 #include <math.h>
 #include <math_utils.h>
 #include <px4_command/TrajectoryPoint.h>
+#include <command_to_mavros.h>
+
 using namespace std;
 
 class Circle_Trajectory
@@ -86,6 +88,8 @@ px4_command::TrajectoryPoint Circle_Trajectory::Circle_trajectory_generation(flo
     Circle_trajectory.header.stamp = ros::Time::now();
 
     Circle_trajectory.time_from_start = time_from_start;
+
+    Circle_trajectory.Sub_mode  = command_to_mavros::XYZ_POS;
 
     Circle_trajectory.position_ref[0] = radius * cos_angle + center[0];
     Circle_trajectory.position_ref[1] = radius * sin_angle + center[1];

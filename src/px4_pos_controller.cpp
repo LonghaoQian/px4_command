@@ -138,6 +138,11 @@ int main(int argc, char **argv)
         pos_controller_ne.printf_param();
     }
 
+    // 圆形轨迹追踪类
+    Circle_Trajectory _Circle_Trajectory;
+    float time_trajectory = 0.0;
+    _Circle_Trajectory.printf_param();
+
     int check_flag;
     // 这一步是为了程序运行前检查一下参数是否正确
     // 输入1,继续，其他，退出程序
@@ -149,10 +154,7 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    // 圆形轨迹追踪类
-    Circle_Trajectory _Circle_Trajectory;
-    float time_trajectory = 0.0;
-    _Circle_Trajectory.printf_param();
+
 
     // 先读取一些飞控的数据
     for(int i=0;i<50;i++)
@@ -289,7 +291,7 @@ int main(int argc, char **argv)
                 _AttitudeReference = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 4)
             {
-                _AttitudeReference = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
+                _AttitudeReference = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
 
             _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
@@ -314,7 +316,7 @@ int main(int argc, char **argv)
                 _AttitudeReference = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 4)
             {
-                _AttitudeReference = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
+                _AttitudeReference = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
 
             _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
@@ -390,7 +392,7 @@ int main(int argc, char **argv)
                 _AttitudeReference = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 4)
             {
-                _AttitudeReference = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
+                _AttitudeReference = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
 
             _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
@@ -428,7 +430,7 @@ int main(int argc, char **argv)
                 _AttitudeReference = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 4)
             {
-                _AttitudeReference = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
+                _AttitudeReference = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
 
             _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
@@ -488,7 +490,7 @@ int main(int argc, char **argv)
                     _AttitudeReference = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
                 }else if(switch_ude == 4)
                 {
-                    _AttitudeReference = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
+                    _AttitudeReference = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
                 }
 
                 _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
@@ -551,7 +553,7 @@ int main(int argc, char **argv)
                 _AttitudeReference = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
             }else if(switch_ude == 4)
             {
-                _AttitudeReference = pos_controller_ps.pos_controller(_DroneState, _Reference_State, dt);
+                _AttitudeReference = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
 
             _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
