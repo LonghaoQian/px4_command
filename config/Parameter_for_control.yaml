@@ -6,12 +6,18 @@ Quad:
 
 ##geo fence
 geo_fence:
-  x_min: -50.0
-  x_max: 50.0
-  y_min: -50.0
-  y_max: 50.0
+##  x_min: -50.0
+##  x_max: 50.0
+## y_min: -50.0
+## y_max: 50.0
+##  z_min: -0.5
+##  z_max: 50.0
+  x_min: -2.0
+  x_max: 2.0
+  y_min: -2.0
+  y_max: 2.0
   z_min: -0.5
-  z_max: 50.0
+  z_max: 1.5
 
 ## 限制参数 for 点追踪
 #Limit:
@@ -35,21 +41,23 @@ Limit:
   vxy_error_max: 1.0
   pz_error_max: 1.0
   vz_error_max: 1.0
-  pxy_int_max : 10.0
-  pz_int_max : 10.0
-  tilt_max: 10.0
+  pxy_int_max : 5.0
+  pz_int_max : 5.0
+  tilt_max: 20.0
   THR_MIN: 0.1
   THR_MAX: 0.9
-  int_start_error: 10.0
+  int_start_error: 1.0
 
-  XY_VEL_MAX : 1.0
-  Z_VEL_MAX : 0.5 
+  XY_VEL_MAX : 0.5
+  Z_VEL_MAX : 0.3 
   
   
 ## 起飞高度
 Takeoff_height : 0.8
 Disarm_height : 0.15
+## 1 for use the mocap raw data
 Use_mocap_raw : 0
+## 1 for use the accel command
 Use_accel : 1.0
 
 # 位置环参数 - cascade pid
@@ -61,8 +69,8 @@ Pos_cascade_pid:
    Ki_vxvy : 0.02
    Ki_vz : 0.02
    Kd_vxvy : 0.01
-   Kd_vz : 0.00
-   Hover_throttle : 0.5
+   Kd_vz : 0.01
+   Hover_throttle : 0.4
    MPC_VELD_LP: 5.0
 
 
@@ -114,7 +122,7 @@ Circle_Trajectory:
   Center_z: 1.0
   radius: 1.0
   linear_vel: 0.1
-  time_total: 200.0
+  time_total: 100.0
   direction: 1.0
 
 

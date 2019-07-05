@@ -161,7 +161,7 @@ void state_from_mavros::prinft_drone_state(px4_command::DroneState Drone_state)
     cout << "Position [X Y Z] : " << Drone_state.position[0] << " [ m ] "<< Drone_state.position[1]<<" [ m ] "<<Drone_state.position[2]<<" [ m ] "<<endl;
     cout << "Velocity [X Y Z] : " << Drone_state.velocity[0] << " [m/s] "<< Drone_state.velocity[1]<<" [m/s] "<<Drone_state.velocity[2]<<" [m/s] "<<endl;
     cout << "Attitude [R P Y] : " << Drone_state.attitude[0] * 180/M_PI <<" [deg] "<<Drone_state.attitude[1] * 180/M_PI << " [deg] "<< Drone_state.attitude[2] * 180/M_PI<<" [deg] "<<endl;
-    cout << "Att_rate [R P Y] : " << Drone_state.attitude_rate[0] * 180/M_PI <<" [deg/s] "<<Drone_state.attitude_rate[1] * 180/M_PI << " [deg/s] "<< Drone_state.attitude_rate[2] * 180/M_PI<<" [deg/s] "<<endl;
+    //cout << "Att_rate [R P Y] : " << Drone_state.attitude_rate[0] * 180/M_PI <<" [deg/s] "<<Drone_state.attitude_rate[1] * 180/M_PI << " [deg/s] "<< Drone_state.attitude_rate[2] * 180/M_PI<<" [deg/s] "<<endl;
 
 }
     

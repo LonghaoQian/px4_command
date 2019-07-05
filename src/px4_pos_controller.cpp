@@ -225,24 +225,24 @@ int main(int argc, char **argv)
         _state_from_mavros.prinft_drone_state(_DroneState);
 
         //Printf the command state
-        prinft_command_state();
+        //prinft_command_state();
 
-        if(switch_ude == 0)
-        {
-            pos_controller_cascade_pid.printf_result();
-        }else if(switch_ude == 1)
-        {
-            pos_controller_pid.printf_result();
-        }else if(switch_ude == 2)
-        {
-            pos_controller_ude.printf_result();
-        }else if(switch_ude == 3)
-        {
-            pos_controller_ps.printf_result();
-        }else if(switch_ude == 4)
-        {
-            pos_controller_ne.printf_result();
-        }
+        // if(switch_ude == 0)
+        // {
+        //     pos_controller_cascade_pid.printf_result();
+        // }else if(switch_ude == 1)
+        // {
+        //     pos_controller_pid.printf_result();
+        // }else if(switch_ude == 2)
+        // {
+        //     pos_controller_ude.printf_result();
+        // }else if(switch_ude == 3)
+        // {
+        //     pos_controller_ps.printf_result();
+        // }else if(switch_ude == 4)
+        // {
+        //     pos_controller_ne.printf_result();
+        // }
 
 
         // 无人机一旦接受到Land指令，则会屏蔽其他指令
@@ -296,17 +296,18 @@ int main(int argc, char **argv)
             {
                 accel_sp = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
+            
+            _AttitudeReference = pos_controller_utils::thrustToAttitude(accel_sp, _Reference_State.yaw_ref);
 
             _AttitudeReference.thrust_sp[0] = accel_sp[0];
             _AttitudeReference.thrust_sp[1] = accel_sp[1];
             _AttitudeReference.thrust_sp[2] = accel_sp[2];
 
-            if(Use_accel < 0.5)
+            if(Use_accel > 0.5)
             {
                 _command_to_mavros.send_accel_setpoint(accel_sp,_Reference_State.yaw_ref);
             }else
             {
-                _AttitudeReference = pos_controller_utils::thrustToAttitude(accel_sp, _Reference_State.yaw_ref);
                 _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
             }
             
@@ -333,16 +334,17 @@ int main(int argc, char **argv)
                 accel_sp = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
 
+            _AttitudeReference = pos_controller_utils::thrustToAttitude(accel_sp, _Reference_State.yaw_ref);
+
             _AttitudeReference.thrust_sp[0] = accel_sp[0];
             _AttitudeReference.thrust_sp[1] = accel_sp[1];
             _AttitudeReference.thrust_sp[2] = accel_sp[2];
 
-            if(Use_accel < 0.5)
+            if(Use_accel > 0.5)
             {
                 _command_to_mavros.send_accel_setpoint(accel_sp,_Reference_State.yaw_ref);
             }else
             {
-                _AttitudeReference = pos_controller_utils::thrustToAttitude(accel_sp, _Reference_State.yaw_ref);
                 _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
             }
             break;
@@ -418,18 +420,19 @@ int main(int argc, char **argv)
             {
                 accel_sp = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
+            _AttitudeReference = pos_controller_utils::thrustToAttitude(accel_sp, _Reference_State.yaw_ref);
 
             _AttitudeReference.thrust_sp[0] = accel_sp[0];
             _AttitudeReference.thrust_sp[1] = accel_sp[1];
             _AttitudeReference.thrust_sp[2] = accel_sp[2];
 
-            if(Use_accel < 0.5)
+
+            if(Use_accel > 0.5)
             {
                 _command_to_mavros.send_accel_setpoint(accel_sp,_Reference_State.yaw_ref);
             }else
             {
-                _AttitudeReference = pos_controller_utils::thrustToAttitude(accel_sp, _Reference_State.yaw_ref);
-                _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
+                                _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
             }
 
             break;
@@ -467,17 +470,18 @@ int main(int argc, char **argv)
             {
                 accel_sp = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
+            _AttitudeReference = pos_controller_utils::thrustToAttitude(accel_sp, _Reference_State.yaw_ref);
 
             _AttitudeReference.thrust_sp[0] = accel_sp[0];
             _AttitudeReference.thrust_sp[1] = accel_sp[1];
             _AttitudeReference.thrust_sp[2] = accel_sp[2];
 
-            if(Use_accel < 0.5)
+
+            if(Use_accel > 0.5)
             {
                 _command_to_mavros.send_accel_setpoint(accel_sp,_Reference_State.yaw_ref);
             }else
             {
-                _AttitudeReference = pos_controller_utils::thrustToAttitude(accel_sp, _Reference_State.yaw_ref);
                 _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
             }
             break;
@@ -538,17 +542,17 @@ int main(int argc, char **argv)
                     accel_sp = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
                 }
 
+                _AttitudeReference = pos_controller_utils::thrustToAttitude(accel_sp, _Reference_State.yaw_ref);
                 _AttitudeReference.thrust_sp[0] = accel_sp[0];
                 _AttitudeReference.thrust_sp[1] = accel_sp[1];
                 _AttitudeReference.thrust_sp[2] = accel_sp[2];
 
 
-                if(Use_accel < 0.5)
+                if(Use_accel > 0.5)
                 {
                     _command_to_mavros.send_accel_setpoint(accel_sp,_Reference_State.yaw_ref);
                 }else
                 {
-                    _AttitudeReference = pos_controller_utils::thrustToAttitude(accel_sp, _Reference_State.yaw_ref);
                     _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
                 }
              }
@@ -613,16 +617,17 @@ int main(int argc, char **argv)
                 accel_sp = pos_controller_ne.pos_controller(_DroneState, _Reference_State, dt);
             }
 
+            _AttitudeReference = pos_controller_utils::thrustToAttitude(accel_sp, _Reference_State.yaw_ref);
+
             _AttitudeReference.thrust_sp[0] = accel_sp[0];
             _AttitudeReference.thrust_sp[1] = accel_sp[1];
             _AttitudeReference.thrust_sp[2] = accel_sp[2];
 
-            if(Use_accel < 0.5)
+            if(Use_accel > 0.5)
             {
                 _command_to_mavros.send_accel_setpoint(accel_sp,_Reference_State.yaw_ref);
             }else
             {
-                _AttitudeReference = pos_controller_utils::thrustToAttitude(accel_sp, _Reference_State.yaw_ref);
                 _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
             }
             
