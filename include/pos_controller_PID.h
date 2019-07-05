@@ -134,6 +134,13 @@ Eigen::Vector3d pos_controller_PID::pos_controller(
         if(abs(pos_error[i]) < int_start_error)
         {
             integral[i] += pos_error[i] * dt;
+
+            if(abs(integral[i]) > int_max[i])
+            {
+                cout << "Integral saturation! " << " [0-1-2] "<< i <<endl;
+                cout << "[integral]: "<< integral[i]<<" [int_max]: "<<int_max[i]<<" [m/s] "<<endl;
+            }
+
             integral[i] = constrain_function(integral[i], int_max[i]);
         }else
         {

@@ -109,16 +109,16 @@ void Command_cb(const px4_command::ControlCommand::ConstPtr& msg)
 {
     Command_Now = *msg;
 }
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "px4_pos_estimator");
     ros::NodeHandle nh("~");
 
-        ros::Subscriber Command_sub = nh.subscribe<px4_command::ControlCommand>("/px4/control_command", 10, Command_cb);
+    ros::Subscriber to_gs_sub = nh.subscribe<px4_command::ControlCommand>("/px4/control_command_to_gs", 10, Command_cb);
 
-
-        // 【订阅】optitrack估计位置
+    // 【订阅】optitrack估计位置
     ros::Subscriber optitrack_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/UAV/pose", 10, optitrack_cb);
 
     // 【订阅】无人机当前位置 坐标系:ENU系 （此处注意，所有状态量在飞控中均为NED系，但在ros中mavros将其转换为ENU系处理。所以，在ROS中，所有和mavros交互的量都为ENU系）
@@ -151,7 +151,7 @@ int main(int argc, char **argv)
 
 void printf_info()
 {
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>Ground Station<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    cout <<">>>>>>>>>>>>>>>>>>>>>>>> Ground Station <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
     //固定的浮点显示
     cout.setf(ios::fixed);
@@ -175,18 +175,21 @@ void printf_info()
         break;
     case command_to_mavros::Move_Body:
         cout << "Command: [ Move_Body ] " <<endl;
+
+        cout << "Command Position [X Y Z] : " << Command_Now.Reference_State.position_ref[0] << " [ m ] "<< Command_Now.Reference_State.position_ref[1]<<" [ m ] "<< Command_Now.Reference_State.position_ref[2]<<" [ m ] "<<endl;
+        cout << "Yaw_setpoint : "  << Command_Now.Reference_State.yaw_ref* 180/M_PI << " [deg] " <<endl;
         break;
 
     case command_to_mavros::Hold:
         cout << "Command: [ Hold ] " <<endl;
-        // cout << "Hold Position [X Y Z] : " << _Reference_State.position_ref[0] << " [ m ] "<< _Reference_State.position_ref[1]<<" [ m ] "<< _Reference_State.position_ref[2]<<" [ m ] "<<endl;
-        // cout << "Yaw_setpoint : "  << _Reference_State.yaw_ref* 180/M_PI << " [deg] " <<endl;
+        cout << "Command Position [X Y Z] : " << Command_Now.Reference_State.position_ref[0] << " [ m ] "<< Command_Now.Reference_State.position_ref[1]<<" [ m ] "<< Command_Now.Reference_State.position_ref[2]<<" [ m ] "<<endl;
+        cout << "Yaw_setpoint : "  << Command_Now.Reference_State.yaw_ref* 180/M_PI << " [deg] " <<endl;
         break;
 
     case command_to_mavros::Land:
         cout << "Command: [ Land ] " <<endl;
-        // cout << "Land Position [X Y Z] : " << _Reference_State.position_ref[0] << " [ m ] "<< _Reference_State.position_ref[1]<<" [ m ] "<< _Reference_State.position_ref[2]<<" [ m ] "<<endl;
-        // cout << "Yaw_setpoint : "  << _Reference_State.yaw_ref* 180/M_PI << " [deg] " <<endl;
+        cout << "Command Position [X Y Z] : " << Command_Now.Reference_State.position_ref[0] << " [ m ] "<< Command_Now.Reference_State.position_ref[1]<<" [ m ] "<< Command_Now.Reference_State.position_ref[2]<<" [ m ] "<<endl;
+        cout << "Yaw_setpoint : "  << Command_Now.Reference_State.yaw_ref* 180/M_PI << " [deg] " <<endl;
         break;
 
     case command_to_mavros::Disarm:
@@ -203,8 +206,8 @@ void printf_info()
 
     case command_to_mavros::Takeoff:
         cout << "Command: [ Takeoff ] " <<endl;
-        // cout << "Takeoff Position [X Y Z] : " << _Reference_State.position_ref[0] << " [ m ] "<< _Reference_State.position_ref[1]<<" [ m ] "<< _Reference_State.position_ref[2]<<" [ m ] "<<endl;
-        // cout << "Yaw_setpoint : "  << _Reference_State.yaw_ref* 180/M_PI << " [deg] " <<endl;
+        cout << "Command Position [X Y Z] : " << Command_Now.Reference_State.position_ref[0] << " [ m ] "<< Command_Now.Reference_State.position_ref[1]<<" [ m ] "<< Command_Now.Reference_State.position_ref[2]<<" [ m ] "<<endl;
+        cout << "Yaw_setpoint : "  << Command_Now.Reference_State.yaw_ref* 180/M_PI << " [deg] " <<endl;
         break;
     }
     

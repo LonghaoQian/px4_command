@@ -216,6 +216,12 @@ Eigen::Vector3d pos_controller_passivity::pos_controller(
             integral[i] = 0;
         }
 
+        if(abs(u_d[i]) > int_max[i])
+        {
+            cout << "u_d saturation! " << " [0-1-2] "<< i <<endl;
+            cout << "[u_d]: "<< u_d[i]<<" [u_d_max]: "<<int_max[i]<<" [m/s] "<<endl;
+        }
+
         u_d[i] = constrain_function(u_d[i], int_max[i]);
     }
 
