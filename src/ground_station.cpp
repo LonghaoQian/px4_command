@@ -49,11 +49,11 @@ Eigen::Quaterniond q_mocap;
 Eigen::Vector3d Euler_mocap;                              //无人机当前姿态 (vicon)
 
 px4_command::AttitudeReference _AttitudeReference;           //位置控制器输出，即姿态环参考量
-    Eigen::Quaterniond q_fcu_target;
-    Eigen::Vector3d euler_fcu_target;
-    float Thrust_target;
+Eigen::Quaterniond q_fcu_target;
+Eigen::Vector3d euler_fcu_target;
+float Thrust_target;
 
-    px4_command::ControlCommand Command_Now;                      //无人机当前执行命令
+px4_command::ControlCommand Command_Now;                      //无人机当前执行命令
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>函数声明<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void printf_info();                                                                       //打印函数
@@ -113,10 +113,10 @@ void Command_cb(const px4_command::ControlCommand::ConstPtr& msg)
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "px4_pos_estimator");
+    ros::init(argc, argv, "ground_station");
     ros::NodeHandle nh("~");
 
-    ros::Subscriber to_gs_sub = nh.subscribe<px4_command::ControlCommand>("/px4/control_command_to_gs", 10, Command_cb);
+    ros::Subscriber to_gs_sub = nh.subscribe<px4_command::ControlCommand>("/px4_command/control_command_to_gs", 10, Command_cb);
 
     // 【订阅】optitrack估计位置
     ros::Subscriber optitrack_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/UAV/pose", 10, optitrack_cb);
@@ -125,9 +125,7 @@ int main(int argc, char **argv)
     //  本话题来自飞控(通过Mavros功能包 /plugins/local_position.cpp读取), 对应Mavlink消息为LOCAL_POSITION_NED (#32), 对应的飞控中的uORB消息为vehicle_local_position.msg
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 10, pos_cb);
 
-
-    ros::Subscriber command_sub = nh.subscribe<px4_command::AttitudeReference>("/px4_command/output", 10,output_cb);
-
+    ros::Subscriber command_sub = nh.subscribe<px4_command::AttitudeReference>("/px4_command/attitude_reference", 10,output_cb);
 
     ros::Subscriber attitude_target_sub = nh.subscribe<mavros_msgs::AttitudeTarget>("/mavros/setpoint_raw/target_attitude", 10,att_target_cb);
 

@@ -99,7 +99,7 @@ int main(int argc, char **argv)
     ros::Subscriber vision_flag_sub = nh.subscribe<geometry_msgs::Pose>("/vision/vision_flag", 10, vision_flag);
 
     // 【发布】发送给position_control.cpp的命令
-    ros::Publisher command_pub = nh.advertise<px4_command::ControlCommand>("/px4/control_command", 10);
+    ros::Publisher command_pub = nh.advertise<px4_command::ControlCommand>("/px4_command/control_command", 10);
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>参数读取<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     //降落追踪控制算法 的比例参数
@@ -138,7 +138,7 @@ int main(int argc, char **argv)
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>模式选择<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     int check_flag;
     //输入1,继续，其他，退出程序
-    cout << "Please check the parameter and setting，1 for go on， else for quit: "<<endl;
+    cout << "Please check the parameter and setting，enter 1 to continue， else for quit: "<<endl;
     cin >> check_flag;
 
     if(check_flag != 1)

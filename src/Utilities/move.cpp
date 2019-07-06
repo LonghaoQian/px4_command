@@ -25,7 +25,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "move");
     ros::NodeHandle nh;
 
-    move_pub = nh.advertise<px4_command::ControlCommand>("/px4/control_command", 10);
+    move_pub = nh.advertise<px4_command::ControlCommand>("/px4_command/control_command", 10);
 
 
     int flag_1;

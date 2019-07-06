@@ -32,7 +32,7 @@
 #include <px4_command/DroneState.h>
 #include <px4_command/TrajectoryPoint.h>
 #include <px4_command/AttitudeReference.h>
-
+#include <px4_command_utils.h>
 #include <px4_command/Trajectory.h>
 
 #include <Eigen/Eigen>
@@ -59,7 +59,7 @@ Eigen::Vector2f geo_fence_y;
 Eigen::Vector2f geo_fence_z;
 
 Eigen::Vector3d Takeoff_position = Eigen::Vector3d(0.0,0.0,0.0);
-float get_ros_time(ros::Time begin);
+float get_time_in_sec(ros::Time begin);
 void prinft_command_state();
 void rotation_yaw(float yaw_angle, float input[2], float output[2]);
 void printf_param();
@@ -74,7 +74,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "px4_sender");
     ros::NodeHandle nh("~");
 
-    ros::Subscriber Command_sub = nh.subscribe<px4_command::ControlCommand>("/px4/control_command", 10, Command_cb);
+    ros::Subscriber Command_sub = nh.subscribe<px4_command::ControlCommand>("/px4_command/control_command", 10, Command_cb);
 
     // 参数读取
     nh.param<float>("Takeoff_height", Takeoff_height, 1.0);
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
     int check_flag;
     // 这一步是为了程序运行前检查一下参数是否正确
     // 输入1,继续，其他，退出程序
-    cout << "Please check the parameter and setting，1 for go on， else for quit: "<<endl;
+    cout << "Please check the parameter and setting，enter 1 to continue， else for quit: "<<endl;
     cin >> check_flag;
 
     if(check_flag != 1)
@@ -146,7 +146,7 @@ int main(int argc, char **argv)
     {
         ros::spinOnce();
 
-        float cur_time = get_ros_time(begin_time);
+        float cur_time = get_time_in_sec(begin_time);
 
         // 获取当前无人机状态
         _DroneState.time_from_start = cur_time;
@@ -154,7 +154,7 @@ int main(int argc, char **argv)
         _DroneState = _state_from_mavros._DroneState;
 
         // 打印无人机状态
-        _state_from_mavros.prinft_drone_state(_DroneState);
+        px4_command_utils::prinft_drone_state(_DroneState);
 
         //Printf the command state
         prinft_command_state();
@@ -322,7 +322,7 @@ int main(int argc, char **argv)
 }
 
 // 【获取当前时间函数】 单位：秒
-float get_ros_time(ros::Time begin)
+float get_time_in_sec(ros::Time begin)
 {
     ros::Time time_now = ros::Time::now();
     float currTimeSec = time_now.sec-begin.sec;

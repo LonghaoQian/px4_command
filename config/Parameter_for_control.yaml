@@ -4,14 +4,8 @@ Quad:
   throttle_a: 20.0
   throttle_b: 0.0
 
-##geo fence
+##geo fence for fsc
 geo_fence:
-##  x_min: -50.0
-##  x_max: 50.0
-## y_min: -50.0
-## y_max: 50.0
-##  z_min: -0.5
-##  z_max: 50.0
   x_min: -2.0
   x_max: 2.0
   y_min: -1.8
@@ -19,23 +13,7 @@ geo_fence:
   z_min: -0.5
   z_max: 1.5
 
-## 限制参数 for 点追踪
-#Limit:
-#  pxy_error_max: 0.8
-#  vxy_error_max: 1.0
-#  pz_error_max: 0.5
-#  vz_error_max: 1.0
-#  pxy_int_max : 5.0
-#  pz_int_max : 5.0
-#  tilt_max: 20.0
-#  THR_MIN: 0.1
-#  THR_MAX: 0.9
-#  int_start_error: 100.0
-
-#  XY_VEL_MAX : 0.8
-#  Z_VEL_MAX : 0.5
-
-## 限制参数 for 轨迹追踪
+## 限制参数 
 Limit:
   pxy_error_max: 1.0
   vxy_error_max: 1.0
@@ -59,6 +37,8 @@ Disarm_height : 0.15
 Use_mocap_raw : 0
 ## 1 for use the accel command
 Use_accel : 1.0
+## 1 for printf the state, 0 for block
+Flag_printf : 1.0
 
 # 位置环参数 - cascade pid
 Pos_cascade_pid:

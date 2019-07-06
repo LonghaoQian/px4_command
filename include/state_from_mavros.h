@@ -60,9 +60,6 @@ class state_from_mavros
     //变量声明 
     px4_command::DroneState _DroneState;
 
-    //Pringt the drone state
-    void prinft_drone_state(px4_command::DroneState Drone_state);
-
     private:
 
         ros::NodeHandle state_nh;
@@ -116,53 +113,5 @@ class state_from_mavros
 
 };
 
-void state_from_mavros::prinft_drone_state(px4_command::DroneState Drone_state)
-{
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Drone Current State <<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-    //固定的浮点显示
-    cout.setf(ios::fixed);
-    //setprecision(n) 设显示小数精度为n位
-    cout<<setprecision(2);
-    //左对齐
-    cout.setf(ios::left);
-    // 强制显示小数点
-    cout.setf(ios::showpoint);
-    // 强制显示符号
-    cout.setf(ios::showpos);
-
-    cout<<setprecision(1);
-
-    cout << "Time: " << Drone_state.time_from_start <<" [s] ";
-
-    //是否和飞控建立起连接
-    if (Drone_state.connected == true)
-    {
-        cout << " [ Connected ]  ";
-    }
-    else
-    {
-        cout << " [ Unconnected ]  ";
-    }
-
-    //是否上锁
-    if (Drone_state.armed == true)
-    {
-        cout << "  [ Armed ]   ";
-    }
-    else
-    {
-        cout << "  [ DisArmed ]   ";
-    }
-
-    cout << " [ " << Drone_state.mode<<" ]   " <<endl;
-
-    cout<<setprecision(2);
-
-    cout << "Position [X Y Z] : " << Drone_state.position[0] << " [ m ] "<< Drone_state.position[1]<<" [ m ] "<<Drone_state.position[2]<<" [ m ] "<<endl;
-    cout << "Velocity [X Y Z] : " << Drone_state.velocity[0] << " [m/s] "<< Drone_state.velocity[1]<<" [m/s] "<<Drone_state.velocity[2]<<" [m/s] "<<endl;
-    cout << "Attitude [R P Y] : " << Drone_state.attitude[0] * 180/M_PI <<" [deg] "<<Drone_state.attitude[1] * 180/M_PI << " [deg] "<< Drone_state.attitude[2] * 180/M_PI<<" [deg] "<<endl;
-    //cout << "Att_rate [R P Y] : " << Drone_state.attitude_rate[0] * 180/M_PI <<" [deg/s] "<<Drone_state.attitude_rate[1] * 180/M_PI << " [deg/s] "<< Drone_state.attitude_rate[2] * 180/M_PI<<" [deg/s] "<<endl;
-
-}
     
 #endif

@@ -23,7 +23,7 @@
 #include <math.h>
 #include <math_utils.h>
 #include <px4_command/data_log.h>
-#include <pos_controller_utils.h>
+#include <px4_command_utils.h>
 #include <px4_command/data_log.h>
 #include <px4_command/DroneState.h>
 #include <px4_command/TrajectoryPoint.h>

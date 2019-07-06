@@ -83,7 +83,7 @@ int main(int argc, char **argv)
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 100, pos_cb);
 
     // 【发布】发送给position_control.cpp的命令
-    ros::Publisher move_pub = nh.advertise<px4_command::ControlCommand>("/px4/control_command", 10);
+    ros::Publisher move_pub = nh.advertise<px4_command::ControlCommand>("/px4_command/control_command", 10);
 
     // Drop cmd send to mavros
     ros::Publisher drop_pub = nh.advertise<mavros_msgs::OverrideRCIn>("/mavros/rc/override", 10);
@@ -110,7 +110,7 @@ int main(int argc, char **argv)
     cout << "limit_time: "<<limit_time<<"[s]"<<endl;
     cout << "min_distance: "<<min_distance<<"[m]"<<endl;
 
-    cout << "Please check the parameter and setting，1 for go on， else for quit: "<<endl;
+    cout << "Please check the parameter and setting，enter 1 to continue， else for quit: "<<endl;
     cin >> check_flag;
 
     if(check_flag != 1)

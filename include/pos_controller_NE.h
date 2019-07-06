@@ -13,7 +13,7 @@
 #include <Eigen/Eigen>
 #include <math.h>
 #include <command_to_mavros.h>
-#include <pos_controller_utils.h>
+#include <px4_command_utils.h>
 #include <math_utils.h>
 
 #include <LowPassFilter.h>
@@ -173,8 +173,8 @@ Eigen::Vector3d pos_controller_NE::pos_controller(
     Eigen::Vector3d accel_sp;
     Eigen::Vector3d thrust_sp;
     // 计算误差项
-    Eigen::Vector3f pos_error = pos_controller_utils::cal_pos_error(_DroneState, _Reference_State);
-    Eigen::Vector3f vel_error = pos_controller_utils::cal_vel_error(_DroneState, _Reference_State);
+    Eigen::Vector3f pos_error = px4_command_utils::cal_pos_error(_DroneState, _Reference_State);
+    Eigen::Vector3f vel_error = px4_command_utils::cal_vel_error(_DroneState, _Reference_State);
 
     // 误差项限幅
     for (int i=0; i<3; i++)
@@ -257,31 +257,6 @@ Eigen::Vector3d pos_controller_NE::pos_controller(
     }
 
     return thrust_sp;
-
-    //     cout <<">>>>>>>>>>>>>>>>>>>>>>PID Position Controller<<<<<<<<<<<<<<<<<<<<<" <<endl;
-
-    // //固定的浮点显示
-    // cout.setf(ios::fixed);
-    // //左对齐
-    // cout.setf(ios::left);
-    // // 强制显示小数点
-    // cout.setf(ios::showpoint);
-    // // 强制显示符号
-    // cout.setf(ios::showpos);
-
-    // cout<<setprecision(2);
-
-    // cout << "e_p [X Y Z] : " << pos_error[0] << " [m] "<< pos_error[1]<<" [m] "<<pos_error[2]<<" [m] "<<endl;
-    // cout << "e_v [X Y Z] : " << vel_error[0] << " [m/s] "<< vel_error[1]<<" [m/s] "<<vel_error[2]<<" [m/s] "<<endl;
-    // cout << "acc_ref [X Y Z] : " << _Reference_State.acceleration_ref[0] << " [m/s^2] "<< _Reference_State.acceleration_ref[1]<<" [m/s^2] "<<_Reference_State.acceleration_ref[2]<<" [m/s^2] "<<endl;
-    
-    // cout << "desired_acceleration [X Y Z] : " << _AttitudeReference.desired_acceleration[0] << " [m/s^2] "<< _AttitudeReference.desired_acceleration[1]<<" [Nm/s^2] "<<_AttitudeReference.desired_acceleration[2]<<" [m/s^2] "<<endl;
-    // cout << "desired_thrust [X Y Z] : " << _AttitudeReference.desired_thrust[0] << " [N] "<< _AttitudeReference.desired_thrust[1]<<" [N] "<<_AttitudeReference.desired_thrust[2]<<" [N] "<<endl;
-    // cout << "desired_thrust_normalized [X Y Z] : " << _AttitudeReference.desired_thrust_normalized[0] << " [N] "<< _AttitudeReference.desired_thrust_normalized[1]<<" [N] "<<_AttitudeReference.desired_thrust_normalized[2]<<" [N] "<<endl;
-    // cout << "desired_attitude [R P Y] : " << _AttitudeReference.desired_attitude[0] * 180/M_PI <<" [deg] "<<_AttitudeReference.desired_attitude[1] * 180/M_PI << " [deg] "<< _AttitudeReference.desired_attitude[2] * 180/M_PI<<" [deg] "<<endl;
-    // cout << "desired_throttle [0-1] : " << _AttitudeReference.desired_throttle <<endl;
-
-   // return _AttitudeReference;
 }
 
 void pos_controller_NE::printf_result()
@@ -299,13 +274,13 @@ void pos_controller_NE::printf_result()
 
     cout<<setprecision(2);
 
-    // cout << "NoiseEstimator [X Y Z] : " <<  Quad_MASS *Kd[0] * NoiseEstimator[0] << " [N] "<<Quad_MASS *Kd[1] * NoiseEstimator[1]<<" [N] "<<Quad_MASS *Kd[2] *NoiseEstimator[2]<<" [N] "<<endl;
+    cout << "NoiseEstimator [X Y Z] : " <<  Quad_MASS *Kd[0] * NoiseEstimator[0] << " [N] "<<Quad_MASS *Kd[1] * NoiseEstimator[1]<<" [N] "<<Quad_MASS *Kd[2] *NoiseEstimator[2]<<" [N] "<<endl;
 
-    // cout << "u_l [X Y Z] : " << u_l[0] << " [N] "<< u_l[1]<<" [N] "<<u_l[2]<<" [N] "<<endl;
+    cout << "u_l [X Y Z] : " << u_l[0] << " [N] "<< u_l[1]<<" [N] "<<u_l[2]<<" [N] "<<endl;
 
-    // cout << "output_LLF [X Y Z] : " << output_LLF[0] << " [N] "<< output_LLF[1]<<" [N] "<<output_LLF[2]<<" [N] "<<endl;
+    cout << "output_LLF [X Y Z] : " << output_LLF[0] << " [N] "<< output_LLF[1]<<" [N] "<<output_LLF[2]<<" [N] "<<endl;
 
-    // cout << "u_d [X Y Z] : " << u_d[0] << " [N] "<< u_d[1]<<" [N] "<<u_d[2]<<" [N] "<<endl;
+    cout << "u_d [X Y Z] : " << u_d[0] << " [N] "<< u_d[1]<<" [N] "<<u_d[2]<<" [N] "<<endl;
     cout << "thrust_sp    [X Y Z] : " << thrust_sp[0] << " [m/s^2] "<< thrust_sp[1]<<" [m/s^2] "<<thrust_sp[2]<<" [m/s^2] "<<endl;
 }
 

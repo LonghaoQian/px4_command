@@ -43,7 +43,7 @@ int main(int argc, char **argv)
     ros::Rate rate(1.0);
 
     // 【发布】发送给position_control.cpp的命令
-    ros::Publisher move_pub = nh.advertise<px4_command::ControlCommand>("/px4/control_command", 10);
+    ros::Publisher move_pub = nh.advertise<px4_command::ControlCommand>("/px4_command/control_command", 10);
 
     //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>参数读取<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     nh.param<float>("size_square", size_square, 1.5);
@@ -57,7 +57,7 @@ int main(int argc, char **argv)
     // 输入1,继续，其他，退出程序
     cout << "size_square: "<<size_square<<"[m]"<<endl;
     cout << "height_square: "<<height_square<<"[m]"<<endl;
-    cout << "Please check the parameter and setting，1 for go on， else for quit: "<<endl;
+    cout << "Please check the parameter and setting，enter 1 to continue， else for quit: "<<endl;
     cin >> check_flag;
 
     if(check_flag != 1)
