@@ -1,8 +1,6 @@
 ## 飞机参数
 Quad:
   mass: 0.8
-  throttle_a: 20.0
-  throttle_b: 0.0
 
 ##geo fence for fsc
 geo_fence:
@@ -22,8 +20,6 @@ Limit:
   pxy_int_max : 5.0
   pz_int_max : 5.0
   tilt_max: 20.0
-  THR_MIN: 0.1
-  THR_MAX: 0.9
   int_start_error: 1.0
 
   XY_VEL_MAX : 0.5

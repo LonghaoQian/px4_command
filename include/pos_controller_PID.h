@@ -32,8 +32,6 @@ class pos_controller_PID
             pos_pid_nh("~")
         {
             pos_pid_nh.param<float>("Quad/mass", Quad_MASS, 1.0);
-            pos_pid_nh.param<float>("Quad/throttle_a", throttle_a, 20.0);
-            pos_pid_nh.param<float>("Quad/throttle_b", throttle_b, 0.0);
 
             pos_pid_nh.param<float>("Pos_pid/Kp_xy", Kp[0], 1.0);
             pos_pid_nh.param<float>("Pos_pid/Kp_xy", Kp[1], 1.0);
@@ -54,19 +52,15 @@ class pos_controller_PID
             pos_pid_nh.param<float>("Limit/pxy_int_max"  , int_max[0], 0.5);
             pos_pid_nh.param<float>("Limit/pxy_int_max"  , int_max[1], 0.5);
             pos_pid_nh.param<float>("Limit/pz_int_max"   , int_max[2], 0.5);
-            pos_pid_nh.param<float>("Limit/THR_MIN", THR_MIN, 0.1);
-            pos_pid_nh.param<float>("Limit/THR_MAX", THR_MAX, 0.9);
             pos_pid_nh.param<float>("Limit/tilt_max", tilt_max, 20.0);
             pos_pid_nh.param<float>("Limit/int_start_error"  , int_start_error, 0.3);
 
             integral = Eigen::Vector3f(0.0,0.0,0.0);
-            thrust_sp = Eigen::Vector3d(0.0,0.0,0.0);
+            throttle_sp = Eigen::Vector3d(0.0,0.0,0.0);
         }
 
         //Quadrotor Parameter
         float Quad_MASS;
-        float throttle_a;
-        float throttle_b;
 
         //PID parameter for the control law
         Eigen::Vector3f Kp;
@@ -77,8 +71,6 @@ class pos_controller_PID
         Eigen::Vector3f pos_error_max;
         Eigen::Vector3f vel_error_max;
         Eigen::Vector3f int_max;
-        float THR_MIN;
-        float THR_MAX;
         float tilt_max;
         float int_start_error;
 
@@ -86,7 +78,7 @@ class pos_controller_PID
         Eigen::Vector3f integral;
 
         //输出
-        Eigen::Vector3d thrust_sp;
+        Eigen::Vector3d throttle_sp;
 
         //Printf the PID parameter
         void printf_param();
@@ -107,7 +99,7 @@ Eigen::Vector3d pos_controller_PID::pos_controller(
     px4_command::TrajectoryPoint _Reference_State, float dt)
 {
     Eigen::Vector3d accel_sp;
-    Eigen::Vector3d thrust_sp;
+    Eigen::Vector3d throttle_sp;
 
     // 计算误差项
     Eigen::Vector3f pos_error = px4_command_utils::cal_pos_error(_DroneState, _Reference_State);
@@ -154,36 +146,11 @@ Eigen::Vector3d pos_controller_PID::pos_controller(
         }
     }
 
-    // cout << "ff [X Y Z] : " << _Reference_State.acceleration_ref[0] << " [m/s] "<< _Reference_State.acceleration_ref[1]<<" [m/s] "<<_Reference_State.acceleration_ref[2]<<" [m/s] "<<endl;
- 
-
-    // cout << "Vel_P_output [X Y Z] : " << Kp[0] * pos_error[0] << " [m/s] "<< Kp[1] * pos_error[1]<<" [m/s] "<<Kp[2] * pos_error[2]<<" [m/s] "<<endl;
-
-    // cout << "Vel_I_output [X Y Z] : " << integral[0] << " [m/s] "<< integral[1]<<" [m/s] "<<integral[2]<<" [m/s] "<<endl;
-
-    // cout << "Vel_D_output [X Y Z] : " << Kd[0] * vel_error[0] << " [m/s] "<< Kd[1] * vel_error[1]<<" [m/s] "<<Kd[2] * vel_error[2]<<" [m/s] "<<endl;
-
-
     // 期望推力 = 期望加速度 × 质量
     // 归一化推力 ： 根据电机模型，反解出归一化推力
-    for (int i=0; i<3; i++)
-    {
-        thrust_sp[i] = (accel_sp[i] * Quad_MASS - throttle_b) / throttle_a;
-    }
+    throttle_sp = px4_command_utils::accelToThrottle(accel_sp, Quad_MASS, tilt_max);
 
-    // 推力限幅，根据最大倾斜角及最大油门
-    // Get maximum allowed thrust in XY based on tilt angle and excess thrust.
-    float thrust_max_XY_tilt = fabs(thrust_sp[2]) * tanf(tilt_max/180.0*M_PI);
-    float thrust_max_XY = sqrtf(THR_MAX * THR_MAX - pow(thrust_sp[2],2));
-    thrust_max_XY = min(thrust_max_XY_tilt, thrust_max_XY);
-
-    if ((pow(thrust_sp[0],2) + pow(thrust_sp[1],2)) > thrust_max_XY * thrust_max_XY) {
-        float mag = sqrtf((pow(thrust_sp[0],2) + pow(thrust_sp[1],2)));
-        thrust_sp[0] = thrust_sp[0] / mag * thrust_max_XY;
-        thrust_sp[1] = thrust_sp[1] / mag * thrust_max_XY;
-    }
-
-    return thrust_sp;
+    return throttle_sp;
 }
 
 void pos_controller_PID::printf_result()
@@ -201,7 +168,7 @@ void pos_controller_PID::printf_result()
 
     cout<<setprecision(2);
 
-    cout << "thrust_sp    [X Y Z] : " << thrust_sp[0] << " [m/s^2] "<< thrust_sp[1]<<" [m/s^2] "<<thrust_sp[2]<<" [m/s^2] "<<endl;
+    cout << "throttle_sp    [X Y Z] : " << throttle_sp[0] << " [m/s^2] "<< throttle_sp[1]<<" [m/s^2] "<<throttle_sp[2]<<" [m/s^2] "<<endl;
 
 }
 
@@ -211,8 +178,6 @@ void pos_controller_PID::printf_param()
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>PID Parameter <<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
     cout <<"Quad_MASS : "<< Quad_MASS << endl;
-    cout <<"throttle_a : "<< throttle_a << endl;
-    cout <<"throttle_b : "<< throttle_b << endl;
 
     cout <<"Kp_x : "<< Kp[0] << endl;
     cout <<"Kp_y : "<< Kp[1] << endl;
@@ -233,8 +198,6 @@ void pos_controller_PID::printf_param()
     cout <<"vz_error_max :  "<< vel_error_max[2] << endl;
     cout <<"pxy_int_max : "<< int_max[0] << endl;
     cout <<"pz_int_max : "<< int_max[2] << endl;
-    cout <<"THR_MIN : "<< THR_MIN << endl;
-    cout <<"THR_MAX : "<< THR_MAX << endl;
     cout <<"tilt_max : "<< tilt_max << endl;
     cout <<"int_start_error : "<< int_start_error << endl;
 

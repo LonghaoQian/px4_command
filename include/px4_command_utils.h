@@ -10,6 +10,7 @@
 
 #include <Eigen/Eigen>
 #include <math.h>
+#include <math_utils.h>
 #include <command_to_mavros.h>
 
 #include <px4_command/ControlCommand.h>
@@ -21,6 +22,16 @@
 using namespace std;
 
 #define NUM_POINT 2
+#define NUM_MOTOR 4
+
+#define MOTOR_P1 -0.00069
+#define MOTOR_P2 0.01271
+#define MOTOR_P3 -0.07948
+#define MOTOR_P4 0.3052
+#define MOTOR_P5 0.008775
+
+#define thrust_max_single_motor 6.0
+
 
 namespace px4_command_utils 
 {
@@ -154,7 +165,7 @@ void prinft_attitude_reference(px4_command::AttitudeReference _AttitudeReference
     // 强制显示符号
     cout.setf(ios::showpos);
 
-    cout << "thrust_sp  [ 0-1 ] : " << _AttitudeReference.thrust_sp[0] << " [m/s^2] "<< _AttitudeReference.thrust_sp[1]<<" [m/s^2] "<<_AttitudeReference.thrust_sp[2]<<" [m/s^2] "<<endl;
+    cout << "thrust_sp  [ 0-1 ] : " << _AttitudeReference.throttle_sp[0] << " [m/s^2] "<< _AttitudeReference.throttle_sp[1]<<" [m/s^2] "<<_AttitudeReference.throttle_sp[2]<<" [m/s^2] "<<endl;
     cout << "Attitude_sp[R P Y] : " << _AttitudeReference.desired_attitude[0] * 180/M_PI <<" [deg]  "<<_AttitudeReference.desired_attitude[1] * 180/M_PI << " [deg]  "<< _AttitudeReference.desired_attitude[2] * 180/M_PI<<" [deg] "<<endl;
     cout << "Throttle_sp[ 0-1 ] : " << _AttitudeReference.desired_throttle <<endl;
 }
@@ -217,6 +228,37 @@ Eigen::Vector3f cal_vel_error(px4_command::DroneState _DroneState, px4_command::
     }
 
     return vel_error;
+}
+
+Eigen::Vector3d accelToThrottle(Eigen::Vector3d accel_sp, float mass, float tilt_max)
+{
+    Eigen::Vector3d thrust_sp;
+    Eigen::Vector3d throttle_sp;
+
+    //除以电机个数得到单个电机的期望推力
+    thrust_sp = mass * accel_sp / NUM_MOTOR;
+
+    // 推力限幅，根据最大倾斜角及最大油门
+    float thrust_max_XY_tilt = fabs(thrust_sp[2]) * tanf(tilt_max/180.0*M_PI);
+    float thrust_max_XY = sqrtf(thrust_max_single_motor * thrust_max_single_motor - pow(thrust_sp[2],2));
+    thrust_max_XY = min(thrust_max_XY_tilt, thrust_max_XY);
+
+    if ((pow(thrust_sp[0],2) + pow(thrust_sp[1],2)) > pow(thrust_max_XY,2)) 
+    {
+        float mag = sqrtf((pow(thrust_sp[0],2) + pow(thrust_sp[1],2)));
+        thrust_sp[0] = thrust_sp[0] / mag * thrust_max_XY;
+        thrust_sp[1] = thrust_sp[1] / mag * thrust_max_XY;
+    }
+    
+    //电机模型，可通过辨识得到，推力-油门曲线
+    for (int i=0; i<3; i++)
+    {
+        throttle_sp[i] = MOTOR_P1 * pow(thrust_sp[i],4) + MOTOR_P2 * pow(thrust_sp[i],3) + MOTOR_P3 * pow(thrust_sp[i],2) + MOTOR_P4 * thrust_sp[i] + MOTOR_P5;
+        // PX4内部默认假设 0.5油门为悬停推力 ， 在无人机重量为1kg时，直接除20得到0.5
+        // throttle_sp[i] = thrust_sp[i]/20；
+    }
+
+    return throttle_sp;
 }
 
 

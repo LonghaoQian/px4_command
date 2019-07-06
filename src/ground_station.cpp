@@ -219,7 +219,7 @@ void printf_info()
     cout << "Euler_fcu    [Yaw] : " << _DroneState.attitude[2] * 180/M_PI<<" [deg] "<<endl;
 
 
-    cout << "Accel_sp   [ 0-1 ] : " << _AttitudeReference.thrust_sp[0] << " [m/s^2] "<< _AttitudeReference.thrust_sp[1]<<" [m/s^2] "<<_AttitudeReference.thrust_sp[2]<<" [m/s^2] "<<endl;
+    cout << "Accel_sp   [ 0-1 ] : " << _AttitudeReference.throttle_sp[0] << " [m/s^2] "<< _AttitudeReference.throttle_sp[1]<<" [m/s^2] "<<_AttitudeReference.throttle_sp[2]<<" [m/s^2] "<<endl;
     cout << "Attitude_sp[R P Y] : " << _AttitudeReference.desired_attitude[0] * 180/M_PI <<" [deg]  "<<_AttitudeReference.desired_attitude[1] * 180/M_PI << " [deg]  "<< _AttitudeReference.desired_attitude[2] * 180/M_PI<<" [deg] "<<endl;
     cout << "Att_target [R P Y] : " << euler_fcu_target[0] * 180/M_PI <<" [deg]  "<<euler_fcu_target[1] * 180/M_PI << " [deg]  "<< euler_fcu_target[2] * 180/M_PI<<" [deg]  "<<endl;
     

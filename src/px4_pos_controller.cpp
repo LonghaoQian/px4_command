@@ -46,7 +46,7 @@ px4_command::ControlCommand Command_to_gs;
 px4_command::DroneState _DroneState;                         //无人机状态量
 
 px4_command::AttitudeReference _AttitudeReference;           //位置控制器输出，即姿态环参考量
-Eigen::Vector3d accel_sp;
+Eigen::Vector3d throttle_sp;
 
 float Takeoff_height;                                       //起飞高度
 float Disarm_height;                                        //自动上锁高度
@@ -266,30 +266,30 @@ int main(int argc, char **argv)
 
             if(switch_ude == 0)
             {
-                accel_sp = pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 1)
             {
-                accel_sp = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 2)
             {
-                accel_sp = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 3)
             {
-                accel_sp = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 4)
             {
-                accel_sp = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }
             
-            _AttitudeReference = px4_command_utils::thrustToAttitude(accel_sp, Command_to_gs.Reference_State.yaw_ref);
+            _AttitudeReference = px4_command_utils::thrustToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
 
-            _AttitudeReference.thrust_sp[0] = accel_sp[0];
-            _AttitudeReference.thrust_sp[1] = accel_sp[1];
-            _AttitudeReference.thrust_sp[2] = accel_sp[2];
+            _AttitudeReference.throttle_sp[0] = throttle_sp[0];
+            _AttitudeReference.throttle_sp[1] = throttle_sp[1];
+            _AttitudeReference.throttle_sp[2] = throttle_sp[2];
 
             if(Use_accel > 0.5)
             {
-                _command_to_mavros.send_accel_setpoint(accel_sp,Command_to_gs.Reference_State.yaw_ref);
+                _command_to_mavros.send_accel_setpoint(throttle_sp,Command_to_gs.Reference_State.yaw_ref);
             }else
             {
                 _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
@@ -303,30 +303,30 @@ int main(int argc, char **argv)
 
             if(switch_ude == 0)
             {
-                accel_sp = pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 1)
             {
-                accel_sp = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 2)
             {
-                accel_sp = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 3)
             {
-                accel_sp = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 4)
             {
-                accel_sp = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }
 
-            _AttitudeReference = px4_command_utils::thrustToAttitude(accel_sp, Command_to_gs.Reference_State.yaw_ref);
+            _AttitudeReference = px4_command_utils::thrustToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
 
-            _AttitudeReference.thrust_sp[0] = accel_sp[0];
-            _AttitudeReference.thrust_sp[1] = accel_sp[1];
-            _AttitudeReference.thrust_sp[2] = accel_sp[2];
+            _AttitudeReference.throttle_sp[0] = throttle_sp[0];
+            _AttitudeReference.throttle_sp[1] = throttle_sp[1];
+            _AttitudeReference.throttle_sp[2] = throttle_sp[2];
 
             if(Use_accel > 0.5)
             {
-                _command_to_mavros.send_accel_setpoint(accel_sp,Command_to_gs.Reference_State.yaw_ref);
+                _command_to_mavros.send_accel_setpoint(throttle_sp,Command_to_gs.Reference_State.yaw_ref);
             }else
             {
                 _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
@@ -392,30 +392,30 @@ int main(int argc, char **argv)
 
             if(switch_ude == 0)
             {
-                accel_sp = pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 1)
             {
-                accel_sp = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 2)
             {
-                accel_sp = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 3)
             {
-                accel_sp = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 4)
             {
-                accel_sp = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }
-            _AttitudeReference = px4_command_utils::thrustToAttitude(accel_sp, Command_to_gs.Reference_State.yaw_ref);
+            _AttitudeReference = px4_command_utils::thrustToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
 
-            _AttitudeReference.thrust_sp[0] = accel_sp[0];
-            _AttitudeReference.thrust_sp[1] = accel_sp[1];
-            _AttitudeReference.thrust_sp[2] = accel_sp[2];
+            _AttitudeReference.throttle_sp[0] = throttle_sp[0];
+            _AttitudeReference.throttle_sp[1] = throttle_sp[1];
+            _AttitudeReference.throttle_sp[2] = throttle_sp[2];
 
 
             if(Use_accel > 0.5)
             {
-                _command_to_mavros.send_accel_setpoint(accel_sp,Command_to_gs.Reference_State.yaw_ref);
+                _command_to_mavros.send_accel_setpoint(throttle_sp,Command_to_gs.Reference_State.yaw_ref);
             }else
             {
                 _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
@@ -444,29 +444,29 @@ int main(int argc, char **argv)
 
             if(switch_ude == 0)
             {
-                accel_sp = pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 1)
             {
-                accel_sp = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 2)
             {
-                accel_sp = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 3)
             {
-                accel_sp = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 4)
             {
-                accel_sp = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }
-            _AttitudeReference = px4_command_utils::thrustToAttitude(accel_sp, Command_to_gs.Reference_State.yaw_ref);
+            _AttitudeReference = px4_command_utils::thrustToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
 
-            _AttitudeReference.thrust_sp[0] = accel_sp[0];
-            _AttitudeReference.thrust_sp[1] = accel_sp[1];
-            _AttitudeReference.thrust_sp[2] = accel_sp[2];
+            _AttitudeReference.throttle_sp[0] = throttle_sp[0];
+            _AttitudeReference.throttle_sp[1] = throttle_sp[1];
+            _AttitudeReference.throttle_sp[2] = throttle_sp[2];
 
             if(Use_accel > 0.5)
             {
-                _command_to_mavros.send_accel_setpoint(accel_sp,Command_to_gs.Reference_State.yaw_ref);
+                _command_to_mavros.send_accel_setpoint(throttle_sp,Command_to_gs.Reference_State.yaw_ref);
             }else
             {
                 _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
@@ -516,30 +516,30 @@ int main(int argc, char **argv)
             {
                 if(switch_ude == 0)
                 {
-                    accel_sp = pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                    throttle_sp = pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
                 }else if(switch_ude == 1)
                 {
-                    accel_sp = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                    throttle_sp = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
                 }else if(switch_ude == 2)
                 {
-                    accel_sp = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                    throttle_sp = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
                 }else if(switch_ude == 3)
                 {
-                    accel_sp = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                    throttle_sp = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
                 }else if(switch_ude == 4)
                 {
-                    accel_sp = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                    throttle_sp = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
                 }
 
-                _AttitudeReference = px4_command_utils::thrustToAttitude(accel_sp, Command_to_gs.Reference_State.yaw_ref);
+                _AttitudeReference = px4_command_utils::thrustToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
 
-                _AttitudeReference.thrust_sp[0] = accel_sp[0];
-                _AttitudeReference.thrust_sp[1] = accel_sp[1];
-                _AttitudeReference.thrust_sp[2] = accel_sp[2];
+                _AttitudeReference.throttle_sp[0] = throttle_sp[0];
+                _AttitudeReference.throttle_sp[1] = throttle_sp[1];
+                _AttitudeReference.throttle_sp[2] = throttle_sp[2];
 
                 if(Use_accel > 0.5)
                 {
-                    _command_to_mavros.send_accel_setpoint(accel_sp,Command_to_gs.Reference_State.yaw_ref);
+                    _command_to_mavros.send_accel_setpoint(throttle_sp,Command_to_gs.Reference_State.yaw_ref);
                 }else
                 {
                     _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
@@ -595,30 +595,30 @@ int main(int argc, char **argv)
 
             if(switch_ude == 0)
             {
-                accel_sp = pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 1)
             {
-                accel_sp = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 2)
             {
-                accel_sp = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 3)
             {
-                accel_sp = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }else if(switch_ude == 4)
             {
-                accel_sp = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                throttle_sp = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }
 
-            _AttitudeReference = px4_command_utils::thrustToAttitude(accel_sp, Command_to_gs.Reference_State.yaw_ref);
+            _AttitudeReference = px4_command_utils::thrustToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
 
-            _AttitudeReference.thrust_sp[0] = accel_sp[0];
-            _AttitudeReference.thrust_sp[1] = accel_sp[1];
-            _AttitudeReference.thrust_sp[2] = accel_sp[2];
+            _AttitudeReference.throttle_sp[0] = throttle_sp[0];
+            _AttitudeReference.throttle_sp[1] = throttle_sp[1];
+            _AttitudeReference.throttle_sp[2] = throttle_sp[2];
 
             if(Use_accel > 0.5)
             {
-                _command_to_mavros.send_accel_setpoint(accel_sp,Command_to_gs.Reference_State.yaw_ref);
+                _command_to_mavros.send_accel_setpoint(throttle_sp,Command_to_gs.Reference_State.yaw_ref);
             }else
             {
                 _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            

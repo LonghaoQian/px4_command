@@ -41,8 +41,6 @@ class pos_controller_UDE
             pos_UDE_nh("~")
         {
             pos_UDE_nh.param<float>("Quad/mass", Quad_MASS, 1.0);
-            pos_UDE_nh.param<float>("Quad/throttle_a", throttle_a, 20.0);
-            pos_UDE_nh.param<float>("Quad/throttle_b", throttle_b, 0.0);
 
             pos_UDE_nh.param<float>("Pos_ude/Kp_xy", Kp[0], 1.0);
             pos_UDE_nh.param<float>("Pos_ude/Kp_xy", Kp[1], 1.0);
@@ -63,21 +61,18 @@ class pos_controller_UDE
             pos_UDE_nh.param<float>("Limit/pxy_int_max"  , int_max[0], 0.5);
             pos_UDE_nh.param<float>("Limit/pxy_int_max"  , int_max[1], 0.5);
             pos_UDE_nh.param<float>("Limit/pz_int_max"   , int_max[2], 0.5);
-            pos_UDE_nh.param<float>("Limit/THR_MIN", THR_MIN, 0.1);
-            pos_UDE_nh.param<float>("Limit/THR_MAX", THR_MAX, 0.9);
             pos_UDE_nh.param<float>("Limit/tilt_max", tilt_max, 20.0);
             pos_UDE_nh.param<float>("Limit/int_start_error"  , int_start_error, 0.3);  
 
             u_l      = Eigen::Vector3f(0.0,0.0,0.0);
             u_d      = Eigen::Vector3f(0.0,0.0,0.0);
             integral = Eigen::Vector3f(0.0,0.0,0.0);
-            thrust_sp = Eigen::Vector3d(0.0,0.0,0.0);
+            throttle_sp = Eigen::Vector3d(0.0,0.0,0.0);
         }
 
         //Quadrotor Parameter
         float Quad_MASS;
-        float throttle_a;
-        float throttle_b;
+
 
         //UDE control parameter
         Eigen::Vector3f Kp;
@@ -88,8 +83,7 @@ class pos_controller_UDE
         Eigen::Vector3f pos_error_max;
         Eigen::Vector3f vel_error_max;
         Eigen::Vector3f int_max;
-        float THR_MIN;
-        float THR_MAX;
+
         float tilt_max;
         float int_start_error;
 
@@ -98,7 +92,7 @@ class pos_controller_UDE
 
         Eigen::Vector3f integral;
 
-        Eigen::Vector3d thrust_sp;
+        Eigen::Vector3d throttle_sp;
 
         //Printf the UDE parameter
         void printf_param();
@@ -121,7 +115,7 @@ Eigen::Vector3d pos_controller_UDE::pos_controller(
     px4_command::TrajectoryPoint _Reference_State, float dt)
 {
     Eigen::Vector3d accel_sp;
-    Eigen::Vector3d thrust_sp;
+    Eigen::Vector3d throttle_sp;
 
     // 计算误差项
     Eigen::Vector3f pos_error = px4_command_utils::cal_pos_error(_DroneState, _Reference_State);
@@ -173,24 +167,9 @@ Eigen::Vector3d pos_controller_UDE::pos_controller(
 
     // 期望推力 = 期望加速度 × 质量
     // 归一化推力 ： 根据电机模型，反解出归一化推力
-    for (int i=0; i<3; i++)
-    {
-        thrust_sp[i] = (accel_sp[i] * Quad_MASS - throttle_b) / throttle_a;
-    }
+    throttle_sp = px4_command_utils::accelToThrottle(accel_sp, Quad_MASS, tilt_max);
 
-    // 推力限幅，根据最大倾斜角及最大油门
-    // Get maximum allowed thrust in XY based on tilt angle and excess thrust.
-    float thrust_max_XY_tilt = fabs(thrust_sp[2]) * tanf(tilt_max/180.0*M_PI);
-    float thrust_max_XY = sqrtf(THR_MAX * THR_MAX - pow(thrust_sp[2],2));
-    thrust_max_XY = min(thrust_max_XY_tilt, thrust_max_XY);
-
-    if ((pow(thrust_sp[0],2) + pow(thrust_sp[1],2)) > thrust_max_XY * thrust_max_XY) {
-        float mag = sqrtf((pow(thrust_sp[0],2) + pow(thrust_sp[1],2)));
-        thrust_sp[0] = thrust_sp[0] / mag * thrust_max_XY;
-        thrust_sp[1] = thrust_sp[1] / mag * thrust_max_XY;
-    }
-
-    return thrust_sp;
+    return throttle_sp;
 }
 
 void pos_controller_UDE::printf_result()
@@ -212,7 +191,7 @@ void pos_controller_UDE::printf_result()
     cout << "int [X Y Z] : " << integral[0] << " [N] "<< integral[1]<<" [N] "<<integral[2]<<" [N] "<<endl;
     cout << "u_d [X Y Z] : " << u_d[0] << " [N] "<< u_d[1]<<" [N] "<<u_d[2]<<" [N] "<<endl;
 
-    cout << "thrust_sp    [X Y Z] : " << thrust_sp[0] << " [m/s^2] "<< thrust_sp[1]<<" [m/s^2] "<<thrust_sp[2]<<" [m/s^2] "<<endl;
+    cout << "throttle_sp    [X Y Z] : " << throttle_sp[0] << " [m/s^2] "<< throttle_sp[1]<<" [m/s^2] "<<throttle_sp[2]<<" [m/s^2] "<<endl;
 
 }
 
@@ -221,8 +200,7 @@ void pos_controller_UDE::printf_param()
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>UDE Parameter <<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
     cout <<"Quad_MASS : "<< Quad_MASS << endl;
-    cout <<"throttle_a : "<< throttle_a << endl;
-    cout <<"throttle_b : "<< throttle_b << endl;
+
 
     cout <<"Kp_x : "<< Kp[0] << endl;
     cout <<"Kp_y : "<< Kp[1] << endl;
@@ -243,8 +221,6 @@ void pos_controller_UDE::printf_param()
     cout <<"vz_error_max :  "<< vel_error_max[2] << endl;
     cout <<"pxy_int_max : "<< int_max[0] << endl;
     cout <<"pz_int_max : "<< int_max[2] << endl;
-    cout <<"THR_MIN : "<< THR_MIN << endl;
-    cout <<"THR_MAX : "<< THR_MAX << endl;
     cout <<"tilt_max : "<< tilt_max << endl;
     cout <<"int_start_error : "<< int_start_error << endl;
 
