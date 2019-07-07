@@ -35,11 +35,11 @@ add_message_files(
   DIRECTORY msg
   FILES
   ControlCommand.msg
-  data_log.msg
   TrajectoryPoint.msg
   Trajectory.msg
   AttitudeReference.msg
   DroneState.msg
+  Topic_for_log.msg
 )
 
 ## Generate added messages and services with any dependencies listed here
@@ -158,13 +158,6 @@ add_executable(eigen_test
 )
 add_dependencies(eigen_test px4_command_gencpp)
 target_link_libraries(eigen_test
-  ${catkin_LIBRARIES}
-)
-add_executable(Data_log
-  src/Utilities/Data_log.cpp
-)
-add_dependencies(Data_log px4_command_gencpp)
-target_link_libraries(Data_log
   ${catkin_LIBRARIES}
 )
 

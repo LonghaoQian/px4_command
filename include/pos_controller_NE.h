@@ -19,7 +19,7 @@
 #include <LowPassFilter.h>
 #include <HighPassFilter.h>
 #include <LeadLagFilter.h>
-#include <px4_command/data_log.h>
+
 
 #include <px4_command/DroneState.h>
 #include <px4_command/TrajectoryPoint.h>

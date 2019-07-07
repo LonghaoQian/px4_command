@@ -14,7 +14,6 @@
 #include <math.h>
 #include <command_to_mavros.h>
 #include <px4_command_utils.h>
-#include <px4_command/data_log.h>
 #include <px4_command/DroneState.h>
 #include <px4_command/TrajectoryPoint.h>
 #include <px4_command/AttitudeReference.h>

@@ -35,6 +35,7 @@
 #include <px4_command/TrajectoryPoint.h>
 #include <px4_command/AttitudeReference.h>
 #include <px4_command/Trajectory.h>
+#include <px4_command/Topic_for_log.h>
 
 using namespace std;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>变量声明<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -47,6 +48,8 @@ px4_command::DroneState _DroneState;                         //无人机状态�
 
 px4_command::AttitudeReference _AttitudeReference;           //位置控制器输出，即姿态环参考量
 Eigen::Vector3d throttle_sp;
+
+px4_command::Topic_for_log _Topic_for_log;
 
 float Takeoff_height;                                       //起飞高度
 float Disarm_height;                                        //自动上锁高度
@@ -93,10 +96,7 @@ int main(int argc, char **argv)
     ros::Subscriber optitrack_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/UAV/pose", 100, optitrack_cb);
 
     // 发布位置控制输出
-    ros::Publisher att_ref_pub = nh.advertise<px4_command::AttitudeReference>("/px4_command/attitude_reference", 10);
-
-    // 发布至地面站节点
-    ros::Publisher to_gs_pub = nh.advertise<px4_command::ControlCommand>("/px4_command/control_command_to_gs", 10);
+    ros::Publisher log_pub = nh.advertise<px4_command::Topic_for_log>("/px4_command/topic_for_log", 10);
 
     // 参数读取
     nh.param<float>("Takeoff_height", Takeoff_height, 1.0);
@@ -663,9 +663,21 @@ int main(int argc, char **argv)
             px4_command_utils::prinft_attitude_reference(_AttitudeReference);
         }
 
-        att_ref_pub.publish(_AttitudeReference);
+        // For log
+        if(time_trajectory == 0)
+        {
+            _Topic_for_log.time = -1.0;
+        }
+        else
+        {
+            _Topic_for_log.time = time_trajectory;
+        }
+        
+        _Topic_for_log.Drone_State = _DroneState;
+        _Topic_for_log.Control_Command = Command_to_gs;
+        _Topic_for_log.Attitude_Reference = _AttitudeReference;
 
-        to_gs_pub.publish(Command_to_gs);
+        log_pub.publish(_Topic_for_log);
 
         Command_Last = Command_Now;
 

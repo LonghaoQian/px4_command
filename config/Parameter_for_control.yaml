@@ -1,6 +1,6 @@
 ## 飞机参数
 Quad:
-  mass: 0.8
+  mass: 1.2
 
 ##geo fence for fsc
 geo_fence:
@@ -48,8 +48,6 @@ Pos_cascade_pid:
    Kd_vz : 0.01
    Hover_throttle : 0.4
    MPC_VELD_LP: 5.0
-
-
 
 # 位置环参数 - normal pid
 Pos_pid:
