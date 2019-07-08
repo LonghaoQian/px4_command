@@ -73,15 +73,25 @@ void Command_cb(const px4_command::ControlCommand::ConstPtr& msg)
 {
     Command_Now = *msg;
 }
+
+
 void optitrack_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
     //位置 -- optitrack系 到 ENU系
-    int optitrack_frame = 1; //Frame convention 0: Z-up -- 1: Y-up
-    // Read the Drone Position from the Vrpn Package [Frame: Vicon]  (Vicon to ENU frame)
-    Eigen::Vector3d pos_drone_mocap_enu(-msg->pose.position.x,msg->pose.position.z,msg->pose.position.y);
+    int optitrack_frame = 0; //Frame convention 0: Z-up -- 1: Y-up
 
-    pos_drone_mocap = pos_drone_mocap_enu;
+    if(optitrack_frame == 0)
+    {
+        // Read the Drone Position from the Vrpn Package [Frame: Vicon]  (Vicon to ENU frame)
+        pos_drone_mocap = Eigen::Vector3d(msg->pose.position.x,msg->pose.position.y,msg->pose.position.z);
+    }
+    else
+    {
+        // Read the Drone Position from the Vrpn Package [Frame: Vicon]  (Vicon to ENU frame)
+        pos_drone_mocap = Eigen::Vector3d(-msg->pose.position.x,msg->pose.position.z,msg->pose.position.y);
+    }
 }
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
 {
