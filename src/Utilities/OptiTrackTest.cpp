@@ -25,7 +25,7 @@ int main(int argc, char **argv)
         23 - 31 Rigidbody1 Rotation matrix R_IB from OptiFeedback
      */
     // Initialize OptiTrack System
-    OptiTrackFeedBackRigidBody Opti_RigidBody1("/vrpn_client_node/Test/pose",n,3,3);
+    OptiTrackFeedBackRigidBody Opti_RigidBody1("/vrpn_client_node/UAV/pose",n,3,3);
     OptiTrackFeedBackRigidBody Opti_RigidBody2("/vrpn_client_node/RigidBody2/pose",n,3,3);
     KeyboardEvent keyboardcontrol;
     rigidbody_state RigidBody1state;
