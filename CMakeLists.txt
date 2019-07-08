@@ -144,14 +144,21 @@ target_link_libraries(move
   ${catkin_LIBRARIES}
 )
 
+add_library(OptiTrackFeedbackRigidBody src/lib/OptiTrackFeedBackRigidBody.cpp)
+add_library(KeyboardEvent src/lib/KeyboardEvent.cpp)
+
+add_executable(OptiTrackTest src/Utilities/OptiTrackTest.cpp)
+add_dependencies(OptiTrackTest px4_command_gencpp)
+target_link_libraries(OptiTrackTest ${catkin_LIBRARIES})
+target_link_libraries(OptiTrackTest OptiTrackFeedbackRigidBody)
+target_link_libraries(OptiTrackTest KeyboardEvent)
+
+
+
 ##
-add_executable(set_mode
-  src/Utilities/set_mode.cpp
-)
+add_executable(set_mode src/Utilities/set_mode.cpp)
 add_dependencies(set_mode px4_command_gencpp)
-target_link_libraries(set_mode
-  ${catkin_LIBRARIES}
-)
+target_link_libraries(set_mode ${catkin_LIBRARIES})
 
 add_executable(eigen_test
   src/Utilities/eigen_test.cpp
@@ -160,6 +167,12 @@ add_dependencies(eigen_test px4_command_gencpp)
 target_link_libraries(eigen_test
   ${catkin_LIBRARIES}
 )
+
+
+
+
+
+
 
 ###### Application File ##########
 add_executable(square
