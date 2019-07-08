@@ -42,7 +42,7 @@ int main(int argc, char **argv)
             // input
             case 0:
                 cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>--------<<<<<<<<<<<<<<<<<<<<<<<<<<< "<< endl;
-                cout << "Input the flag:  0 for Move_ENU，1 for Move_Body，2 for Land,3 for Disarm ,4 for Hold, 5 for Failsafe Land, 6 for Idle,7 for Takeoff to default height, 8 for trajectory tracking"<<endl;
+                cout << "Input the flag:  0 for Move_ENU，1 for Move_Body，2 for Land,3 for Disarm ,4 for Hold, 5 for PPN Land, 6 for Idle,7 for Takeoff to default height, 8 for trajectory tracking"<<endl;
                 cin >> flag_1;
 
                 if (flag_1 == 2)
@@ -60,12 +60,6 @@ int main(int argc, char **argv)
                 if (flag_1 == 4)
                 {
                     Num_StateMachine = 5;
-                    break;
-                }
-
-                if (flag_1 == 5)
-                {
-                    Num_StateMachine = 6;
                     break;
                 }
 
@@ -96,6 +90,11 @@ int main(int argc, char **argv)
                 else if(flag_1 == 0)
                 {
                     Num_StateMachine = 3;
+                }
+
+                if (flag_1 == 5)
+                {
+                    Num_StateMachine = 6;
                 }
 
                 cout << "Input the sub_mode:  # 0 for xy/z position control; 3 for xy/z velocity control"<<endl;
@@ -163,10 +162,11 @@ int main(int argc, char **argv)
             Num_StateMachine = 0;
             break;
 
-        //Failsafe_Land
+        //PPN_land
         case 6:
             Command_Now.header.stamp = ros::Time::now();
-            Command_Now.Mode = command_to_mavros::Failsafe_land;
+            Command_Now.Mode = command_to_mavros::PPN_land;
+            generate_com(sub_mode, state_desired);
             move_pub.publish(Command_Now);
             Num_StateMachine = 0;
             break;

@@ -96,7 +96,7 @@ class command_to_mavros
         Hold,
         Land,
         Disarm,
-        Failsafe_land,
+        PPN_land,
         Trajectory_Tracking,
     };
 

@@ -36,6 +36,10 @@ Use_accel : 1.0
 ## 1 for printf the state, 0 for block
 Flag_printf : 1.0
 
+ppn_kx : 0.5
+ppn_ky : 0.5
+ppn_kz : 0.1
+
 # 位置环参数 - cascade pid
 Pos_cascade_pid:
    Kp_xy : 0.95

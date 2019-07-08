@@ -305,7 +305,7 @@ int main(int argc, char **argv)
 
             break;
 
-        case command_to_mavros::Failsafe_land:
+        case command_to_mavros::PPN_land:
 
             break;
 
@@ -350,8 +350,8 @@ void prinft_command_state()
     case command_to_mavros::Disarm:
         cout << "Command: [ Disarm ] " <<endl;
         break;
-    case command_to_mavros::Failsafe_land:
-        cout << "Command: [ Failsafe_land ] " <<endl;
+    case command_to_mavros::PPN_land:
+        cout << "Command: [ PPN_land ] " <<endl;
         break;
     case command_to_mavros::Idle:
         cout << "Command: [ Idle ] " <<endl;

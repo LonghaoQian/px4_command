@@ -93,8 +93,10 @@ void printf_command_control(px4_command::ControlCommand _ControlCommand)
             cout << "Command: [ Disarm ] " <<endl;
             break;
 
-        case command_to_mavros::Failsafe_land:
-            cout << "Command: [ Failsafe_land ] " <<endl;
+        case command_to_mavros::PPN_land:
+            cout << "Command: [ PPN_land ] " <<endl;
+            cout << "Position_Ref [X Y Z] : " << _ControlCommand.Reference_State.position_ref[0] << " [ m ] "<< _ControlCommand.Reference_State.position_ref[1]<<" [ m ] "<< _ControlCommand.Reference_State.position_ref[2]<<" [ m ] "<<endl;
+            cout << "Yaw_Ref : "  << _ControlCommand.Reference_State.yaw_ref* 180/M_PI << " [deg] " <<endl;
             break;
     }
 

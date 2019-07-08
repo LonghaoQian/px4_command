@@ -321,8 +321,8 @@ int main(int argc, char **argv)
         // 【Disarm】 紧急上锁。直接上锁，不建议使用，危险。
         case command_to_mavros::Disarm:
 
-        // 【Failsafe_land】 暂空。可进行自定义
-        case command_to_mavros::Failsafe_land:
+        // 【PPN_land】 暂空。可进行自定义
+        case command_to_mavros::PPN_land:
 
 
 
@@ -428,8 +428,8 @@ void prinft_command_state()
         cout << "Command: [ Disarm ] " <<endl;
         break;
 
-    case command_to_mavros::Failsafe_land:
-        cout << "Command: [ Failsafe_land ] " <<endl;
+    case command_to_mavros::PPN_land:
+        cout << "Command: [ PPN_land ] " <<endl;
         break;
 
     case command_to_mavros::Idle:

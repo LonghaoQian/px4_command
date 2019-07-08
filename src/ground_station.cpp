@@ -168,8 +168,8 @@ void printf_info()
         cout << "Command: [ Disarm ] " <<endl;
         break;
 
-    case command_to_mavros::Failsafe_land:
-        cout << "Command: [ Failsafe_land ] " <<endl;
+    case command_to_mavros::PPN_land:
+        cout << "Command: [ PPN_land ] " <<endl;
         break;
 
     case command_to_mavros::Idle:

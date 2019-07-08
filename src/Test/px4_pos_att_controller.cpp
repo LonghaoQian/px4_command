@@ -35,7 +35,7 @@ enum Command
     Hold,
     Land,
     Disarm,
-    Failsafe_land,
+    PPN_land,
     Idle
 };
 //Command Now [from upper node]
@@ -309,7 +309,7 @@ int main(int argc, char **argv)
             break;
 
         // 【】
-        case Failsafe_land:
+        case PPN_land:
 
 
             break;
@@ -359,8 +359,8 @@ void prinft_command_state()
     case Disarm:
         cout << "Command: [ Disarm ] " <<endl;
         break;
-    case Failsafe_land:
-        cout << "Command: [ Failsafe_land ] " <<endl;
+    case PPN_land:
+        cout << "Command: [ PPN_land ] " <<endl;
         break;
     case Idle:
         cout << "Command: [ Idle ] " <<endl;

@@ -57,6 +57,18 @@ float Use_mocap_raw;                                        // 1 for use the moc
 float Use_accel;                                            // 1 for use the accel command
 int Flag_printf;
 
+
+// For PPN landing - Silas
+Eigen::Vector3d pos_des_prev;
+
+Eigen::Vector3d vel_command;
+
+
+float ppn_kx;
+float ppn_ky;
+float ppn_kz;//0.01;
+
+
 //变量声明 - 其他变量
 //Geigraphical fence 地理围栏
 Eigen::Vector2f geo_fence_x;
@@ -114,6 +126,10 @@ int main(int argc, char **argv)
     nh.param<float>("Use_mocap_raw", Use_mocap_raw, 0.0);
     nh.param<float>("Use_accel", Use_accel, 0.0);
     nh.param<int>("Flag_printf", Flag_printf, 0.0);
+
+    nh.param<float>("ppn_kx", ppn_kx, 0.0);
+    nh.param<float>("ppn_ky", ppn_ky, 0.0);
+    nh.param<float>("ppn_kz", ppn_kz, 0.0);
     
     nh.param<float>("geo_fence/x_min", geo_fence_x[0], -100.0);
     nh.param<float>("geo_fence/x_max", geo_fence_x[1], 100.0);
@@ -563,6 +579,7 @@ int main(int argc, char **argv)
         case command_to_mavros::Disarm:
             Command_to_gs.Mode = Command_Now.Mode;
             Command_to_gs.Command_ID = Command_Now.Command_ID;
+            
             if(_DroneState.mode == "OFFBOARD")
             {
                 _command_to_mavros.mode_cmd.request.custom_mode = "MANUAL";
@@ -583,8 +600,75 @@ int main(int argc, char **argv)
 
             break;
 
-        // 【Failsafe_land】 暂空。可进行自定义
-        case command_to_mavros::Failsafe_land:
+        // 【PPN_land】 暂空。可进行自定义
+        case command_to_mavros::PPN_land:
+
+            if (Command_Last.Mode != command_to_mavros::PPN_land)
+            {
+                pos_des_prev[0] = _DroneState.position[0];
+                pos_des_prev[1] = _DroneState.position[1];
+                pos_des_prev[2] = _DroneState.position[2];
+            }
+
+            Command_to_gs.Mode = Command_Now.Mode;
+            Command_to_gs.Command_ID = Command_Now.Command_ID;
+
+            Command_to_gs.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;
+
+            vel_command[0] = ppn_kx * ( Command_Now.Reference_State.position_ref[0] - _DroneState.position[0]);
+            vel_command[1] = ppn_ky * ( Command_Now.Reference_State.position_ref[1] - _DroneState.position[1]);
+            vel_command[2] = ppn_kz * ( Command_Now.Reference_State.position_ref[2] - _DroneState.position[2]);
+
+            for (int i=0; i<3; i++)
+            {
+                Command_to_gs.Reference_State.position_ref[i] = pos_des_prev[i] + vel_command[i]*dt;
+            }
+
+            Command_to_gs.Reference_State.velocity_ref[0] = 0;
+            Command_to_gs.Reference_State.velocity_ref[1] = 0;
+            Command_to_gs.Reference_State.velocity_ref[2] = 0;
+            Command_to_gs.Reference_State.acceleration_ref[0] = 0;
+            Command_to_gs.Reference_State.acceleration_ref[1] = 0;
+            Command_to_gs.Reference_State.acceleration_ref[2] = 0;
+            Command_to_gs.Reference_State.yaw_ref = 0; //rad
+
+            for (int i=0; i<3; i++)
+            {
+                pos_des_prev[i] = Command_to_gs.Reference_State.position_ref[i];
+            }
+        
+            if(switch_ude == 0)
+            {
+                throttle_sp = pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+            }else if(switch_ude == 1)
+            {
+                throttle_sp = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+            }else if(switch_ude == 2)
+            {
+                throttle_sp = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+            }else if(switch_ude == 3)
+            {
+                throttle_sp = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+            }else if(switch_ude == 4)
+            {
+                throttle_sp = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+            }
+
+            _AttitudeReference = px4_command_utils::thrustToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
+
+            _AttitudeReference.throttle_sp[0] = throttle_sp[0];
+            _AttitudeReference.throttle_sp[1] = throttle_sp[1];
+            _AttitudeReference.throttle_sp[2] = throttle_sp[2];
+
+            if(Use_accel > 0.5)
+            {
+                _command_to_mavros.send_accel_setpoint(throttle_sp,Command_to_gs.Reference_State.yaw_ref);
+            }else
+            {
+                _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
+            }
+
+            
             break;
         
         // Trajectory_Tracking 轨迹追踪控制，与上述追踪点或者追踪速度不同，此时期望输入为一段轨迹
@@ -708,6 +792,8 @@ void printf_param()
     cout << "geo_fence_x : "<< geo_fence_x[0] << " [m]  to  "<<geo_fence_x[1] << " [m]"<< endl;
     cout << "geo_fence_y : "<< geo_fence_y[0] << " [m]  to  "<<geo_fence_y[1] << " [m]"<< endl;
     cout << "geo_fence_z : "<< geo_fence_z[0] << " [m]  to  "<<geo_fence_z[1] << " [m]"<< endl;
+    cout << "ppn_kx: "<< ppn_kx<<" [m] "<<endl;
+    
 
 }
 
