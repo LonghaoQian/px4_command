@@ -172,7 +172,7 @@ void pos_controller_UDE::pos_controller(
 
 void pos_controller_UDE::printf_result()
 {
-    cout <<">>>>>>>>>>>>>>>>>>>>PD+UDE Position Controller<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    cout <<">>>>>>>>>>>>>>>>>>>>  PD+UDE Position Controller  <<<<<<<<<<<<<<<<<<<<<" <<endl;
 
     //固定的浮点显示
     cout.setf(ios::fixed);

@@ -113,7 +113,7 @@ void Circle_Trajectory::Circle_trajectory_generation(float time_from_start, px4_
 
 void Circle_Trajectory::printf_result(px4_command::TrajectoryPoint& Circle_trajectory)
 {
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Circle_Trajectory<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>> Circle_Trajectory <<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
     //固定的浮点显示
     cout.setf(ios::fixed);

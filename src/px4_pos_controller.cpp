@@ -41,14 +41,11 @@ using namespace std;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>变量声明<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 px4_command::ControlCommand Command_Now;                      //无人机当前执行命令
 px4_command::ControlCommand Command_Last;                     //无人机上一条执行命令
-
 px4_command::ControlCommand Command_to_gs;
-
 px4_command::DroneState _DroneState;                         //无人机状态量
-
-px4_command::AttitudeReference _AttitudeReference;           //位置控制器输出，即姿态环参考量
 Eigen::Vector3d throttle_sp;
-
+px4_command::AttitudeReference _AttitudeReference;           //位置控制器输出，即姿态环参考量
+float cur_time;
 px4_command::Topic_for_log _Topic_for_log;
 
 float Takeoff_height;                                       //起飞高度
@@ -57,17 +54,12 @@ float Use_mocap_raw;                                        // 1 for use the moc
 float Use_accel;                                            // 1 for use the accel command
 int Flag_printf;
 
-
 // For PPN landing - Silas
 Eigen::Vector3d pos_des_prev;
-
 Eigen::Vector3d vel_command;
-
-
 float ppn_kx;
 float ppn_ky;
 float ppn_kz;//0.01;
-
 
 //变量声明 - 其他变量
 //Geigraphical fence 地理围栏
@@ -84,25 +76,25 @@ void printf_param();
 void Command_cb(const px4_command::ControlCommand::ConstPtr& msg)
 {
     Command_Now = *msg;
+    // 无人机一旦接受到Land指令，则会屏蔽其他指令
+    if(Command_Last.Mode == command_to_mavros::Land)
+    {
+        Command_Now.Mode = command_to_mavros::Land;
+    }
+
+    // Check for geo fence: If drone is out of the geo fence, it will land now.
+    if(check_failsafe() == 1)
+    {
+        Command_Now.Mode = command_to_mavros::Land;
+    }
 }
 
 
-void optitrack_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
+void drone_state_cb(const px4_command::DroneState::ConstPtr& msg)
 {
-    //位置 -- optitrack系 到 ENU系
-    //Frame convention 0: Z-up -- 1: Y-up (See the configuration in the motive software)
-    int optitrack_frame = 0; 
+    _DroneState = *msg;
 
-    if(optitrack_frame == 0)
-    {
-        // Read the Drone Position from the Vrpn Package [Frame: Vicon]  (Vicon to ENU frame)
-        pos_drone_mocap = Eigen::Vector3d(msg->pose.position.x,msg->pose.position.y,msg->pose.position.z);
-    }
-    else
-    {
-        // Read the Drone Position from the Vrpn Package [Frame: Vicon]  (Vicon to ENU frame)
-        pos_drone_mocap = Eigen::Vector3d(-msg->pose.position.x,msg->pose.position.z,msg->pose.position.y);
-    }
+    _DroneState.time_from_start = cur_time;
 }
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -115,8 +107,7 @@ int main(int argc, char **argv)
     // 本话题来自根据需求自定义的上层模块，比如track_land.cpp 比如move.cpp
     ros::Subscriber Command_sub = nh.subscribe<px4_command::ControlCommand>("/px4_command/control_command", 10, Command_cb);
 
-    // 订阅】来自mocap的数据 
-    ros::Subscriber optitrack_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/UAV/pose", 100, optitrack_cb);
+    ros::Subscriber drone_state_sub = nh.subscribe<px4_command::DroneState>("/px4_command/drone_state", 10, drone_state_cb);
 
     // 发布位置控制输出
     ros::Publisher log_pub = nh.advertise<px4_command::Topic_for_log>("/px4_command/topic_for_log", 10);
@@ -124,7 +115,6 @@ int main(int argc, char **argv)
     // 参数读取
     nh.param<float>("Takeoff_height", Takeoff_height, 1.0);
     nh.param<float>("Disarm_height", Disarm_height, 0.15);
-    nh.param<float>("Use_mocap_raw", Use_mocap_raw, 0.0);
     nh.param<float>("Use_accel", Use_accel, 0.0);
     nh.param<int>("Flag_printf", Flag_printf, 0.0);
 
@@ -142,8 +132,6 @@ int main(int argc, char **argv)
     // 位置控制一般选取为50Hz，主要取决于位置状态的更新频率
     ros::Rate rate(50.0);
 
-    // 用于与mavros通讯的类，通过mavros接收来至飞控的消息【飞控->mavros->本程序】
-    state_from_mavros _state_from_mavros;
     // 用于与mavros通讯的类，通过mavros发送控制指令至飞控【本程序->mavros->飞控】
     command_to_mavros _command_to_mavros;
     
@@ -200,9 +188,9 @@ int main(int argc, char **argv)
     }
 
     // Set the takeoff position
-    Takeoff_position[0] = _state_from_mavros._DroneState.position[0];
-    Takeoff_position[1] = _state_from_mavros._DroneState.position[1];
-    Takeoff_position[2] = _state_from_mavros._DroneState.position[2];
+    Takeoff_position[0] = _DroneState.position[0];
+    Takeoff_position[1] = _DroneState.position[1];
+    Takeoff_position[2] = _DroneState.position[2];
 
     // NE控制律需要设置起飞初始值
     if(switch_ude == 4)
@@ -234,39 +222,14 @@ int main(int argc, char **argv)
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主  循  环<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     while(ros::ok())
     {
-        //执行回调函数
-        ros::spinOnce();
-
         // 当前时间
-        float cur_time = px4_command_utils::get_time_in_sec(begin_time);
+        cur_time = px4_command_utils::get_time_in_sec(begin_time);
         dt = cur_time  - last_time;
         dt = constrain_function2(dt, 0.01, 0.03);
         last_time = cur_time;
 
-        // 无人机一旦接受到Land指令，则会屏蔽其他指令
-        if(Command_Last.Mode == command_to_mavros::Land)
-        {
-            Command_Now.Mode = command_to_mavros::Land;
-        }
-
-        // Check for geo fence: If drone is out of the geo fence, it will land now.
-        if(check_failsafe() == 1)
-        {
-            Command_Now.Mode = command_to_mavros::Land;
-        }
-
-        // 获取当前无人机状态
-        _DroneState = _state_from_mavros._DroneState;
-        _DroneState.header.stamp = ros::Time::now();
-        _DroneState.time_from_start = cur_time;
-
-        if (Use_mocap_raw == 1)
-        {
-            for (int i=0;i<3;i++)
-            {
-                _DroneState.position[i] = pos_drone_mocap[i];
-            }
-        }
+        //执行回调函数
+        ros::spinOnce();
 
         switch (Command_Now.Mode)
         {
@@ -730,11 +693,12 @@ int main(int argc, char **argv)
 
         if(Flag_printf == 1)
         {
-            // 打印上层控制指令
-            px4_command_utils::printf_command_control(Command_to_gs);
-
+            cout <<">>>>>>>>>>>>>>>>>>>>>> px4_pos_controller <<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
             // 打印无人机状态
             px4_command_utils::prinft_drone_state(_DroneState);
+
+            // 打印上层控制指令
+            px4_command_utils::printf_command_control(Command_to_gs);
 
             // 打印位置控制器中间计算量
             if(switch_ude == 0)

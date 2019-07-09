@@ -33,8 +33,8 @@
 
 #include <iostream>
 #include <Eigen/Eigen>
-
-
+#include <state_from_mavros.h>
+#include <OptiTrackFeedBackRigidBody.h>
 #include <math_utils.h>
 #include <Frame_tf_utils.h>
 //msg 头文件
@@ -55,11 +55,16 @@
 #include <tf2_msgs/TFMessage.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <sensor_msgs/Range.h>
-
+#include <px4_command/DroneState.h>
 
 using namespace std;
 //---------------------------------------相关参数-----------------------------------------------
 int flag_use_laser_or_vicon;                               //0:使用mocap数据作为定位数据 1:使用laser数据作为定位数据
+float Use_mocap_raw;
+int linear_window;
+int angular_window;
+
+rigidbody_state UAVstate;
 //---------------------------------------vicon定位相关------------------------------------------
 Eigen::Vector3d pos_drone_mocap;                          //无人机当前位置 (vicon)
 Eigen::Quaterniond q_mocap;
@@ -74,14 +79,16 @@ geometry_msgs::TransformStamped laser_last;
 //---------------------------------------无人机位置及速度--------------------------------------------
 Eigen::Vector3d pos_drone_fcu;                           //无人机当前位置 (来自fcu)
 Eigen::Vector3d vel_drone_fcu;                           //无人机上一时刻位置 (来自fcu)
-
-Eigen::Quaterniond q_fcu;
-Eigen::Vector3d Euler_fcu;                                          //无人机当前欧拉角(来自fcu)
+Eigen::Vector3d Att_fcu;                               //无人机当前欧拉角(来自fcu)
+Eigen::Vector3d Att_rate_fcu;
 //---------------------------------------发布相关变量--------------------------------------------
-geometry_msgs::PoseStamped vision;
+ros::Publisher vision_pub;
+ros::Publisher drone_state_pub;
+px4_command::DroneState _DroneState;  
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>函数声明<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-float get_dt(ros::Time last);                                                        //获取时间间隔
 void printf_info();                                                                       //打印函数
+void send_to_fcu();
+void publish_drone_state();
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>回调函数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void laser_cb(const tf2_msgs::TFMessage::ConstPtr& msg)
 {
@@ -160,36 +167,6 @@ void optitrack_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
 
 }
 
-void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
-{
-    // Read the Drone Position from the Mavros Package [Frame: ENU]
-    Eigen::Vector3d pos_drone_fcu_enu(msg->pose.position.x,msg->pose.position.y,msg->pose.position.z);
-
-    pos_drone_fcu = pos_drone_fcu_enu;
-}
-
-void vel_cb(const geometry_msgs::TwistStamped::ConstPtr &msg)
-{
-    // Read the Drone Velocity from the Mavros Package [Frame: ENU]
-    Eigen::Vector3d vel_drone_fcu_enu(msg->twist.linear.x,msg->twist.linear.y,msg->twist.linear.z);
-
-    vel_drone_fcu = vel_drone_fcu_enu;
-}
-
-void euler_cb(const sensor_msgs::Imu::ConstPtr& msg)
-{
-    // Read the Quaternion from the Mavros Package [Frame: ENU]
-    Eigen::Quaterniond q_fcu_enu(msg->orientation.w, msg->orientation.x, msg->orientation.y, msg->orientation.z);
-
-    q_fcu = q_fcu_enu;
-
-    //Transform the Quaternion to Euler Angles
-    Euler_fcu = quaternion_to_euler(q_fcu);
-
-    // Transform the Quaternion from ENU to NED
-    Eigen::Quaterniond q_ned = transform_orientation_enu_to_ned( transform_orientation_baselink_to_aircraft(q_fcu_enu) );
-}
-
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
 {
@@ -199,6 +176,18 @@ int main(int argc, char **argv)
     //读取参数表中的参数
     // 使用激光SLAM数据orVicon数据 0 for vicon， 1 for 激光SLAM
     nh.param<int>("pos_estimator/flag_use_laser_or_vicon", flag_use_laser_or_vicon, 0);
+
+    // 0 for use the data from fcu, 1 for use the mocap raw data(only position), 2 for use the mocap raw data(position and velocity)
+    nh.param<float>("pos_estimator/Use_mocap_raw", Use_mocap_raw, 0.0);
+
+    // window for linear velocity
+    nh.param<int>("pos_estimator/linear_window", linear_window, 3);
+
+    // window for linear velocity
+    nh.param<int>("pos_estimator/angular_window", angular_window, 3);
+
+    //nh.param<string>("pos_estimator/rigid_body_name", rigid_body_name, '/vrpn_client_node/UAV/pose');
+
 
     // 【订阅】cartographer估计位置
     ros::Subscriber laser_sub = nh.subscribe<tf2_msgs::TFMessage>("/tf", 1000, laser_cb);
@@ -212,21 +201,19 @@ int main(int argc, char **argv)
     // 【订阅】optitrack估计位置
     ros::Subscriber optitrack_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/UAV/pose", 1000, optitrack_cb);
 
-    // 【订阅】无人机当前位置 坐标系:ENU系 [室外：GPS，室内：自主定位或mocap等] 这里订阅仅作比较用
-    ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 10, pos_cb);
-
-    // 【订阅】无人机当前速度 坐标系:ENU系 [室外：GPS，室内：自主定位或mocap等] 这里订阅仅作比较用
-    ros::Subscriber velocity_sub = nh.subscribe<geometry_msgs::TwistStamped>("/mavros/local_position/velocity_local", 10, vel_cb);
-
-    // 【订阅】无人机当前欧拉角 坐标系:ENU系 这里订阅仅作比较用
-    ros::Subscriber euler_sub = nh.subscribe<sensor_msgs::Imu>("/mavros/imu/data", 10, euler_cb);
-
     // 【发布】无人机位置和偏航角 坐标系 ENU系
     //  本话题要发送飞控(通过mavros_extras/src/plugins/vision_pose_estimate.cpp发送), 对应Mavlink消息为VISION_POSITION_ESTIMATE(#??), 对应的飞控中的uORB消息为vehicle_vision_position.msg 及 vehicle_vision_attitude.msg
-    ros::Publisher vision_pub = nh.advertise<geometry_msgs::PoseStamped>("/mavros/vision_pose/pose", 100);
+    vision_pub = nh.advertise<geometry_msgs::PoseStamped>("/mavros/vision_pose/pose", 100);
+
+    drone_state_pub = nh.advertise<px4_command::DroneState>("/px4_command/drone_state", 10);
+
+    // 用于与mavros通讯的类，通过mavros接收来至飞控的消息【飞控->mavros->本程序】
+    state_from_mavros _state_from_mavros;
+
+    OptiTrackFeedBackRigidBody UAV("/vrpn_client_node/UAV/pose",nh,linear_window,angular_window);
 
     // 频率
-    ros::Rate rate(20.0);
+    ros::Rate rate(100.0);
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     while(ros::ok())
@@ -234,35 +221,46 @@ int main(int argc, char **argv)
         //回调一次 更新传感器状态
         ros::spinOnce();
 
-        //vicon
-        if(flag_use_laser_or_vicon == 0)
+        //利用OptiTrackFeedBackRigidBody类获取optitrack的数据
+        //UAV.GetOptiTrackState();
+        UAV.GetState(UAVstate);
+
+        for (int i=0;i<3;i++)
         {
-            vision.pose.position.x = pos_drone_mocap[0] ;
-            vision.pose.position.y = pos_drone_mocap[1] ;
-            vision.pose.position.z = pos_drone_mocap[2] ;
-
-            vision.pose.orientation.x = q_mocap.x();
-            vision.pose.orientation.y = q_mocap.y();
-            vision.pose.orientation.z = q_mocap.z();
-            vision.pose.orientation.w = q_mocap.w();
-
-        }//laser
-        else if (flag_use_laser_or_vicon == 1)
-        {
-            vision.pose.position.x = pos_drone_laser[0];
-            vision.pose.position.y = pos_drone_laser[1];
-            vision.pose.position.z = pos_drone_laser[2];
-
-            vision.pose.orientation.x = q_laser.x();
-            vision.pose.orientation.y = q_laser.y();
-            vision.pose.orientation.z = q_laser.z();
-            vision.pose.orientation.w = q_laser.w();
+            pos_drone_fcu[i] = _state_from_mavros._DroneState.position[i];                           
+            vel_drone_fcu[i] = _state_from_mavros._DroneState.velocity[i];                           
+            Att_fcu[i] = _state_from_mavros._DroneState.attitude[i];  
+            Att_rate_fcu[i] = _state_from_mavros._DroneState.attitude_rate[i];  
         }
 
-        vision.header.stamp = ros::Time::now();
-        vision_pub.publish(vision);
+        // 发布无人机状态至px4_pos_controller.cpp节点，根据参数Use_mocap_raw选择位置速度消息来源
+        // get drone state from _state_from_mavros
+        _DroneState = _state_from_mavros._DroneState;
+        _DroneState.header.stamp = ros::Time::now();
+                
+        // 根据Use_mocap_raw来选择位置和速度的来源
+        if (Use_mocap_raw == 1)
+        {
+            for (int i=0;i<3;i++)
+            {
+                _DroneState.position[i] = pos_drone_mocap[i];
+            }
+        }
+        else if (Use_mocap_raw == 2) 
+        {
+            for (int i=0;i<3;i++)
+            {
+                _DroneState.position[i] = UAVstate.Position[i];
+                _DroneState.velocity[i] = UAVstate.V_I[i];
+            }
+        }
 
-        //打印
+        drone_state_pub.publish(_DroneState);
+
+        // 将定位信息及偏航角信息发送至飞控，根据参数flag_use_laser_or_vicon选择定位信息来源
+        send_to_fcu();
+
+        // 打印
         printf_info();
         rate.sleep();
     }
@@ -271,13 +269,43 @@ int main(int argc, char **argv)
 
 }
 
-//获取当前时间 单位：秒
-float get_dt(ros::Time last)
+
+void publish_drone_state()
 {
-    ros::Time time_now = ros::Time::now();
-    float currTimeSec = time_now.sec-last.sec;
-    float currTimenSec = time_now.nsec / 1e9 - last.nsec / 1e9;
-    return (currTimeSec + currTimenSec);
+
+}
+
+void send_to_fcu()
+{
+    geometry_msgs::PoseStamped vision;
+    
+    //vicon
+    if(flag_use_laser_or_vicon == 0)
+    {
+        vision.pose.position.x = pos_drone_mocap[0] ;
+        vision.pose.position.y = pos_drone_mocap[1] ;
+        vision.pose.position.z = pos_drone_mocap[2] ;
+
+        vision.pose.orientation.x = q_mocap.x();
+        vision.pose.orientation.y = q_mocap.y();
+        vision.pose.orientation.z = q_mocap.z();
+        vision.pose.orientation.w = q_mocap.w();
+
+    }//laser
+    else if (flag_use_laser_or_vicon == 1)
+    {
+        vision.pose.position.x = pos_drone_laser[0];
+        vision.pose.position.y = pos_drone_laser[1];
+        vision.pose.position.z = pos_drone_laser[2];
+
+        vision.pose.orientation.x = q_laser.x();
+        vision.pose.orientation.y = q_laser.y();
+        vision.pose.orientation.z = q_laser.z();
+        vision.pose.orientation.w = q_laser.w();
+    }
+
+    vision.header.stamp = ros::Time::now();
+    vision_pub.publish(vision);
 }
 
 void printf_info()
@@ -300,7 +328,7 @@ void printf_info()
     {
         cout <<">>>>>>>>>>>>>>>>>>>>>>>>Vicon Info [ENU Frame]<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
         cout << "Pos_vicon [X Y Z] : " << pos_drone_mocap[0] << " [ m ] "<< pos_drone_mocap[1] <<" [ m ] "<< pos_drone_mocap[2] <<" [ m ] "<<endl;
-        cout << "Euler_vicon [Yaw] : " << Euler_mocap[2] * 180/M_PI<<" [deg]  "<<endl;
+        cout << "Att_vicon [R P Y] : " << Euler_mocap[0] * 180/M_PI <<" [deg] "<< Euler_mocap[1] * 180/M_PI << " [deg] "<< Euler_mocap[2] * 180/M_PI<<" [deg] "<<endl;
     }else
     {
         cout <<">>>>>>>>>>>>>>>>>>>>>>>>Laser Info [ENU Frame]<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
@@ -311,5 +339,12 @@ void printf_info()
         cout <<">>>>>>>>>>>>>>>>>>>>>>>>FCU Info [ENU Frame]<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
         cout << "Pos_fcu [X Y Z] : " << pos_drone_fcu[0] << " [ m ] "<< pos_drone_fcu[1] <<" [ m ] "<< pos_drone_fcu[2] <<" [ m ] "<<endl;
         cout << "Vel_fcu [X Y Z] : " << vel_drone_fcu[0] << " [m/s] "<< vel_drone_fcu[1] <<" [m/s] "<< vel_drone_fcu[2] <<" [m/s] "<<endl;
-        cout << "Euler_fcu [Yaw] : " << Euler_fcu[2] * 180/M_PI<<" [deg] "<<endl;
+        cout << "Att_fcu [R P Y] : " << Att_fcu[0] * 180/M_PI <<" [deg] "<< Att_fcu[1] * 180/M_PI << " [deg] "<< Att_fcu[2] * 180/M_PI<<" [deg] "<<endl;
+
+        // cout <<">>>>>>>>>>>>>>>>>>>>>>>>Error Info [ Longhao ]<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+        // cout << "Error_pos      : " << UAVstate.Position[0] - pos_drone_fcu[0] << " [ m ] "<< UAVstate.Position[1] - pos_drone_fcu[1]<<" [ m ] "<< UAVstate.Position[2] - pos_drone_fcu[2]<<" [ m ] "<<endl;
+        // cout << "Error_vel      : " << UAVstate.V_I[0] - vel_drone_fcu[0] << " [m/s] "<< UAVstate.V_I[1] - vel_drone_fcu[1]<<" [m/s] "<< UAVstate.V_I[2] - vel_drone_fcu[2]<<" [m/s] "<<endl;
+        // cout << "Error_att      : " << UAVstate.Euler[0]*57.3 - Att_fcu[0]*57.3 << " [deg] "<< UAVstate.Euler[1]*57.3 - Att_fcu[1]*57.3<<" [deg] "<< UAVstate.Euler[2]*57.3 - Att_fcu[2]*57.3<<" [deg] "<<endl;
+        // cout << "Error_att_rate : " << UAVstate.Omega_BI[0]*57.3 - Att_rate_fcu[0]*57.3 << " [deg] "<< UAVstate.Omega_BI[1]*57.3 - Att_rate_fcu[1]*57.3<<" [deg] "<< UAVstate.Omega_BI[2]*57.3 - Att_rate_fcu[2]*57.3<<" [deg] "<<endl;
+
 }

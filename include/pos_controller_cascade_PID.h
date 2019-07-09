@@ -316,7 +316,7 @@ void pos_controller_cascade_PID::cal_vel_error_deriv(const Eigen::Vector3d& erro
 
 void pos_controller_cascade_PID::printf_result()
 {
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Position Controller<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    cout <<">>>>>>>>>>>>>>>>>>>  cascade PID Position Controller <<<<<<<<<<<<<<<<<<" <<endl;
 
     //固定的浮点显示
     cout.setf(ios::fixed);

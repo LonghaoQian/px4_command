@@ -1,3 +1,26 @@
+## parameter for px4_pos_controller.cpp
+## 起飞高度
+Takeoff_height : 1.0
+Disarm_height : 0.10
+## 1 for use the accel command
+Use_accel : 1.0
+## 1 for printf the state, 0 for block
+Flag_printf : 1.0
+
+ppn_kx : 0.5
+ppn_ky : 0.5
+ppn_kz : 0.1
+
+## parameter for px4_pos_estimator.cpp
+pos_estimator:
+  ## 使用激光SLAM数据orVicon数据 0 for vicon， 1 for 激光SLAM
+  flag_use_laser_or_vicon : 0
+  ## 0 for use the data from fcu, 1 for use the mocap raw data(only position), 2 for use the mocap raw data(position and velocity)
+  Use_mocap_raw : 0
+  linear_window : 3
+  angular_window : 3
+
+
 ## 飞机参数
 Quad:
   mass: 1.2
@@ -24,21 +47,6 @@ Limit:
 
   XY_VEL_MAX : 10.0
   Z_VEL_MAX : 10.0 
-  
-  
-## 起飞高度
-Takeoff_height : 1.0
-Disarm_height : 0.10
-## 1 for use the mocap raw data
-Use_mocap_raw : 0
-## 1 for use the accel command
-Use_accel : 1.0
-## 1 for printf the state, 0 for block
-Flag_printf : 1.0
-
-ppn_kx : 0.5
-ppn_ky : 0.5
-ppn_kz : 0.1
 
 # 位置环参数 - cascade pid
 Pos_cascade_pid:

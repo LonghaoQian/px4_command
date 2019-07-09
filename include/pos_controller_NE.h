@@ -238,7 +238,7 @@ void pos_controller_NE::pos_controller(
 
 void pos_controller_NE::printf_result()
 {
-    cout <<">>>>>>>>>>>>>>>>>>>>NE Position Controller<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    cout <<">>>>>>>>>>>>>>>>>>>>>>  NE Position Controller  <<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
     //固定的浮点显示
     cout.setf(ios::fixed);
@@ -253,9 +253,9 @@ void pos_controller_NE::printf_result()
 
     cout << "NoiseEstimator [X Y Z] : " <<  Quad_MASS *Kd[0] * NoiseEstimator[0] << " [N] "<<Quad_MASS *Kd[1] * NoiseEstimator[1]<<" [N] "<<Quad_MASS *Kd[2] *NoiseEstimator[2]<<" [N] "<<endl;
 
-    cout << "u_l [X Y Z] : " << u_l[0] << " [N] "<< u_l[1]<<" [N] "<<u_l[2]<<" [N] "<<endl;
-
     cout << "output_LLF [X Y Z] : " << output_LLF[0] << " [N] "<< output_LLF[1]<<" [N] "<<output_LLF[2]<<" [N] "<<endl;
+
+    cout << "u_l [X Y Z] : " << u_l[0] << " [N] "<< u_l[1]<<" [N] "<<u_l[2]<<" [N] "<<endl;
 
     cout << "u_d [X Y Z] : " << u_d[0] << " [N] "<< u_d[1]<<" [N] "<<u_d[2]<<" [N] "<<endl;
 }

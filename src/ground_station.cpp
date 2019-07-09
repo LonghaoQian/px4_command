@@ -8,7 +8,8 @@
 #include <state_from_mavros.h>
 #include <command_to_mavros.h>
 
-
+#include <px4_command_utils.h>
+#include <OptiTrackFeedBackRigidBody.h>
 #include <px4_command/ControlCommand.h>
 #include <px4_command/DroneState.h>
 #include <px4_command/TrajectoryPoint.h>
@@ -41,7 +42,7 @@ px4_command::Topic_for_log _Topic_for_log;
 Eigen::Vector3d pos_drone_mocap;                          //无人机当前位置 (vicon)
 Eigen::Quaterniond q_mocap;
 Eigen::Vector3d Euler_mocap;                              //无人机当前姿态 (vicon)
-
+rigidbody_state UAVstate;
 Eigen::Quaterniond q_fcu_target;
 Eigen::Vector3d euler_fcu_target;
 float Thrust_target;
@@ -105,11 +106,17 @@ int main(int argc, char **argv)
     // 频率
     ros::Rate rate(10.0);
 
+    OptiTrackFeedBackRigidBody UAV("/vrpn_client_node/UAV/pose",nh,3,3);
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     while(ros::ok())
     {
         //回调一次 更新传感器状态
         ros::spinOnce();
+
+        //利用OptiTrackFeedBackRigidBody类获取optitrack的数据
+        //UAV.GetOptiTrackState();
+        UAV.GetState(UAVstate);
 
         //打印
         printf_info();
@@ -122,8 +129,7 @@ int main(int argc, char **argv)
 
 void printf_info()
 {
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>> Ground Station <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-
+    cout <<">>>>>>>>>>>>>>>>>>>>>>>> Ground Station  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
     //固定的浮点显示
     cout.setf(ios::fixed);
     //setprecision(n) 设显示小数精度为n位
@@ -135,70 +141,26 @@ void printf_info()
     // 强制显示符号
     cout.setf(ios::showpos);
 
-    switch(_Topic_for_log.Control_Command.Mode)
-    {
-    case command_to_mavros::Move_ENU:
-        cout << "Command: [ Move_ENU ] " <<endl;
+    px4_command_utils::prinft_drone_state(_Topic_for_log.Drone_State);
 
-        cout << "Command Position [X Y Z] : " << _Topic_for_log.Control_Command.Reference_State.position_ref[0] << " [ m ] "<< _Topic_for_log.Control_Command.Reference_State.position_ref[1]<<" [ m ] "<< _Topic_for_log.Control_Command.Reference_State.position_ref[2]<<" [ m ] "<<endl;
-        cout << "Yaw_setpoint : "  << _Topic_for_log.Control_Command.Reference_State.yaw_ref* 180/M_PI << " [deg] " <<endl;
+    px4_command_utils::printf_command_control(_Topic_for_log.Control_Command);
 
-        break;
-    case command_to_mavros::Move_Body:
-        cout << "Command: [ Move_Body ] " <<endl;
+    px4_command_utils::prinft_attitude_reference(_Topic_for_log.Attitude_Reference);
 
-        cout << "Command Position [X Y Z] : " << _Topic_for_log.Control_Command.Reference_State.position_ref[0] << " [ m ] "<< _Topic_for_log.Control_Command.Reference_State.position_ref[1]<<" [ m ] "<< _Topic_for_log.Control_Command.Reference_State.position_ref[2]<<" [ m ] "<<endl;
-        cout << "Yaw_setpoint : "  << _Topic_for_log.Control_Command.Reference_State.yaw_ref* 180/M_PI << " [deg] " <<endl;
-        break;
-
-    case command_to_mavros::Hold:
-        cout << "Command: [ Hold ] " <<endl;
-        cout << "Command Position [X Y Z] : " << _Topic_for_log.Control_Command.Reference_State.position_ref[0] << " [ m ] "<< _Topic_for_log.Control_Command.Reference_State.position_ref[1]<<" [ m ] "<< _Topic_for_log.Control_Command.Reference_State.position_ref[2]<<" [ m ] "<<endl;
-        cout << "Yaw_setpoint : "  << _Topic_for_log.Control_Command.Reference_State.yaw_ref* 180/M_PI << " [deg] " <<endl;
-        break;
-
-    case command_to_mavros::Land:
-        cout << "Command: [ Land ] " <<endl;
-        cout << "Command Position [X Y Z] : " << _Topic_for_log.Control_Command.Reference_State.position_ref[0] << " [ m ] "<< _Topic_for_log.Control_Command.Reference_State.position_ref[1]<<" [ m ] "<< _Topic_for_log.Control_Command.Reference_State.position_ref[2]<<" [ m ] "<<endl;
-        cout << "Yaw_setpoint : "  << _Topic_for_log.Control_Command.Reference_State.yaw_ref* 180/M_PI << " [deg] " <<endl;
-        break;
-
-    case command_to_mavros::Disarm:
-        cout << "Command: [ Disarm ] " <<endl;
-        break;
-
-    case command_to_mavros::PPN_land:
-        cout << "Command: [ PPN_land ] " <<endl;
-        break;
-
-    case command_to_mavros::Idle:
-        cout << "Command: [ Idle ] " <<endl;
-        break;
-
-    case command_to_mavros::Takeoff:
-        cout << "Command: [ Takeoff ] " <<endl;
-        cout << "Command Position [X Y Z] : " << _Topic_for_log.Control_Command.Reference_State.position_ref[0] << " [ m ] "<< _Topic_for_log.Control_Command.Reference_State.position_ref[1]<<" [ m ] "<< _Topic_for_log.Control_Command.Reference_State.position_ref[2]<<" [ m ] "<<endl;
-        cout << "Yaw_setpoint : "  << _Topic_for_log.Control_Command.Reference_State.yaw_ref* 180/M_PI << " [deg] " <<endl;
-        break;
-    }
+    cout <<">>>>>>>>>>>>>>>>>>>>>>>> Target Info FCU <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
     
     cout << "Pos_vicon [X Y Z]  : " << pos_drone_mocap[0] << " [ m ] "<< pos_drone_mocap[1] <<" [ m ] "<< pos_drone_mocap[2] <<" [ m ] "<<endl;
     
-
-    cout << "Position  [X Y Z]  : " << _Topic_for_log.Drone_State.position[0] << " [ m ] "<< _Topic_for_log.Drone_State.position[1]<<" [ m ] "<<_Topic_for_log.Drone_State.position[2]<<" [ m ] "<<endl;
-
-    cout << "Euler_vicon  [Yaw] : " << Euler_mocap[2] * 180/M_PI<<" [deg]  "<<endl;
-
-    cout << "Euler_fcu    [Yaw] : " << _Topic_for_log.Drone_State.attitude[2] * 180/M_PI<<" [deg] "<<endl;
-
-
-    cout << "Accel_sp   [ 0-1 ] : " << _Topic_for_log.Attitude_Reference.throttle_sp[0] << " [m/s^2] "<< _Topic_for_log.Attitude_Reference.throttle_sp[1]<<" [m/s^2] "<<_Topic_for_log.Attitude_Reference.throttle_sp[2]<<" [m/s^2] "<<endl;
-    cout << "Attitude_sp[R P Y] : " << _Topic_for_log.Attitude_Reference.desired_attitude[0] * 180/M_PI <<" [deg]  "<<_Topic_for_log.Attitude_Reference.desired_attitude[1] * 180/M_PI << " [deg]  "<< _Topic_for_log.Attitude_Reference.desired_attitude[2] * 180/M_PI<<" [deg] "<<endl;
     cout << "Att_target [R P Y] : " << euler_fcu_target[0] * 180/M_PI <<" [deg]  "<<euler_fcu_target[1] * 180/M_PI << " [deg]  "<< euler_fcu_target[2] * 180/M_PI<<" [deg]  "<<endl;
     
-    cout << "Throttle_sp[ 0-1 ] : " << _Topic_for_log.Attitude_Reference.desired_throttle <<endl;
-    
     cout << "Thr_target [ 0-1 ] : " << Thrust_target <<endl;
+
+    cout <<">>>>>>>>>>>>>>>>>>>>>>>>Error Info [ Longhao ]<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    cout << "Error_pos      : " << UAVstate.Position[0] - _Topic_for_log.Drone_State.position[0] << " [ m ] "<< UAVstate.Position[1] - _Topic_for_log.Drone_State.position[1]<<" [ m ] "<< UAVstate.Position[2] - _Topic_for_log.Drone_State.position[2]<<" [ m ] "<<endl;
+    cout << "Error_vel      : " << UAVstate.V_I[0] - _Topic_for_log.Drone_State.velocity[0] << " [m/s] "<< UAVstate.V_I[1] - _Topic_for_log.Drone_State.velocity[1]<<" [m/s] "<< UAVstate.V_I[2] - _Topic_for_log.Drone_State.velocity[2]<<" [m/s] "<<endl;
+    cout << "Error_att      : " << UAVstate.Euler[0]*57.3 - _Topic_for_log.Drone_State.attitude[0]*57.3 << " [deg] "<< UAVstate.Euler[1]*57.3 - _Topic_for_log.Drone_State.attitude[1]*57.3<<" [deg] "<< UAVstate.Euler[2]*57.3 - _Topic_for_log.Drone_State.attitude[2]*57.3<<" [deg] "<<endl;
+    cout << "Error_att_rate : " << UAVstate.Omega_BI[0]*57.3 - _Topic_for_log.Drone_State.attitude_rate[0]*57.3 << " [deg] "<< UAVstate.Omega_BI[1]*57.3 - _Topic_for_log.Drone_State.attitude_rate[1]*57.3<<" [deg] "<< UAVstate.Omega_BI[2]*57.3 - _Topic_for_log.Drone_State.attitude_rate[2]*57.3<<" [deg] "<<endl;
+
 
 
 }

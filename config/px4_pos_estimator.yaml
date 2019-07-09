@@ -1,5 +1,0 @@
-## 使用激光SLAM数据orVicon数据 0 for vicon， 1 for 激光SLAM
-flag_use_laser_or_vicon : 0
-
-
-

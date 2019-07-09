@@ -153,7 +153,7 @@ void pos_controller_PID::pos_controller(
 
 void pos_controller_PID::printf_result()
 {
-    cout <<">>>>>>>>>>>>>>>>>>>>PID Position Controller<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    cout <<">>>>>>>>>>>>>>>>>>>>>>  PID Position Controller  <<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
     //固定的浮点显示
     cout.setf(ios::fixed);

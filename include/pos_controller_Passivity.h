@@ -66,6 +66,7 @@ class pos_controller_passivity
             y1_k       = Eigen::Vector3f(0.0,0.0,0.0);
             y2_k       = Eigen::Vector3f(0.0,0.0,0.0);
             y3_k       = Eigen::Vector3f(0.0,0.0,0.0);
+            z_k        = Eigen::Vector3f(0.0,0.0,0.0);
 
             set_filter();
 
@@ -261,8 +262,7 @@ void pos_controller_passivity::printf_param()
 
 void pos_controller_passivity::printf_result()
 {
-    cout <<">>>>>>>>>>>>>>>>>>>>Passivity Position Controller<<<<<<<<<<<<<<<<<<<<<" <<endl;
-
+    cout <<">>>>>>>>>>>>>>>>>>>> Passivity Position Controller <<<<<<<<<<<<<<<<<<<<" <<endl;
     //固定的浮点显示
     cout.setf(ios::fixed);
     //左对齐
@@ -274,7 +274,6 @@ void pos_controller_passivity::printf_result()
 
     cout<<setprecision(2);
 
-    cout << "u_l [X Y Z] : " << u_l[0] << " [N] "<< u_l[1]<<" [N] "<<u_l[2]<<" [N] "<<endl;
     cout << "z_k [X Y Z] : " << z_k[0] << " [N] "<< z_k[1]<<" [N] "<<z_k[2]<<" [N] "<<endl;
 
     cout << "y1 [X Y Z] : " << y1_k[0] << " [N] "<< y1_k[1]<<" [N] "<<y1_k[2]<<" [N] "<<endl;
