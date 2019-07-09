@@ -17,6 +17,7 @@
 #include <px4_command/DroneState.h>
 #include <px4_command/TrajectoryPoint.h>
 #include <px4_command/AttitudeReference.h>
+#include <px4_command/ControlOutput.h>
 
 
 using namespace std;
@@ -76,6 +77,8 @@ class pos_controller_PID
         Eigen::Vector3f integral;
 
         //输出
+        px4_command::ControlOutput _ControlOutput;
+
 
         //Printf the PID parameter
         void printf_param();
@@ -84,14 +87,14 @@ class pos_controller_PID
 
         // Position control main function 
         // [Input: Current state, Reference state, sub_mode, dt; Output: AttitudeReference;]
-        void pos_controller(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, float dt, Eigen::Vector3d& throttle_sp);
+        px4_command::ControlOutput pos_controller(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, float dt, Eigen::Vector3d& throttle_sp);
 
     private:
         ros::NodeHandle pos_pid_nh;
 
 };
 
-void pos_controller_PID::pos_controller(
+px4_command::ControlOutput pos_controller_PID::pos_controller(
     const px4_command::DroneState& _DroneState, 
     const px4_command::TrajectoryPoint& _Reference_State, float dt,
     Eigen::Vector3d& throttle_sp)
@@ -149,6 +152,15 @@ void pos_controller_PID::pos_controller(
     // 期望推力 = 期望加速度 × 质量
     // 归一化推力 ： 根据电机模型，反解出归一化推力
     px4_command_utils::accelToThrottle(accel_sp, Quad_MASS, tilt_max, throttle_sp);
+
+for (int i=0; i<3; i++)
+{
+        _ControlOutput.u_l[i] = _Reference_State.acceleration_ref[i] + Kp[i] * pos_error[i] + Kd[i] * vel_error[i];
+    _ControlOutput.u_d[i] = Ki[i] * integral[i];
+
+}
+return _ControlOutput;
+
 }
 
 void pos_controller_PID::printf_result()

@@ -40,6 +40,7 @@ add_message_files(
   AttitudeReference.msg
   DroneState.msg
   Topic_for_log.msg
+  ControlOutput.msg
 )
 
 ## Generate added messages and services with any dependencies listed here

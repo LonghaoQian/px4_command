@@ -9,5 +9,7 @@ ControlCommand Control_Command
 
 AttitudeReference Attitude_Reference
 
+ControlOutput Control_Output
+
 
 

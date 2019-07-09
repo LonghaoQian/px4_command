@@ -7,9 +7,9 @@ Use_accel : 1.0
 ## 1 for printf the state, 0 for block
 Flag_printf : 1.0
 
-ppn_kx : 0.5
-ppn_ky : 0.5
-ppn_kz : 0.1
+ppn_kx : 0.2
+ppn_ky : 0.2
+ppn_kz : 0.2
 
 ## parameter for px4_pos_estimator.cpp
 pos_estimator:
@@ -57,7 +57,7 @@ Pos_cascade_pid:
    Ki_vxvy : 0.02
    Ki_vz : 0.02
    Kd_vxvy : 0.01
-   Kd_vz : 0.01
+   Kd_vz : 0.0
    Hover_throttle : 0.4
    MPC_VELD_LP: 5.0
 
@@ -106,7 +106,7 @@ Circle_Trajectory:
   Center_x: 0.0
   Center_y: 0.0
   Center_z: 5.0
-  radius: 5.0
+  radius: 0.0
   linear_vel: 0.5
   time_total: 100.0
   direction: 1.0

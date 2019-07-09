@@ -36,6 +36,9 @@
 #include <px4_command/AttitudeReference.h>
 #include <px4_command/Trajectory.h>
 #include <px4_command/Topic_for_log.h>
+#include <px4_command/Trajectory.h>
+
+#include <px4_command/ControlOutput.h>
 
 using namespace std;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>变量声明<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -44,6 +47,7 @@ px4_command::ControlCommand Command_Last;                     //无人机上一�
 px4_command::ControlCommand Command_to_gs;
 px4_command::DroneState _DroneState;                         //无人机状态量
 Eigen::Vector3d throttle_sp;
+px4_command::ControlOutput _ControlOutput;
 px4_command::AttitudeReference _AttitudeReference;           //位置控制器输出，即姿态环参考量
 float cur_time;
 px4_command::Topic_for_log _Topic_for_log;
@@ -259,16 +263,16 @@ int main(int argc, char **argv)
                 pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 1)
             {
-                pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 2)
             {
-                pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 3)
             {
-                pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 4)
             {
-                pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }
             
             px4_command_utils::thrustToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref, _AttitudeReference);
@@ -296,16 +300,16 @@ int main(int argc, char **argv)
                 pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 1)
             {
-                pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 2)
             {
-                pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 3)
             {
-                pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 4)
             {
-                pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }
 
             px4_command_utils::thrustToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref, _AttitudeReference);
@@ -385,16 +389,16 @@ int main(int argc, char **argv)
                 pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 1)
             {
-                pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 2)
             {
-                pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 3)
             {
-                pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 4)
             {
-                pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }
             px4_command_utils::thrustToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref, _AttitudeReference);
 
@@ -437,16 +441,16 @@ int main(int argc, char **argv)
                 pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 1)
             {
-                pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 2)
             {
-                pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 3)
             {
-                pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 4)
             {
-                pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }
             px4_command_utils::thrustToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref, _AttitudeReference);
 
@@ -509,16 +513,16 @@ int main(int argc, char **argv)
                     pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
                 }else if(switch_ude == 1)
                 {
-                    pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                    _ControlOutput = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
                 }else if(switch_ude == 2)
                 {
-                    pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                    _ControlOutput = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
                 }else if(switch_ude == 3)
                 {
-                    pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                    _ControlOutput = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
                 }else if(switch_ude == 4)
                 {
-                    pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                    _ControlOutput = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
                 }
 
                 px4_command_utils::thrustToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref, _AttitudeReference);
@@ -606,16 +610,16 @@ int main(int argc, char **argv)
                 pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 1)
             {
-                pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 2)
             {
-                pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 3)
             {
-                pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 4)
             {
-                pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }
 
             px4_command_utils::thrustToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref, _AttitudeReference);
@@ -656,16 +660,16 @@ int main(int argc, char **argv)
                 pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 1)
             {
-                pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 2)
             {
-                pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 3)
             {
-                pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }else if(switch_ude == 4)
             {
-                pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
+                _ControlOutput = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt, throttle_sp);
             }
 
             px4_command_utils::thrustToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref, _AttitudeReference);
@@ -691,9 +695,11 @@ int main(int argc, char **argv)
             break;
         }
 
+        cout <<">>>>>>>>>>>>>>>>>>>>>> px4_pos_controller <<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+
         if(Flag_printf == 1)
         {
-            cout <<">>>>>>>>>>>>>>>>>>>>>> px4_pos_controller <<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+            //cout <<">>>>>>>>>>>>>>>>>>>>>> px4_pos_controller <<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
             // 打印无人机状态
             px4_command_utils::prinft_drone_state(_DroneState);
 
@@ -735,6 +741,7 @@ int main(int argc, char **argv)
         _Topic_for_log.Drone_State = _DroneState;
         _Topic_for_log.Control_Command = Command_to_gs;
         _Topic_for_log.Attitude_Reference = _AttitudeReference;
+        _Topic_for_log.Control_Output = _ControlOutput;
 
         log_pub.publish(_Topic_for_log);
 

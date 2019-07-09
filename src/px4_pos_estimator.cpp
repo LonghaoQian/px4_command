@@ -261,7 +261,7 @@ int main(int argc, char **argv)
         send_to_fcu();
 
         // 打印
-        printf_info();
+       // printf_info();
         rate.sleep();
     }
 

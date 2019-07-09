@@ -116,6 +116,8 @@ int main(int argc, char **argv)
 
         //利用OptiTrackFeedBackRigidBody类获取optitrack的数据
         //UAV.GetOptiTrackState();
+
+        UAV.RosWhileLoopRun();
         UAV.GetState(UAVstate);
 
         //打印
@@ -146,6 +148,14 @@ void printf_info()
     px4_command_utils::printf_command_control(_Topic_for_log.Control_Command);
 
     px4_command_utils::prinft_attitude_reference(_Topic_for_log.Attitude_Reference);
+
+
+    cout <<">>>>>>>>>>>>>>>>>>>>>>>> Control Output  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    
+    cout << "u_l [X Y Z]  : " << _Topic_for_log.Control_Output.u_l[0] << " [ ] "<< _Topic_for_log.Control_Output.u_l[1] <<" [ ] "<< _Topic_for_log.Control_Output.u_l[2] <<" [ ] "<<endl;
+    
+    cout << "u_d [X Y Z]  : " << _Topic_for_log.Control_Output.u_d[0] << " [ ] "<< _Topic_for_log.Control_Output.u_d[1] <<" [ ] "<< _Topic_for_log.Control_Output.u_d[2] <<" [ ] "<<endl;
+    cout << "NE  [X Y Z]  : " << _Topic_for_log.Control_Output.NE[0] << " [ ] "<< _Topic_for_log.Control_Output.NE[1] <<" [ ] "<< _Topic_for_log.Control_Output.NE[2] <<" [ ] "<<endl;
 
     cout <<">>>>>>>>>>>>>>>>>>>>>>>> Target Info FCU <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
     

@@ -285,7 +285,7 @@ void pos_controller_cascade_PID::_velocityController
     vel_err_lim_x = error_vel[0] - (thrust_desired_X - thrust_sp[0]) * arw_gain;
     vel_err_lim_y = error_vel[1] - (thrust_desired_Y - thrust_sp[1]) * arw_gain;
 
-    cout << "vel_err_lim_x : " << vel_err_lim_x << " [deg] " <<endl;
+   // cout << "vel_err_lim_x : " << vel_err_lim_x << " [deg] " <<endl;
 
     // Update integral
     thurst_int[0] += Ki_vxvy * vel_err_lim_x * delta_time;

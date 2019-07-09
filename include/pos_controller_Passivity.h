@@ -20,6 +20,7 @@
 #include <px4_command/DroneState.h>
 #include <px4_command/TrajectoryPoint.h>
 #include <px4_command/AttitudeReference.h>
+#include <px4_command/ControlOutput.h>
 
 
 using namespace std;
@@ -91,6 +92,8 @@ class pos_controller_passivity
         //u_l for nominal contorol(PD), u_d for passivity control(disturbance estimator)
         Eigen::Vector3f u_l,u_d;
         Eigen::Vector3f integral;
+        px4_command::ControlOutput _ControlOutput;
+
 
         HighPassFilter HPF_pos_error_x;
         HighPassFilter HPF_pos_error_y;
@@ -123,14 +126,13 @@ class pos_controller_passivity
 
         // Position control main function 
         // [Input: Current state, Reference state, sub_mode, dt; Output: AttitudeReference;]
-        void pos_controller(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, float dt, Eigen::Vector3d& throttle_sp);
+        px4_command::ControlOutput pos_controller(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, float dt, Eigen::Vector3d& throttle_sp);
 
     private:
 
         ros::NodeHandle pos_passivity_nh;
 
 };
-
 void pos_controller_passivity::set_filter()
 {   
     HPF_pos_error_x.set_Time_constant(T_ps);
@@ -150,7 +152,7 @@ void pos_controller_passivity::set_filter()
     LPF_int_x.set_Time_constant(T_ude[2]);
 }
 
-void pos_controller_passivity::pos_controller(
+px4_command::ControlOutput pos_controller_passivity::pos_controller(
     const px4_command::DroneState& _DroneState, 
     const px4_command::TrajectoryPoint& _Reference_State, float dt,
     Eigen::Vector3d& throttle_sp)
@@ -225,6 +227,14 @@ void pos_controller_passivity::pos_controller(
     // 期望推力 = 期望加速度 × 质量
     // 归一化推力 ： 根据电机模型，反解出归一化推力
     px4_command_utils::accelToThrottle(accel_sp, Quad_MASS, tilt_max, throttle_sp);
+
+        for (int i=0; i<3; i++)
+{
+        _ControlOutput.u_l[i] = u_l[i];
+    _ControlOutput.u_d[i] = u_d[i];
+
+}
+return _ControlOutput;
 }
 
 
