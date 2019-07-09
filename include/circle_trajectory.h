@@ -38,8 +38,6 @@ class Circle_Trajectory
             Circle_Trajectory_nh.param<float>("Circle_Trajectory/linear_vel", linear_vel, 0.5);
             Circle_Trajectory_nh.param<float>("Circle_Trajectory/time_total", time_total, 10.0);
             Circle_Trajectory_nh.param<float>("Circle_Trajectory/direction", direction, 1.0);
- 
-            time_from_start  = 0.0;
         }
         
         // Parameter
@@ -49,20 +47,14 @@ class Circle_Trajectory
         float time_total;
         float direction;         //direction = 1 for CCW 逆时针, direction = -1 for CW 顺时针
 
-        // Input
-        float time_from_start;
-
-        // Output: position, velocity, acceleration, jerk, snap
-        px4_command::TrajectoryPoint Circle_trajectory;
-
         //Printf the Circle_Trajectory parameter
         void printf_param();
 
         //Printf the Circle_Trajectory result
-        void printf_result();
+        void printf_result(px4_command::TrajectoryPoint& Circle_trajectory);
 
         //Circle_Trajectory Calculation [Input: time_from_start; Output: Circle_trajectory;]
-        px4_command::TrajectoryPoint Circle_trajectory_generation(float time_from_start);
+        void Circle_trajectory_generation(float time_from_start, px4_command::TrajectoryPoint& Circle_trajectory);
 
     private:
 
@@ -70,7 +62,7 @@ class Circle_Trajectory
 };
 
 
-px4_command::TrajectoryPoint Circle_Trajectory::Circle_trajectory_generation(float time_from_start)
+void Circle_Trajectory::Circle_trajectory_generation(float time_from_start, px4_command::TrajectoryPoint& Circle_trajectory)
 {
     float omega;
     if( radius != 0)
@@ -116,12 +108,10 @@ px4_command::TrajectoryPoint Circle_Trajectory::Circle_trajectory_generation(flo
     Circle_trajectory.yaw_ref = 0;
     // Circle_trajectory.yaw_rate_ref = 0;
     // Circle_trajectory.yaw_acceleration_ref = 0;
-
-    return Circle_trajectory;
 }
 
 
-void Circle_Trajectory::printf_result()
+void Circle_Trajectory::printf_result(px4_command::TrajectoryPoint& Circle_trajectory)
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Circle_Trajectory<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 

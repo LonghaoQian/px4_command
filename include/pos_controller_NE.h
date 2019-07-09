@@ -68,8 +68,6 @@ class pos_controller_NE
             integral_LLF    = Eigen::Vector3f(0.0,0.0,0.0);
             NoiseEstimator  = Eigen::Vector3f(0.0,0.0,0.0);
             output_LLF      = Eigen::Vector3f(0.0,0.0,0.0);
-            throttle_sp = Eigen::Vector3d(0.0,0.0,0.0);
-
             set_filter();
         }
 
@@ -117,7 +115,6 @@ class pos_controller_NE
 
         Eigen::Vector3f NoiseEstimator;
 
-        Eigen::Vector3d throttle_sp;
 
         //Printf the NE parameter
         void printf_param();
@@ -127,9 +124,9 @@ class pos_controller_NE
 
         // Position control main function 
         // [Input: Current state, Reference state, sub_mode, dt; Output: AttitudeReference;]
-        Eigen::Vector3d pos_controller(px4_command::DroneState _DroneState, px4_command::TrajectoryPoint _Reference_State, float dt);
+        void pos_controller(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, float dt, Eigen::Vector3d& throttle_sp);
 
-        Eigen::Vector3f set_initial_pos(Eigen::Vector3d pos);
+        void set_initial_pos(const Eigen::Vector3d& pos);
 
         void set_filter();
 
@@ -154,20 +151,24 @@ void pos_controller_NE::set_filter()
     LLF_z.set_Time_constant(T_ne, Kd[2]);
 }
 
-Eigen::Vector3f pos_controller_NE::set_initial_pos(Eigen::Vector3d pos)
+void pos_controller_NE::set_initial_pos(const Eigen::Vector3d& pos)
 {
     pos_initial = pos;
 }
 
-Eigen::Vector3d pos_controller_NE::pos_controller(
-    px4_command::DroneState _DroneState, 
-    px4_command::TrajectoryPoint _Reference_State, float dt)
+void pos_controller_NE::pos_controller(
+    const px4_command::DroneState& _DroneState, 
+    const px4_command::TrajectoryPoint& _Reference_State, float dt,
+    Eigen::Vector3d& throttle_sp)
 {
     Eigen::Vector3d accel_sp;
-    Eigen::Vector3d throttle_sp;
+    
     // 计算误差项
-    Eigen::Vector3f pos_error = px4_command_utils::cal_pos_error(_DroneState, _Reference_State);
-    Eigen::Vector3f vel_error = px4_command_utils::cal_vel_error(_DroneState, _Reference_State);
+    Eigen::Vector3f pos_error;
+    Eigen::Vector3f vel_error;
+    
+    px4_command_utils::cal_pos_error(_DroneState, _Reference_State, pos_error);
+    px4_command_utils::cal_vel_error(_DroneState, _Reference_State, vel_error);
 
     // 误差项限幅
     for (int i=0; i<3; i++)
@@ -232,9 +233,7 @@ Eigen::Vector3d pos_controller_NE::pos_controller(
 
     // 期望推力 = 期望加速度 × 质量
     // 归一化推力 ： 根据电机模型，反解出归一化推力
-    throttle_sp = px4_command_utils::accelToThrottle(accel_sp, Quad_MASS, tilt_max);
-
-    return throttle_sp;
+    px4_command_utils::accelToThrottle(accel_sp, Quad_MASS, tilt_max, throttle_sp);
 }
 
 void pos_controller_NE::printf_result()

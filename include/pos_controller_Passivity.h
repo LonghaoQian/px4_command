@@ -62,7 +62,6 @@ class pos_controller_passivity
             u_l        = Eigen::Vector3f(0.0,0.0,0.0);
             u_d        = Eigen::Vector3f(0.0,0.0,0.0);
             integral   = Eigen::Vector3f(0.0,0.0,0.0);
-            throttle_sp = Eigen::Vector3d(0.0,0.0,0.0);
 
             y1_k       = Eigen::Vector3f(0.0,0.0,0.0);
             y2_k       = Eigen::Vector3f(0.0,0.0,0.0);
@@ -91,7 +90,6 @@ class pos_controller_passivity
         //u_l for nominal contorol(PD), u_d for passivity control(disturbance estimator)
         Eigen::Vector3f u_l,u_d;
         Eigen::Vector3f integral;
-        Eigen::Vector3d throttle_sp;
 
         HighPassFilter HPF_pos_error_x;
         HighPassFilter HPF_pos_error_y;
@@ -124,7 +122,7 @@ class pos_controller_passivity
 
         // Position control main function 
         // [Input: Current state, Reference state, sub_mode, dt; Output: AttitudeReference;]
-        Eigen::Vector3d pos_controller(px4_command::DroneState _DroneState, px4_command::TrajectoryPoint _Reference_State, float dt);
+        void pos_controller(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, float dt, Eigen::Vector3d& throttle_sp);
 
     private:
 
@@ -151,21 +149,22 @@ void pos_controller_passivity::set_filter()
     LPF_int_x.set_Time_constant(T_ude[2]);
 }
 
-Eigen::Vector3d pos_controller_passivity::pos_controller(
-    px4_command::DroneState _DroneState, 
-    px4_command::TrajectoryPoint _Reference_State, float dt)
+void pos_controller_passivity::pos_controller(
+    const px4_command::DroneState& _DroneState, 
+    const px4_command::TrajectoryPoint& _Reference_State, float dt,
+    Eigen::Vector3d& throttle_sp)
 {
     Eigen::Vector3d accel_sp;
-    Eigen::Vector3d throttle_sp;
+
     // 计算误差项
-    Eigen::Vector3f pos_error = px4_command_utils::cal_pos_error(_DroneState, _Reference_State);
-    Eigen::Vector3f vel_error = px4_command_utils::cal_vel_error(_DroneState, _Reference_State);
+    Eigen::Vector3f pos_error;
+    
+    px4_command_utils::cal_pos_error(_DroneState, _Reference_State, pos_error);
 
     // 误差项限幅
     for (int i=0; i<3; i++)
     {
         pos_error[i] = constrain_function(pos_error[i], pos_error_max[i]);
-        vel_error[i] = constrain_function(vel_error[i], vel_error_max[i]);
     }
 
     //z_k
@@ -224,9 +223,7 @@ Eigen::Vector3d pos_controller_passivity::pos_controller(
 
     // 期望推力 = 期望加速度 × 质量
     // 归一化推力 ： 根据电机模型，反解出归一化推力
-    throttle_sp = px4_command_utils::accelToThrottle(accel_sp, Quad_MASS, tilt_max);
-
-    return throttle_sp;
+    px4_command_utils::accelToThrottle(accel_sp, Quad_MASS, tilt_max, throttle_sp);
 }
 
 
@@ -289,8 +286,6 @@ void pos_controller_passivity::printf_result()
     cout << "u_l [X Y Z] : " << u_l[0] << " [N] "<< u_l[1]<<" [N] "<<u_l[2]<<" [N] "<<endl;
 
     cout << "u_d [X Y Z] : " << u_d[0] << " [N] "<< u_d[1]<<" [N] "<<u_d[2]<<" [N] "<<endl;
-
-    cout << "throttle_sp    [X Y Z] : " << throttle_sp[0] << " [m/s^2] "<< throttle_sp[1]<<" [m/s^2] "<<throttle_sp[2]<<" [m/s^2] "<<endl;
 
 }
 

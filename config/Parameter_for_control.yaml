@@ -22,8 +22,8 @@ Limit:
   tilt_max: 20.0
   int_start_error: 10.0
 
-  XY_VEL_MAX : 0.5
-  Z_VEL_MAX : 0.3 
+  XY_VEL_MAX : 10.0
+  Z_VEL_MAX : 10.0 
   
   
 ## 起飞高度

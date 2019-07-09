@@ -55,10 +55,8 @@ Eigen::Vector3d quaternion_to_euler(const Eigen::Quaterniond &q)
 }
 
 //旋转矩阵转欧拉角
-Eigen::Vector3d rotation_to_euler(Eigen::Matrix3d dcm)
+void rotation_to_euler(const Eigen::Matrix3d& dcm, Eigen::Vector3d& euler_angle)
 {
-    Eigen::Vector3d euler_angle;
-
     double phi_val = atan2(dcm(2, 1), dcm(2, 2));
     double theta_val = asin(-dcm(2, 0));
     double psi_val = atan2(dcm(1, 0), dcm(0, 0));
@@ -76,8 +74,6 @@ Eigen::Vector3d rotation_to_euler(Eigen::Matrix3d dcm)
     euler_angle(0) = phi_val;
     euler_angle(1) = theta_val;
     euler_angle(2) = psi_val;
-
-    return euler_angle;
 }
 
 

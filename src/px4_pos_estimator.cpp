@@ -138,8 +138,8 @@ void tfmini_cb(const sensor_msgs::Range::ConstPtr& msg)
 void optitrack_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
     //位置 -- optitrack系 到 ENU系
-    int optitrack_frame = 0; //Frame convention 0: Z-up -- 1: Y-up
-
+    //Frame convention 0: Z-up -- 1: Y-up (See the configuration in the motive software)
+    int optitrack_frame = 0; 
     if(optitrack_frame == 0)
     {
         // Read the Drone Position from the Vrpn Package [Frame: Vicon]  (Vicon to ENU frame)

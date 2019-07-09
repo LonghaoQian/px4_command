@@ -137,26 +137,26 @@ class command_to_mavros
     void idle();
 
     //发送位置期望值至飞控（输入：期望xyz,期望yaw）
-    void send_pos_setpoint(Eigen::Vector3d pos_sp, float yaw_sp);
+    void send_pos_setpoint(const Eigen::Vector3d& pos_sp, float yaw_sp);
 
     //发送速度期望值至飞控（输入：期望vxvyvz,期望yaw）
-    void send_vel_setpoint(Eigen::Vector3d vel_sp, float yaw_sp);
+    void send_vel_setpoint(const Eigen::Vector3d& vel_sp, float yaw_sp);
 
     //发送速度期望值至飞控（机体系）（输入：期望vxvyvz,期望yaw）
-    void send_vel_setpoint_body(Eigen::Vector3d vel_sp, float yaw_sp);
+    void send_vel_setpoint_body(const Eigen::Vector3d& vel_sp, float yaw_sp);
 
     //发送加速度期望值至飞控（输入：期望axayaz,期望yaw）
     //这是px4_pos_controller.cpp中目前使用的控制方式
-    void send_accel_setpoint(Eigen::Vector3d accel_sp, float yaw_sp);
+    void send_accel_setpoint(const Eigen::Vector3d& accel_sp, float yaw_sp);
 
     //发送角度期望值至飞控（输入：期望角度-四元数,期望推力）
-    void send_attitude_setpoint(px4_command::AttitudeReference _AttitudeReference);
+    void send_attitude_setpoint(const px4_command::AttitudeReference& _AttitudeReference);
 
     //发送角度期望值至飞控（输入：期望角速度,期望推力）
-    void send_attitude_rate_setpoint(Eigen::Vector3d attitude_rate_sp, float thrust_sp);
+    void send_attitude_rate_setpoint(const Eigen::Vector3d& attitude_rate_sp, float thrust_sp);
 
     //发送底层至飞控（输入：MxMyMz,期望推力）[Not recommanded. Because the high delay between the onboard computer and Pixhawk]
-    void send_actuator_setpoint(Eigen::Vector4d actuator_sp);
+    void send_actuator_setpoint(const Eigen::Vector4d& actuator_sp);
 
     private:
 
@@ -210,7 +210,7 @@ void command_to_mavros::idle()
 }
 
 //发送位置期望值至飞控（输入：期望xyz,期望yaw）
-void command_to_mavros::send_pos_setpoint(Eigen::Vector3d pos_sp, float yaw_sp)
+void command_to_mavros::send_pos_setpoint(const Eigen::Vector3d& pos_sp, float yaw_sp)
 {
     mavros_msgs::PositionTarget pos_setpoint;
     //Bitmask toindicate which dimensions should be ignored (1 means ignore,0 means not ignore; Bit 10 must set to 0)
@@ -229,13 +229,13 @@ void command_to_mavros::send_pos_setpoint(Eigen::Vector3d pos_sp, float yaw_sp)
     setpoint_raw_local_pub.publish(pos_setpoint);
 
     // 检查飞控是否收到控制量
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>command_to_mavros<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-    cout << "Pos_target [X Y Z] : " << pos_drone_fcu_target[0] << " [ m ] "<< pos_drone_fcu_target[1]<<" [ m ] "<<pos_drone_fcu_target[2]<<" [ m ] "<<endl;
-    cout << "Yaw_target : " << euler_fcu_target[2] * 180/M_PI<<" [deg] "<<endl;
+    // cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>command_to_mavros<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    // cout << "Pos_target [X Y Z] : " << pos_drone_fcu_target[0] << " [ m ] "<< pos_drone_fcu_target[1]<<" [ m ] "<<pos_drone_fcu_target[2]<<" [ m ] "<<endl;
+    // cout << "Yaw_target : " << euler_fcu_target[2] * 180/M_PI<<" [deg] "<<endl;
 }
 
 //发送速度期望值至飞控（输入：期望vxvyvz,期望yaw）
-void command_to_mavros::send_vel_setpoint(Eigen::Vector3d vel_sp, float yaw_sp)
+void command_to_mavros::send_vel_setpoint(const Eigen::Vector3d& vel_sp, float yaw_sp)
 {
     mavros_msgs::PositionTarget pos_setpoint;
 
@@ -252,13 +252,13 @@ void command_to_mavros::send_vel_setpoint(Eigen::Vector3d vel_sp, float yaw_sp)
     setpoint_raw_local_pub.publish(pos_setpoint);
     
     // 检查飞控是否收到控制量
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>command_to_mavros<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-    cout << "Vel_target [X Y Z] : " << vel_drone_fcu_target[0] << " [m/s] "<< vel_drone_fcu_target[1]<<" [m/s] "<<vel_drone_fcu_target[2]<<" [m/s] "<<endl;
-    cout << "Yaw_target : " << euler_fcu_target[2] * 180/M_PI<<" [deg] "<<endl;
+    // cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>command_to_mavros<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    // cout << "Vel_target [X Y Z] : " << vel_drone_fcu_target[0] << " [m/s] "<< vel_drone_fcu_target[1]<<" [m/s] "<<vel_drone_fcu_target[2]<<" [m/s] "<<endl;
+    // cout << "Yaw_target : " << euler_fcu_target[2] * 180/M_PI<<" [deg] "<<endl;
 }
 
 //发送速度期望值至飞控（机体系）（输入：期望vxvyvz,期望yaw）
-void command_to_mavros::send_vel_setpoint_body(Eigen::Vector3d vel_sp, float yaw_sp)
+void command_to_mavros::send_vel_setpoint_body(const Eigen::Vector3d& vel_sp, float yaw_sp)
 {
     mavros_msgs::PositionTarget pos_setpoint;
 
@@ -276,14 +276,14 @@ void command_to_mavros::send_vel_setpoint_body(Eigen::Vector3d vel_sp, float yaw
 
     setpoint_raw_local_pub.publish(pos_setpoint);
 
-    // 检查飞控是否收到控制量
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>command_to_mavros<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-    cout << "Vel_target [X Y Z] : " << vel_drone_fcu_target[0] << " [m/s] "<< vel_drone_fcu_target[1]<<" [m/s] "<<vel_drone_fcu_target[2]<<" [m/s] "<<endl;
-    cout << "Yaw_target : " << euler_fcu_target[2] * 180/M_PI<<" [deg] "<<endl;
+    // // 检查飞控是否收到控制量
+    // cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>command_to_mavros<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    // cout << "Vel_target [X Y Z] : " << vel_drone_fcu_target[0] << " [m/s] "<< vel_drone_fcu_target[1]<<" [m/s] "<<vel_drone_fcu_target[2]<<" [m/s] "<<endl;
+    // cout << "Yaw_target : " << euler_fcu_target[2] * 180/M_PI<<" [deg] "<<endl;
 }
 
 //发送加速度期望值至飞控（输入：期望axayaz,期望yaw）
-void command_to_mavros::send_accel_setpoint(Eigen::Vector3d accel_sp, float yaw_sp)
+void command_to_mavros::send_accel_setpoint(const Eigen::Vector3d& accel_sp, float yaw_sp)
 {
     mavros_msgs::PositionTarget pos_setpoint;
 
@@ -300,14 +300,14 @@ void command_to_mavros::send_accel_setpoint(Eigen::Vector3d accel_sp, float yaw_
     setpoint_raw_local_pub.publish(pos_setpoint);
 
     // 检查飞控是否收到控制量
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>command_to_mavros<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-    cout << "Acc_target [X Y Z] : " << accel_drone_fcu_target[0] << " [m/s^2] "<< accel_drone_fcu_target[1]<<" [m/s^2] "<<accel_drone_fcu_target[2]<<" [m/s^2] "<<endl;
-    cout << "Yaw_target : " << euler_fcu_target[2] * 180/M_PI<<" [deg] "<<endl;
+    // cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>command_to_mavros<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    // cout << "Acc_target [X Y Z] : " << accel_drone_fcu_target[0] << " [m/s^2] "<< accel_drone_fcu_target[1]<<" [m/s^2] "<<accel_drone_fcu_target[2]<<" [m/s^2] "<<endl;
+    // cout << "Yaw_target : " << euler_fcu_target[2] * 180/M_PI<<" [deg] "<<endl;
 
 }
 
 //发送角度期望值至飞控（输入：期望角度-四元数,期望推力）
-void command_to_mavros::send_attitude_setpoint(px4_command::AttitudeReference _AttitudeReference)
+void command_to_mavros::send_attitude_setpoint(const px4_command::AttitudeReference& _AttitudeReference)
 {
     mavros_msgs::AttitudeTarget att_setpoint;
 
@@ -326,13 +326,13 @@ void command_to_mavros::send_attitude_setpoint(px4_command::AttitudeReference _A
     setpoint_raw_attitude_pub.publish(att_setpoint);
 
     // 检查飞控是否收到控制量
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>command_to_mavros<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-    cout << "Att_target [R P Y] : " << euler_fcu_target[0] * 180/M_PI <<" [deg] "<<euler_fcu_target[1] * 180/M_PI << " [deg] "<< euler_fcu_target[2] * 180/M_PI<<" [deg] "<<endl;
-    cout << "Thr_target [0 - 1] : " << Thrust_target <<endl;
+    // cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>command_to_mavros<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    // cout << "Att_target [R P Y] : " << euler_fcu_target[0] * 180/M_PI <<" [deg] "<<euler_fcu_target[1] * 180/M_PI << " [deg] "<< euler_fcu_target[2] * 180/M_PI<<" [deg] "<<endl;
+    // cout << "Thr_target [0 - 1] : " << Thrust_target <<endl;
 }
 
 //发送角度期望值至飞控（输入：期望角速度,期望推力）
-void command_to_mavros::send_attitude_rate_setpoint(Eigen::Vector3d attitude_rate_sp, float thrust_sp)
+void command_to_mavros::send_attitude_rate_setpoint(const Eigen::Vector3d& attitude_rate_sp, float thrust_sp)
 {
     mavros_msgs::AttitudeTarget att_setpoint;
 
@@ -350,13 +350,13 @@ void command_to_mavros::send_attitude_rate_setpoint(Eigen::Vector3d attitude_rat
     setpoint_raw_attitude_pub.publish(att_setpoint);
 
     // 检查飞控是否收到控制量
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>command_to_mavros<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-    cout << "Att_rate_target [R P Y] : " << rates_fcu_target[0] * 180/M_PI <<" [deg/s] "<<rates_fcu_target[1] * 180/M_PI << " [deg/s] "<< rates_fcu_target[2] * 180/M_PI<<" [deg/s] "<<endl;
-    cout << "Thr_target [0 - 1] : " << Thrust_target <<endl;
+    // cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>command_to_mavros<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    // cout << "Att_rate_target [R P Y] : " << rates_fcu_target[0] * 180/M_PI <<" [deg/s] "<<rates_fcu_target[1] * 180/M_PI << " [deg/s] "<< rates_fcu_target[2] * 180/M_PI<<" [deg/s] "<<endl;
+    // cout << "Thr_target [0 - 1] : " << Thrust_target <<endl;
 }
 
 //发送底层至飞控（输入：MxMyMz,期望推力）
-void command_to_mavros::send_actuator_setpoint(Eigen::Vector4d actuator_sp)
+void command_to_mavros::send_actuator_setpoint(const Eigen::Vector4d& actuator_sp)
 {
     mavros_msgs::ActuatorControl actuator_setpoint;
 
@@ -372,12 +372,12 @@ void command_to_mavros::send_actuator_setpoint(Eigen::Vector4d actuator_sp)
 
     actuator_setpoint_pub.publish(actuator_setpoint);
 
-    // 检查飞控是否收到控制量
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>command_to_mavros<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-    //ned to enu
-    cout << "actuator_target [0 1 2 3] : " << actuator_target.controls[0] << " [ ] "<< -actuator_target.controls[1] <<" [ ] "<<-actuator_target.controls[2]<<" [ ] "<<actuator_target.controls[3] <<" [ ] "<<endl;
+    // // 检查飞控是否收到控制量
+    // cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>command_to_mavros<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    // //ned to enu
+    // cout << "actuator_target [0 1 2 3] : " << actuator_target.controls[0] << " [ ] "<< -actuator_target.controls[1] <<" [ ] "<<-actuator_target.controls[2]<<" [ ] "<<actuator_target.controls[3] <<" [ ] "<<endl;
 
-    cout << "actuator_target [4 5 6 7] : " << actuator_target.controls[4] << " [ ] "<< actuator_target.controls[5] <<" [ ] "<<actuator_target.controls[6]<<" [ ] "<<actuator_target.controls[7] <<" [ ] "<<endl;
+    // cout << "actuator_target [4 5 6 7] : " << actuator_target.controls[4] << " [ ] "<< actuator_target.controls[5] <<" [ ] "<<actuator_target.controls[6]<<" [ ] "<<actuator_target.controls[7] <<" [ ] "<<endl;
 
 }
 

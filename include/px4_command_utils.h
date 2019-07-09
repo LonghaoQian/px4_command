@@ -38,7 +38,7 @@ namespace px4_command_utils
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 打 印 函 数 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  
 // 打印上层控制指令  
-void printf_command_control(px4_command::ControlCommand _ControlCommand)
+void printf_command_control(const px4_command::ControlCommand& _ControlCommand)
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>> Control Command <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
@@ -98,13 +98,18 @@ void printf_command_control(px4_command::ControlCommand _ControlCommand)
             cout << "Position_Ref [X Y Z] : " << _ControlCommand.Reference_State.position_ref[0] << " [ m ] "<< _ControlCommand.Reference_State.position_ref[1]<<" [ m ] "<< _ControlCommand.Reference_State.position_ref[2]<<" [ m ] "<<endl;
             cout << "Yaw_Ref : "  << _ControlCommand.Reference_State.yaw_ref* 180/M_PI << " [deg] " <<endl;
             break;
+        case command_to_mavros::Trajectory_Tracking:
+            cout << "Command: [ Trajectory_Tracking ] " <<endl;
+            cout << "Position_Ref [X Y Z] : " << _ControlCommand.Reference_State.position_ref[0] << " [ m ] "<< _ControlCommand.Reference_State.position_ref[1]<<" [ m ] "<< _ControlCommand.Reference_State.position_ref[2]<<" [ m ] "<<endl;
+            cout << "Yaw_Ref : "  << _ControlCommand.Reference_State.yaw_ref* 180/M_PI << " [deg] " <<endl;
+            break;
     }
 
 }
 
 
 // 打印无人机状态
-void prinft_drone_state(px4_command::DroneState _Drone_state)
+void prinft_drone_state(const px4_command::DroneState& _Drone_state)
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>   Drone State   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
@@ -152,7 +157,7 @@ void prinft_drone_state(px4_command::DroneState _Drone_state)
 }
 
 // 打印位置控制器输出结果
-void prinft_attitude_reference(px4_command::AttitudeReference _AttitudeReference)
+void prinft_attitude_reference(const px4_command::AttitudeReference& _AttitudeReference)
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>> Attitude Reference <<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
@@ -175,7 +180,7 @@ void prinft_attitude_reference(px4_command::AttitudeReference _AttitudeReference
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 其 他 函 数 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< 
 
 // 【获取当前时间函数】 单位：秒
-float get_time_in_sec(ros::Time begin_time)
+float get_time_in_sec(const ros::Time& begin_time)
 {
     ros::Time time_now = ros::Time::now();
     float currTimeSec = time_now.sec-begin_time.sec;
@@ -193,10 +198,8 @@ void rotation_yaw(float yaw_angle, float body_frame[2], float enu_frame[2])
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 控 制 辅 助 函 数 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< 
 //计算位置误差
-Eigen::Vector3f cal_pos_error(px4_command::DroneState _DroneState, px4_command::TrajectoryPoint _Reference_State)
+void cal_pos_error(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, Eigen::Vector3f& pos_error)
 {
-    Eigen::Vector3f pos_error;
-
     for (int i=0; i<3; i++)
     {
         pos_error[i] = _Reference_State.position_ref[i] - _DroneState.position[i];
@@ -215,27 +218,21 @@ Eigen::Vector3f cal_pos_error(px4_command::DroneState _DroneState, px4_command::
     {
         pos_error[3] = 0;
     }
-
-    return pos_error;
 }
 
 //计算速度误差
-Eigen::Vector3f cal_vel_error(px4_command::DroneState _DroneState, px4_command::TrajectoryPoint _Reference_State)
+void cal_vel_error(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, Eigen::Vector3f& vel_error)
 {
-    Eigen::Vector3f vel_error;
-
     for (int i=0; i<3; i++)
     {
         vel_error[i] = _Reference_State.velocity_ref[i] - _DroneState.velocity[i];
     }
 
-    return vel_error;
 }
 
-Eigen::Vector3d accelToThrottle(Eigen::Vector3d accel_sp, float mass, float tilt_max)
+void accelToThrottle(const Eigen::Vector3d& accel_sp, float mass, float tilt_max, Eigen::Vector3d& throttle_sp)
 {
     Eigen::Vector3d thrust_sp;
-    Eigen::Vector3d throttle_sp;
 
     //除以电机个数得到单个电机的期望推力
     thrust_sp = mass * accel_sp / NUM_MOTOR;
@@ -259,8 +256,6 @@ Eigen::Vector3d accelToThrottle(Eigen::Vector3d accel_sp, float mass, float tilt
         // PX4内部默认假设 0.5油门为悬停推力 ， 在无人机重量为1kg时，直接除20得到0.5
         // throttle_sp[i] = thrust_sp[i]/20；
     }
-
-    return throttle_sp;
 }
 
 
@@ -268,10 +263,8 @@ Eigen::Vector3d accelToThrottle(Eigen::Vector3d accel_sp, float mass, float tilt
 //Thrust to Attitude
 //Input: desired thrust (desired throttle [0,1]) and yaw_sp(rad)
 //Output: desired attitude (quaternion)
-px4_command::AttitudeReference thrustToAttitude(Eigen::Vector3d thr_sp, float yaw_sp)
+void thrustToAttitude(const Eigen::Vector3d& thr_sp, float yaw_sp, px4_command::AttitudeReference& _AttitudeReference)
 {
-    px4_command::AttitudeReference _AttitudeReference;
-
     Eigen::Vector3d att_sp;
     att_sp[2] = yaw_sp;
 
@@ -325,7 +318,7 @@ px4_command::AttitudeReference thrustToAttitude(Eigen::Vector3d thr_sp, float ya
 
     Eigen::Quaterniond q_sp(R_sp);
 
-    att_sp = rotation_to_euler(R_sp);
+    rotation_to_euler(R_sp, att_sp);
 
     //cout << "Desired euler [R P Y]: "<< att_sp[0]* 180/M_PI <<" [deg] " << att_sp[1]* 180/M_PI <<" [deg] "<< att_sp[2]* 180/M_PI <<" [deg] "<< endl;
     //cout << "Desired Thrust: "<< thr_sp_length<< endl;
@@ -345,8 +338,6 @@ px4_command::AttitudeReference thrustToAttitude(Eigen::Vector3d thr_sp, float ya
 
     //期望油门
     _AttitudeReference.desired_throttle = thr_sp_length;  
-
-    return _AttitudeReference;
 }
 
 }

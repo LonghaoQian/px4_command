@@ -55,7 +55,6 @@ class pos_controller_PID
             pos_pid_nh.param<float>("Limit/int_start_error"  , int_start_error, 0.3);
 
             integral = Eigen::Vector3f(0.0,0.0,0.0);
-            throttle_sp = Eigen::Vector3d(0.0,0.0,0.0);
         }
 
         //Quadrotor Parameter
@@ -77,7 +76,6 @@ class pos_controller_PID
         Eigen::Vector3f integral;
 
         //输出
-        Eigen::Vector3d throttle_sp;
 
         //Printf the PID parameter
         void printf_param();
@@ -86,23 +84,26 @@ class pos_controller_PID
 
         // Position control main function 
         // [Input: Current state, Reference state, sub_mode, dt; Output: AttitudeReference;]
-        Eigen::Vector3d pos_controller(px4_command::DroneState _DroneState, px4_command::TrajectoryPoint _Reference_State, float dt);
+        void pos_controller(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, float dt, Eigen::Vector3d& throttle_sp);
 
     private:
         ros::NodeHandle pos_pid_nh;
 
 };
 
-Eigen::Vector3d pos_controller_PID::pos_controller(
-    px4_command::DroneState _DroneState, 
-    px4_command::TrajectoryPoint _Reference_State, float dt)
+void pos_controller_PID::pos_controller(
+    const px4_command::DroneState& _DroneState, 
+    const px4_command::TrajectoryPoint& _Reference_State, float dt,
+    Eigen::Vector3d& throttle_sp)
 {
     Eigen::Vector3d accel_sp;
-    Eigen::Vector3d throttle_sp;
-
+    
     // 计算误差项
-    Eigen::Vector3f pos_error = px4_command_utils::cal_pos_error(_DroneState, _Reference_State);
-    Eigen::Vector3f vel_error = px4_command_utils::cal_vel_error(_DroneState, _Reference_State);
+    Eigen::Vector3f pos_error;
+    Eigen::Vector3f vel_error;
+    
+    px4_command_utils::cal_pos_error(_DroneState, _Reference_State, pos_error);
+    px4_command_utils::cal_vel_error(_DroneState, _Reference_State, vel_error);
 
     // 误差项限幅
     for (int i=0; i<3; i++)
@@ -147,9 +148,7 @@ Eigen::Vector3d pos_controller_PID::pos_controller(
 
     // 期望推力 = 期望加速度 × 质量
     // 归一化推力 ： 根据电机模型，反解出归一化推力
-    throttle_sp = px4_command_utils::accelToThrottle(accel_sp, Quad_MASS, tilt_max);
-
-    return throttle_sp;
+    px4_command_utils::accelToThrottle(accel_sp, Quad_MASS, tilt_max, throttle_sp);
 }
 
 void pos_controller_PID::printf_result()
@@ -166,9 +165,6 @@ void pos_controller_PID::printf_result()
     cout.setf(ios::showpos);
 
     cout<<setprecision(2);
-
-    cout << "throttle_sp    [X Y Z] : " << throttle_sp[0] << " [m/s^2] "<< throttle_sp[1]<<" [m/s^2] "<<throttle_sp[2]<<" [m/s^2] "<<endl;
-
 }
 
 // 【打印参数函数】

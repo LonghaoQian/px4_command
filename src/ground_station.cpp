@@ -8,7 +8,6 @@
 #include <state_from_mavros.h>
 #include <command_to_mavros.h>
 
-#include <circle_trajectory.h>
 
 #include <px4_command/ControlCommand.h>
 #include <px4_command/DroneState.h>

@@ -128,38 +128,39 @@ class pos_controller_cascade_PID
 
         // Position control main function 
         // [Input: Current state, Reference state, _Reference_State.Sub_mode, dt; Output: AttitudeReference;]
-        Eigen::Vector3d pos_controller(px4_command::DroneState _DroneState, px4_command::TrajectoryPoint _Reference_State, float dt);
+        void pos_controller(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, float dt, Eigen::Vector3d& thrust_sp);
 
         //Position control loop [Input: current pos, desired pos; Output: desired vel]
-        Eigen::Vector3d _positionController(px4_command::DroneState _DroneState, px4_command::TrajectoryPoint _Reference_State);
+        void _positionController(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, Eigen::Vector3d& vel_setpoint);
 
         //Velocity control loop [Input: current vel, desired vel; Output: desired thrust]
-        Eigen::Vector3d _velocityController(px4_command::DroneState _DroneState, px4_command::TrajectoryPoint _Reference_State, float dt);
+        void _velocityController(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, float dt, Eigen::Vector3d& thrust_sp);
 
-        Eigen::Vector3d cal_vel_error_deriv(Eigen::Vector3d error_now);
+        void cal_vel_error_deriv(const Eigen::Vector3d& error_now, Eigen::Vector3d& vel_error_deriv);
 
     private:
 
         ros::NodeHandle pos_cascade_pid_nh;
 };
 
-Eigen::Vector3d pos_controller_cascade_PID::pos_controller
-    (px4_command::DroneState _DroneState, 
-     px4_command::TrajectoryPoint _Reference_State, float dt)
+void pos_controller_cascade_PID::pos_controller
+    (const px4_command::DroneState& _DroneState, 
+     const px4_command::TrajectoryPoint& _Reference_State, 
+     float dt, 
+     Eigen::Vector3d& thrust_sp)
 {
     delta_time = dt;
 
-    vel_setpoint = _positionController(_DroneState, _Reference_State);
+    _positionController(_DroneState, _Reference_State, vel_setpoint);
 
-    thrust_sp    = _velocityController(_DroneState, _Reference_State, delta_time);
-
-    return thrust_sp;
+    _velocityController(_DroneState, _Reference_State, delta_time, thrust_sp);
 }
 
 
-Eigen::Vector3d pos_controller_cascade_PID::_positionController
-    (px4_command::DroneState _DroneState, 
-     px4_command::TrajectoryPoint _Reference_State)
+void pos_controller_cascade_PID::_positionController
+    (const px4_command::DroneState& _DroneState, 
+     const px4_command::TrajectoryPoint& _Reference_State,
+     Eigen::Vector3d& vel_setpoint)
 {
     //# _Reference_State.Sub_mode 2-bit value:
     //# 0 for position, 1 for vel, 1st for xy, 2nd for z.
@@ -169,8 +170,8 @@ Eigen::Vector3d pos_controller_cascade_PID::_positionController
 
     if((_Reference_State.Sub_mode & 0b10) == 0) //xy channel
     {
-        vel_setpoint[0] = Kp_xy * (_Reference_State.position_ref[0] - _DroneState.position[0]);
-        vel_setpoint[1] = Kp_xy * (_Reference_State.position_ref[1] - _DroneState.position[1]);
+        vel_setpoint[0] = _Reference_State.velocity_ref[0] + Kp_xy * (_Reference_State.position_ref[0] - _DroneState.position[0]);
+        vel_setpoint[1] = _Reference_State.velocity_ref[1] + Kp_xy * (_Reference_State.position_ref[1] - _DroneState.position[1]);
     }
     else
     {
@@ -180,7 +181,7 @@ Eigen::Vector3d pos_controller_cascade_PID::_positionController
 
     if((_Reference_State.Sub_mode & 0b01) == 0) //z channel
     {
-        vel_setpoint[2] = Kp_z  * (_Reference_State.position_ref[2] - _DroneState.position[2]);
+        vel_setpoint[2] = _Reference_State.velocity_ref[2] + Kp_z  * (_Reference_State.position_ref[2] - _DroneState.position[2]);
     }
     else
     {
@@ -191,13 +192,12 @@ Eigen::Vector3d pos_controller_cascade_PID::_positionController
     vel_setpoint[0] = constrain_function(vel_setpoint[0], MPC_XY_VEL_MAX);
     vel_setpoint[1] = constrain_function(vel_setpoint[1], MPC_XY_VEL_MAX);
     vel_setpoint[2] = constrain_function(vel_setpoint[2], MPC_Z_VEL_MAX);
-
-    return vel_setpoint;
 }
 
-Eigen::Vector3d pos_controller_cascade_PID::_velocityController
-    (px4_command::DroneState _DroneState, 
-     px4_command::TrajectoryPoint _Reference_State, float dt)
+void pos_controller_cascade_PID::_velocityController
+    (const px4_command::DroneState& _DroneState, 
+     const px4_command::TrajectoryPoint& _Reference_State, float dt,
+     Eigen::Vector3d& thrust_sp)
 {
     // Generate desired thrust setpoint.
     // PID
@@ -229,7 +229,8 @@ Eigen::Vector3d pos_controller_cascade_PID::_velocityController
     vel_P_output[1] = Kp_vxvy * error_vel[1];
     vel_P_output[2] = Kp_vz  * error_vel[2];
 
-    Eigen::Vector3d vel_error_deriv = cal_vel_error_deriv(error_vel);
+    Eigen::Vector3d vel_error_deriv;
+    cal_vel_error_deriv(error_vel, vel_error_deriv);
 
     vel_D_output[0] = Kd_vxvy * vel_error_deriv[0];
     vel_D_output[1] = Kd_vxvy * vel_error_deriv[1];
@@ -237,7 +238,7 @@ Eigen::Vector3d pos_controller_cascade_PID::_velocityController
 
 
     // Consider thrust in Z-direction. [Here Hover_throttle is added]
-    float thrust_desired_Z  = vel_P_output[2] + thurst_int[2] + vel_D_output[2] + Hover_throttle;
+    float thrust_desired_Z  = _Reference_State.acceleration_ref[2] + vel_P_output[2] + thurst_int[2] + vel_D_output[2] + Hover_throttle;
 
     // Apply Anti-Windup in Z-direction.
     // 两种情况：期望推力大于最大推力，且速度误差朝上；期望推力小于最小推力，且速度误差朝下
@@ -256,8 +257,8 @@ Eigen::Vector3d pos_controller_cascade_PID::_velocityController
     // PID-velocity controller for XY-direction.
     float thrust_desired_X;
     float thrust_desired_Y;
-    thrust_desired_X  = vel_P_output[0] + thurst_int[0] + vel_D_output[0];
-    thrust_desired_Y  = vel_P_output[1] + thurst_int[1] + vel_D_output[1];
+    thrust_desired_X  = _Reference_State.acceleration_ref[0] + vel_P_output[0] + thurst_int[0] + vel_D_output[0];
+    thrust_desired_Y  = _Reference_State.acceleration_ref[1] + vel_P_output[1] + thurst_int[1] + vel_D_output[1];
 
     // Get maximum allowed thrust in XY based on tilt angle and excess thrust.
     float thrust_max_XY_tilt = fabs(thrust_sp[2]) * tanf(tilt_max/180.0*M_PI);
@@ -295,11 +296,9 @@ Eigen::Vector3d pos_controller_cascade_PID::_velocityController
     {
         thurst_int = Eigen::Vector3d(0.0,0.0,0.0);
     }
-
-    return thrust_sp;
 }
 
-Eigen::Vector3d pos_controller_cascade_PID::cal_vel_error_deriv(Eigen::Vector3d error_now)
+void pos_controller_cascade_PID::cal_vel_error_deriv(const Eigen::Vector3d& error_now, Eigen::Vector3d& vel_error_deriv)
 {
     Eigen::Vector3d error_vel_dot_now;
     error_vel_dot_now = (error_now - error_vel_last)/delta_time;
@@ -309,13 +308,9 @@ Eigen::Vector3d pos_controller_cascade_PID::cal_vel_error_deriv(Eigen::Vector3d 
     b = 2 * M_PI * MPC_VELD_LP * delta_time;
     a = b / (1 + b);
 
-    Eigen::Vector3d output;
+    vel_error_deriv = a * error_vel_dot_now + (1 - a) * error_vel_dot_last ;
 
-    output = a * error_vel_dot_now + (1 - a) * error_vel_dot_last ;
-
-    error_vel_dot_last = output;
-
-    return output;
+    error_vel_dot_last = vel_error_deriv;
 }
 
 
