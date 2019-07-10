@@ -48,7 +48,7 @@ int main(int argc, char **argv)
         cin >> yaw_sp;
 
 
-        //Eigen::Quaterniond q_sp = thrustToAttitude(thr_sp, yaw_sp);
+        //Eigen::Quaterniond q_sp = ThrottleToAttitude(thr_sp, yaw_sp);
 
         //周期休眠
         rate.sleep();

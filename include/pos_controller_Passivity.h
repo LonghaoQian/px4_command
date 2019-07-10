@@ -126,7 +126,7 @@ class pos_controller_passivity
 
         // Position control main function 
         // [Input: Current state, Reference state, sub_mode, dt; Output: AttitudeReference;]
-        px4_command::ControlOutput pos_controller(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, float dt, Eigen::Vector3d& throttle_sp);
+        px4_command::ControlOutput pos_controller(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, float dt);
 
     private:
 
@@ -154,8 +154,7 @@ void pos_controller_passivity::set_filter()
 
 px4_command::ControlOutput pos_controller_passivity::pos_controller(
     const px4_command::DroneState& _DroneState, 
-    const px4_command::TrajectoryPoint& _Reference_State, float dt,
-    Eigen::Vector3d& throttle_sp)
+    const px4_command::TrajectoryPoint& _Reference_State, float dt)
 {
     Eigen::Vector3d accel_sp;
 
@@ -226,15 +225,20 @@ px4_command::ControlOutput pos_controller_passivity::pos_controller(
 
     // 期望推力 = 期望加速度 × 质量
     // 归一化推力 ： 根据电机模型，反解出归一化推力
-    px4_command_utils::accelToThrottle(accel_sp, Quad_MASS, tilt_max, throttle_sp);
+    Eigen::Vector3d thrust_sp;
+    Eigen::Vector3d throttle_sp;
+    thrust_sp =  px4_command_utils::accelToThrust(accel_sp, Quad_MASS, tilt_max);
+    throttle_sp = px4_command_utils::thrustToThrottle(thrust_sp);
 
-        for (int i=0; i<3; i++)
-{
+    for (int i=0; i<3; i++)
+    {
         _ControlOutput.u_l[i] = u_l[i];
-    _ControlOutput.u_d[i] = u_d[i];
+        _ControlOutput.u_d[i] = u_d[i];
+        _ControlOutput.Thrust[i] = thrust_sp[i];
+        _ControlOutput.Throttle[i] = throttle_sp[i];
+    }
 
-}
-return _ControlOutput;
+    return _ControlOutput;
 }
 
 

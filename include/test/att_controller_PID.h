@@ -11,7 +11,7 @@
 *                       https://github.com/PX4/Firmware/blob/master/src/modules/mc_att_control/AttitudeControl/AttitudeControl.cpp
 *         3. Here we didn't consider the mass of the drone, we treat accel_sp is the thrust_sp.
 *         4. We didn't use filter to get the derivation of the ratesocity [It must be considered.]
-*         5. thrustToAttitude ref to https://github.com/PX4/Firmware/blob/master/src/modules/mc_att_control/Utility/ControlMath.cpp
+*         5. ThrottleToAttitude ref to https://github.com/PX4/Firmware/blob/master/src/modules/mc_att_control/Utility/ControlMath.cpp
 ***************************************************************************************************************************/
 #ifndef ATT_CONTROLLER_PID_H
 #define ATT_CONTROLLER_PID_H
@@ -159,8 +159,8 @@ class att_controller_PID
         //attition control main function [Input: desired state, time_now; Output: actuator_setpoint;]
         Eigen::Vector4d att_controller(Eigen::Vector3d att, Eigen::Vector3d rates, Eigen::Vector3d accel_sp, float yaw_sp, float curtime);
 
-        //thrustToAttitude [Input: desired thrust,desired yaw angle; Output: desired euler angle]
-        void thrustToAttitude(float yaw_sp);
+        //ThrottleToAttitude [Input: desired thrust,desired yaw angle; Output: desired euler angle]
+        void ThrottleToAttitude(float yaw_sp);
 
         //attition control loop [Input: desired state; Output: desired rates]
         void _attController();
@@ -204,7 +204,7 @@ Eigen::Vector4d att_controller_PID::att_controller(Eigen::Vector3d att, Eigen::V
 
     rates_fcu = rates;
 
-    thrustToAttitude(yaw_sp);
+    ThrottleToAttitude(yaw_sp);
 
     _attController();
 
@@ -215,7 +215,7 @@ Eigen::Vector4d att_controller_PID::att_controller(Eigen::Vector3d att, Eigen::V
     return actuator_setpoint;
 }
 
-void att_controller_PID::thrustToAttitude(float yaw_sp)
+void att_controller_PID::ThrottleToAttitude(float yaw_sp)
 {
 
     Eigen::Vector3d body_x,body_y,body_z;

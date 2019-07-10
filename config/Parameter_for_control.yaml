@@ -89,7 +89,7 @@ Pos_passivity:
   Kd_z : 2.0
   T_ude_xy : 1.0
   T_ude_z : 1.0
-  T_ps: 0.1
+  T_ps: 0.2
 
 # 位置环参数 for ne
 Pos_ne:
@@ -99,16 +99,16 @@ Pos_ne:
   Kd_Zz : 2.0
   T_ude_xy : 1.0
   T_ude_z : 1.0
-  T_ne : 0.1
+  T_ne : 0.2
 
 # 圆轨迹参数 for Circle_Trajectory
 Circle_Trajectory:
   Center_x: 0.0
   Center_y: 0.0
-  Center_z: 5.0
-  radius: 0.0
-  linear_vel: 0.5
-  time_total: 100.0
+  Center_z: 1.0
+  radius: 1.0
+  linear_vel: 0.1
+  time_total: 70.0
   direction: 1.0
 
 

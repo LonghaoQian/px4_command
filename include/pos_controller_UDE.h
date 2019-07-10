@@ -9,7 +9,7 @@
 *         1. Ref to Zhongqingchang's paper:
 *     Uncertainty and Disturbance Estimator-Based Robust Trajectory Tracking Control for a Quadrotor in a Global Positioning System-Denied Environment
 *         2. Ref to : https://github.com/PX4/Firmware/blob/master/src/modules/mc_pos_control/PositionControl.cpp
-*         3. thrustToAttitude ref to https://github.com/PX4/Firmware/blob/master/src/modules/mc_pos_control/Utility/ControlMath.cpp
+*         3. ThrottleToAttitude ref to https://github.com/PX4/Firmware/blob/master/src/modules/mc_pos_control/Utility/ControlMath.cpp
 *         4. 没有考虑积分器清零的情况，在降落时 或者突然换方向机动时，积分器需要清0
 *         5. 推力到欧拉角基本与PX4吻合，但是在极端情况下不吻合。如：z轴期望值为-100时。
 ***************************************************************************************************************************/
@@ -103,7 +103,7 @@ class pos_controller_UDE
 
         // Position control main function 
         // [Input: Current state, Reference state, sub_mode, dt; Output: AttitudeReference;]
-        px4_command::ControlOutput pos_controller(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, float dt, Eigen::Vector3d& throttle_sp);
+        px4_command::ControlOutput pos_controller(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, float dt);
 
     private:
 
@@ -113,8 +113,7 @@ class pos_controller_UDE
 
 px4_command::ControlOutput pos_controller_UDE::pos_controller(
     const px4_command::DroneState& _DroneState, 
-    const px4_command::TrajectoryPoint& _Reference_State, float dt, 
-    Eigen::Vector3d& throttle_sp)
+    const px4_command::TrajectoryPoint& _Reference_State, float dt)
 {
     Eigen::Vector3d accel_sp;
 
@@ -171,15 +170,20 @@ px4_command::ControlOutput pos_controller_UDE::pos_controller(
 
     // 期望推力 = 期望加速度 × 质量
     // 归一化推力 ： 根据电机模型，反解出归一化推力
-    px4_command_utils::accelToThrottle(accel_sp, Quad_MASS, tilt_max, throttle_sp);
+    Eigen::Vector3d thrust_sp;
+    Eigen::Vector3d throttle_sp;
+    thrust_sp =  px4_command_utils::accelToThrust(accel_sp, Quad_MASS, tilt_max);
+    throttle_sp = px4_command_utils::thrustToThrottle(thrust_sp);
 
     for (int i=0; i<3; i++)
-{
+    {
         _ControlOutput.u_l[i] = u_l[i];
-    _ControlOutput.u_d[i] = u_d[i];
+        _ControlOutput.u_d[i] = u_d[i];
+        _ControlOutput.Thrust[i] = thrust_sp[i];
+        _ControlOutput.Throttle[i] = throttle_sp[i];
+    }
 
-}
-return _ControlOutput;
+    return _ControlOutput;
 }
 
 void pos_controller_UDE::printf_result()

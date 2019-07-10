@@ -222,7 +222,7 @@ int main(int argc, char **argv)
         ros::spinOnce();
 
         //利用OptiTrackFeedBackRigidBody类获取optitrack的数据
-        //UAV.GetOptiTrackState();
+        UAV.RosWhileLoopRun();
         UAV.GetState(UAVstate);
 
         for (int i=0;i<3;i++)
@@ -261,7 +261,7 @@ int main(int argc, char **argv)
         send_to_fcu();
 
         // 打印
-       // printf_info();
+        // printf_info();
         rate.sleep();
     }
 

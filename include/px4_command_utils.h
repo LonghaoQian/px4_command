@@ -172,7 +172,6 @@ void prinft_attitude_reference(const px4_command::AttitudeReference& _AttitudeRe
     // 强制显示符号
     cout.setf(ios::showpos);
 
-    cout << "thrust_sp  [ 0-1 ] : " << _AttitudeReference.throttle_sp[0] << " [m/s^2] "<< _AttitudeReference.throttle_sp[1]<<" [m/s^2] "<<_AttitudeReference.throttle_sp[2]<<" [m/s^2] "<<endl;
     cout << "Attitude_sp[R P Y] : " << _AttitudeReference.desired_attitude[0] * 180/M_PI <<" [deg]  "<<_AttitudeReference.desired_attitude[1] * 180/M_PI << " [deg]  "<< _AttitudeReference.desired_attitude[2] * 180/M_PI<<" [deg] "<<endl;
     cout << "Throttle_sp[ 0-1 ] : " << _AttitudeReference.desired_throttle <<endl;
 }
@@ -230,7 +229,7 @@ void cal_vel_error(const px4_command::DroneState& _DroneState, const px4_command
 
 }
 
-void accelToThrottle(const Eigen::Vector3d& accel_sp, float mass, float tilt_max, Eigen::Vector3d& throttle_sp)
+Eigen::Vector3d accelToThrust(const Eigen::Vector3d& accel_sp, float mass, float tilt_max)
 {
     Eigen::Vector3d thrust_sp;
 
@@ -249,6 +248,13 @@ void accelToThrottle(const Eigen::Vector3d& accel_sp, float mass, float tilt_max
         thrust_sp[1] = thrust_sp[1] / mag * thrust_max_XY;
     }
     
+    return thrust_sp;   
+}
+
+Eigen::Vector3d thrustToThrottle(const Eigen::Vector3d& thrust_sp)
+{
+    Eigen::Vector3d throttle_sp;
+
     //电机模型，可通过辨识得到，推力-油门曲线
     for (int i=0; i<3; i++)
     {
@@ -256,14 +262,14 @@ void accelToThrottle(const Eigen::Vector3d& accel_sp, float mass, float tilt_max
         // PX4内部默认假设 0.5油门为悬停推力 ， 在无人机重量为1kg时，直接除20得到0.5
         // throttle_sp[i] = thrust_sp[i]/20；
     }
+    return throttle_sp; 
 }
-
 
 //Throttle to Attitude
 //Thrust to Attitude
 //Input: desired thrust (desired throttle [0,1]) and yaw_sp(rad)
 //Output: desired attitude (quaternion)
-void thrustToAttitude(const Eigen::Vector3d& thr_sp, float yaw_sp, px4_command::AttitudeReference& _AttitudeReference)
+void ThrottleToAttitude(const Eigen::Vector3d& thr_sp, float yaw_sp, px4_command::AttitudeReference& _AttitudeReference)
 {
     Eigen::Vector3d att_sp;
     att_sp[2] = yaw_sp;

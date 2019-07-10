@@ -9,7 +9,7 @@
 *         1. Similiar to the position controller in PX4 (1.8.2)
 *         2. Ref to : https://github.com/PX4/Firmware/blob/master/src/modules/mc_pos_control/PositionControl.cpp
 *         3. Here we didn't consider the mass of the drone, we treat accel_sp is the thrust_sp.
-*         4. thrustToAttitude ref to https://github.com/PX4/Firmware/blob/master/src/modules/mc_pos_control/Utility/ControlMath.cpp
+*         4. ThrottleToAttitude ref to https://github.com/PX4/Firmware/blob/master/src/modules/mc_pos_control/Utility/ControlMath.cpp
 *         5. For the derrive of the velocity error, we use a low-pass filter as same in PX4.
 *                   Ref to: https://github.com/PX4/Firmware/blob/master/src/lib/controllib/BlockDerivative.cpp
 *                           https://github.com/PX4/Firmware/blob/master/src/lib/controllib/BlockLowPass.cpp
@@ -26,6 +26,8 @@
 #include <px4_command/DroneState.h>
 #include <px4_command/TrajectoryPoint.h>
 #include <px4_command/AttitudeReference.h>
+#include <px4_command/ControlOutput.h>
+
 using namespace std;
 
 
@@ -117,8 +119,7 @@ class pos_controller_cascade_PID
         //Current state of the drone
         mavros_msgs::State current_state;
 
-        // Output of thrustToAttitude
-        Eigen::Vector3d euler_sp;
+        px4_command::ControlOutput _ControlOutput;
 
         //Printf the PID parameter
         void printf_param();
@@ -128,7 +129,7 @@ class pos_controller_cascade_PID
 
         // Position control main function 
         // [Input: Current state, Reference state, _Reference_State.Sub_mode, dt; Output: AttitudeReference;]
-        void pos_controller(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, float dt, Eigen::Vector3d& thrust_sp);
+        px4_command::ControlOutput pos_controller(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, float dt);
 
         //Position control loop [Input: current pos, desired pos; Output: desired vel]
         void _positionController(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, Eigen::Vector3d& vel_setpoint);
@@ -143,17 +144,24 @@ class pos_controller_cascade_PID
         ros::NodeHandle pos_cascade_pid_nh;
 };
 
-void pos_controller_cascade_PID::pos_controller
+px4_command::ControlOutput pos_controller_cascade_PID::pos_controller
     (const px4_command::DroneState& _DroneState, 
      const px4_command::TrajectoryPoint& _Reference_State, 
-     float dt, 
-     Eigen::Vector3d& thrust_sp)
+     float dt)
 {
     delta_time = dt;
 
     _positionController(_DroneState, _Reference_State, vel_setpoint);
 
+    Eigen::Vector3d thrust_sp;
+
     _velocityController(_DroneState, _Reference_State, delta_time, thrust_sp);
+
+    _ControlOutput.Throttle[0] = thrust_sp[0];
+    _ControlOutput.Throttle[0] = thrust_sp[0];
+    _ControlOutput.Throttle[0] = thrust_sp[0];
+
+    return _ControlOutput;
 }
 
 

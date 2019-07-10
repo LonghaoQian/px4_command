@@ -157,6 +157,10 @@ void printf_info()
     cout << "u_d [X Y Z]  : " << _Topic_for_log.Control_Output.u_d[0] << " [ ] "<< _Topic_for_log.Control_Output.u_d[1] <<" [ ] "<< _Topic_for_log.Control_Output.u_d[2] <<" [ ] "<<endl;
     cout << "NE  [X Y Z]  : " << _Topic_for_log.Control_Output.NE[0] << " [ ] "<< _Topic_for_log.Control_Output.NE[1] <<" [ ] "<< _Topic_for_log.Control_Output.NE[2] <<" [ ] "<<endl;
 
+    cout << "Thrust  [X Y Z]  : " << _Topic_for_log.Control_Output.Thrust[0] << " [ ] "<< _Topic_for_log.Control_Output.Thrust[1] <<" [ ] "<< _Topic_for_log.Control_Output.Thrust[2] <<" [ ] "<<endl;
+
+    cout << "Throttle  [X Y Z]  : " << _Topic_for_log.Control_Output.Throttle[0] << " [ ] "<< _Topic_for_log.Control_Output.Throttle[1] <<" [ ] "<< _Topic_for_log.Control_Output.Throttle[2] <<" [ ] "<<endl;
+
     cout <<">>>>>>>>>>>>>>>>>>>>>>>> Target Info FCU <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
     
     cout << "Pos_vicon [X Y Z]  : " << pos_drone_mocap[0] << " [ m ] "<< pos_drone_mocap[1] <<" [ m ] "<< pos_drone_mocap[2] <<" [ m ] "<<endl;
@@ -170,7 +174,5 @@ void printf_info()
     cout << "Error_vel      : " << UAVstate.V_I[0] - _Topic_for_log.Drone_State.velocity[0] << " [m/s] "<< UAVstate.V_I[1] - _Topic_for_log.Drone_State.velocity[1]<<" [m/s] "<< UAVstate.V_I[2] - _Topic_for_log.Drone_State.velocity[2]<<" [m/s] "<<endl;
     cout << "Error_att      : " << UAVstate.Euler[0]*57.3 - _Topic_for_log.Drone_State.attitude[0]*57.3 << " [deg] "<< UAVstate.Euler[1]*57.3 - _Topic_for_log.Drone_State.attitude[1]*57.3<<" [deg] "<< UAVstate.Euler[2]*57.3 - _Topic_for_log.Drone_State.attitude[2]*57.3<<" [deg] "<<endl;
     cout << "Error_att_rate : " << UAVstate.Omega_BI[0]*57.3 - _Topic_for_log.Drone_State.attitude_rate[0]*57.3 << " [deg] "<< UAVstate.Omega_BI[1]*57.3 - _Topic_for_log.Drone_State.attitude_rate[1]*57.3<<" [deg] "<< UAVstate.Omega_BI[2]*57.3 - _Topic_for_log.Drone_State.attitude_rate[2]*57.3<<" [deg] "<<endl;
-
-
 
 }
