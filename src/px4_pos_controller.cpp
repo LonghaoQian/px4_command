@@ -54,7 +54,6 @@ px4_command::Topic_for_log _Topic_for_log;
 
 float Takeoff_height;                                       //起飞高度
 float Disarm_height;                                        //自动上锁高度
-float Use_mocap_raw;                                        // 1 for use the mocap raw data 
 float Use_accel;                                            // 1 for use the accel command
 int Flag_printf;
 
@@ -111,9 +110,11 @@ int main(int argc, char **argv)
     // 本话题来自根据需求自定义的上层模块，比如track_land.cpp 比如move.cpp
     ros::Subscriber Command_sub = nh.subscribe<px4_command::ControlCommand>("/px4_command/control_command", 10, Command_cb);
 
+    //【订阅】无人机当前状态
+    // 本话题来自根据需求自定px4_pos_estimator.cpp
     ros::Subscriber drone_state_sub = nh.subscribe<px4_command::DroneState>("/px4_command/drone_state", 10, drone_state_cb);
 
-    // 发布位置控制输出
+    // 发布log消息至ground_station.cpp
     ros::Publisher log_pub = nh.advertise<px4_command::Topic_for_log>("/px4_command/topic_for_log", 10);
 
     // 参数读取
@@ -218,7 +219,6 @@ int main(int argc, char **argv)
     Command_Now.Reference_State.acceleration_ref[2] = 0;
     Command_Now.Reference_State.yaw_ref = 0;
 
-
     // 记录启控时间
     ros::Time begin_time = ros::Time::now();
     float last_time = px4_command_utils::get_time_in_sec(begin_time);
@@ -279,7 +279,7 @@ int main(int argc, char **argv)
             throttle_sp[1] = _ControlOutput.Throttle[1];
             throttle_sp[2] = _ControlOutput.Throttle[2];
 
-            px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref, _AttitudeReference);
+            _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
 
             if(Use_accel > 0.5)
             {
@@ -316,7 +316,7 @@ int main(int argc, char **argv)
             throttle_sp[1] = _ControlOutput.Throttle[1];
             throttle_sp[2] = _ControlOutput.Throttle[2];
 
-            px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref, _AttitudeReference);
+            _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
 
             if(Use_accel > 0.5)
             {
@@ -405,7 +405,7 @@ int main(int argc, char **argv)
             throttle_sp[1] = _ControlOutput.Throttle[1];
             throttle_sp[2] = _ControlOutput.Throttle[2];
 
-            px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref, _AttitudeReference);
+            _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
 
 
             if(Use_accel > 0.5)
@@ -458,7 +458,7 @@ int main(int argc, char **argv)
             throttle_sp[1] = _ControlOutput.Throttle[1];
             throttle_sp[2] = _ControlOutput.Throttle[2];
 
-            px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref, _AttitudeReference);
+            _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
 
             if(Use_accel > 0.5)
             {
@@ -531,7 +531,7 @@ int main(int argc, char **argv)
                 throttle_sp[1] = _ControlOutput.Throttle[1];
                 throttle_sp[2] = _ControlOutput.Throttle[2];
 
-                px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref, _AttitudeReference);
+                _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
 
                 if(Use_accel > 0.5)
                 {
@@ -628,7 +628,7 @@ int main(int argc, char **argv)
             throttle_sp[1] = _ControlOutput.Throttle[1];
             throttle_sp[2] = _ControlOutput.Throttle[2];
 
-            px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref, _AttitudeReference);
+            _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
 
             if(Use_accel > 0.5)
             {
@@ -655,7 +655,7 @@ int main(int argc, char **argv)
 
             _Circle_Trajectory.Circle_trajectory_generation(time_trajectory, Command_to_gs.Reference_State);
 
-            _Circle_Trajectory.printf_result(Command_to_gs.Reference_State);
+            //_Circle_Trajectory.printf_result(Command_to_gs.Reference_State);
 
             if(switch_ude == 0)
             {
@@ -678,7 +678,7 @@ int main(int argc, char **argv)
             throttle_sp[1] = _ControlOutput.Throttle[1];
             throttle_sp[2] = _ControlOutput.Throttle[2];
 
-            px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref, _AttitudeReference);
+            _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
 
             if(Use_accel > 0.5)
             {
@@ -696,8 +696,6 @@ int main(int argc, char **argv)
 
             break;
         }
-
-        cout <<">>>>>>>>>>>>>>>>>>>>>> px4_pos_controller <<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
         if(Flag_printf == 1)
         {
@@ -728,6 +726,9 @@ int main(int argc, char **argv)
 
             // 打印位置控制器输出结果
             px4_command_utils::prinft_attitude_reference(_AttitudeReference);
+        }else if(((int)(cur_time*10) % 50) == 0)
+        {
+            cout << "px4_pos_controller is running for :" << cur_time << " [s] "<<endl;
         }
 
         // For log
@@ -739,7 +740,8 @@ int main(int argc, char **argv)
         {
             _Topic_for_log.time = time_trajectory;
         }
-        
+
+        _Topic_for_log.header.stamp = ros::Time::now();
         _Topic_for_log.Drone_State = _DroneState;
         _Topic_for_log.Control_Command = Command_to_gs;
         _Topic_for_log.Attitude_Reference = _AttitudeReference;
@@ -762,7 +764,6 @@ void printf_param()
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Parameter <<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
     cout << "Takeoff_height: "<< Takeoff_height<<" [m] "<<endl;
     cout << "Disarm_height : "<< Disarm_height <<" [m] "<<endl;
-    cout << "Use_mocap_raw : "<< Use_mocap_raw <<" [1 for use mocap raw data] "<<endl;
     cout << "geo_fence_x : "<< geo_fence_x[0] << " [m]  to  "<<geo_fence_x[1] << " [m]"<< endl;
     cout << "geo_fence_y : "<< geo_fence_y[0] << " [m]  to  "<<geo_fence_y[1] << " [m]"<< endl;
     cout << "geo_fence_z : "<< geo_fence_z[0] << " [m]  to  "<<geo_fence_z[1] << " [m]"<< endl;

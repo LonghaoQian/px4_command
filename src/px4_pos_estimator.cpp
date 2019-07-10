@@ -221,7 +221,10 @@ int main(int argc, char **argv)
         //回调一次 更新传感器状态
         ros::spinOnce();
 
-        //利用OptiTrackFeedBackRigidBody类获取optitrack的数据
+        // 将定位信息及偏航角信息发送至飞控，根据参数flag_use_laser_or_vicon选择定位信息来源
+        send_to_fcu();
+
+        //利用OptiTrackFeedBackRigidBody类获取optitrack的数据 -- for test -code by longhao
         UAV.RosWhileLoopRun();
         UAV.GetState(UAVstate);
 
@@ -256,9 +259,6 @@ int main(int argc, char **argv)
         }
 
         drone_state_pub.publish(_DroneState);
-
-        // 将定位信息及偏航角信息发送至飞控，根据参数flag_use_laser_or_vicon选择定位信息来源
-        send_to_fcu();
 
         // 打印
         // printf_info();
@@ -340,11 +340,5 @@ void printf_info()
         cout << "Pos_fcu [X Y Z] : " << pos_drone_fcu[0] << " [ m ] "<< pos_drone_fcu[1] <<" [ m ] "<< pos_drone_fcu[2] <<" [ m ] "<<endl;
         cout << "Vel_fcu [X Y Z] : " << vel_drone_fcu[0] << " [m/s] "<< vel_drone_fcu[1] <<" [m/s] "<< vel_drone_fcu[2] <<" [m/s] "<<endl;
         cout << "Att_fcu [R P Y] : " << Att_fcu[0] * 180/M_PI <<" [deg] "<< Att_fcu[1] * 180/M_PI << " [deg] "<< Att_fcu[2] * 180/M_PI<<" [deg] "<<endl;
-
-        // cout <<">>>>>>>>>>>>>>>>>>>>>>>>Error Info [ Longhao ]<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-        // cout << "Error_pos      : " << UAVstate.Position[0] - pos_drone_fcu[0] << " [ m ] "<< UAVstate.Position[1] - pos_drone_fcu[1]<<" [ m ] "<< UAVstate.Position[2] - pos_drone_fcu[2]<<" [ m ] "<<endl;
-        // cout << "Error_vel      : " << UAVstate.V_I[0] - vel_drone_fcu[0] << " [m/s] "<< UAVstate.V_I[1] - vel_drone_fcu[1]<<" [m/s] "<< UAVstate.V_I[2] - vel_drone_fcu[2]<<" [m/s] "<<endl;
-        // cout << "Error_att      : " << UAVstate.Euler[0]*57.3 - Att_fcu[0]*57.3 << " [deg] "<< UAVstate.Euler[1]*57.3 - Att_fcu[1]*57.3<<" [deg] "<< UAVstate.Euler[2]*57.3 - Att_fcu[2]*57.3<<" [deg] "<<endl;
-        // cout << "Error_att_rate : " << UAVstate.Omega_BI[0]*57.3 - Att_rate_fcu[0]*57.3 << " [deg] "<< UAVstate.Omega_BI[1]*57.3 - Att_rate_fcu[1]*57.3<<" [deg] "<< UAVstate.Omega_BI[2]*57.3 - Att_rate_fcu[2]*57.3<<" [deg] "<<endl;
 
 }

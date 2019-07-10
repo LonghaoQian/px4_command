@@ -269,8 +269,9 @@ Eigen::Vector3d thrustToThrottle(const Eigen::Vector3d& thrust_sp)
 //Thrust to Attitude
 //Input: desired thrust (desired throttle [0,1]) and yaw_sp(rad)
 //Output: desired attitude (quaternion)
-void ThrottleToAttitude(const Eigen::Vector3d& thr_sp, float yaw_sp, px4_command::AttitudeReference& _AttitudeReference)
+px4_command::AttitudeReference ThrottleToAttitude(const Eigen::Vector3d& thr_sp, float yaw_sp)
 {
+    px4_command::AttitudeReference _AttitudeReference;
     Eigen::Vector3d att_sp;
     att_sp[2] = yaw_sp;
 
@@ -333,6 +334,14 @@ void ThrottleToAttitude(const Eigen::Vector3d& thr_sp, float yaw_sp, px4_command
 //    cout << "     : "<< R_sp(1, 0) <<" " << R_sp(1, 1) <<" "<< R_sp(1, 2) << endl;
 //    cout << "     : "<< R_sp(2, 0) <<" " << R_sp(2, 1) <<" "<< R_sp(2, 2) << endl;
 
+
+    _AttitudeReference.throttle_sp[0] = thr_sp[0];
+    _AttitudeReference.throttle_sp[1] = thr_sp[1];
+    _AttitudeReference.throttle_sp[2] = thr_sp[2];
+
+    //期望油门
+    _AttitudeReference.desired_throttle = thr_sp_length; 
+
     _AttitudeReference.desired_att_q.w = q_sp.w();
     _AttitudeReference.desired_att_q.x = q_sp.x();
     _AttitudeReference.desired_att_q.y = q_sp.y();
@@ -342,8 +351,7 @@ void ThrottleToAttitude(const Eigen::Vector3d& thr_sp, float yaw_sp, px4_command
     _AttitudeReference.desired_attitude[1] = att_sp[1]; 
     _AttitudeReference.desired_attitude[2] = att_sp[2]; 
 
-    //期望油门
-    _AttitudeReference.desired_throttle = thr_sp_length;  
+    return _AttitudeReference;
 }
 
 }
