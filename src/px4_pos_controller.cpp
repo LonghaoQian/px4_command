@@ -56,7 +56,8 @@ float Takeoff_height;                                       //起飞高度
 float Disarm_height;                                        //自动上锁高度
 float Use_accel;                                            // 1 for use the accel command
 int Flag_printf;
-
+float noise_a_xy,noise_b_xy;
+float noise_a_z,noise_b_z;
 // For PPN landing - Silas
 Eigen::Vector3d pos_des_prev;
 Eigen::Vector3d vel_command;
@@ -122,6 +123,12 @@ int main(int argc, char **argv)
     nh.param<float>("Disarm_height", Disarm_height, 0.15);
     nh.param<float>("Use_accel", Use_accel, 0.0);
     nh.param<int>("Flag_printf", Flag_printf, 0.0);
+
+    nh.param<float>("noise_a_xy", noise_a_xy, 0.5);
+    nh.param<float>("noise_b_xy", noise_b_xy, 0.0);
+
+    nh.param<float>("noise_a_z", noise_a_z, 0.5);
+    nh.param<float>("noise_b_z", noise_b_z, 0.0);
 
     nh.param<float>("ppn_kx", ppn_kx, 0.0);
     nh.param<float>("ppn_ky", ppn_ky, 0.0);
@@ -673,6 +680,20 @@ int main(int argc, char **argv)
             {
                 _ControlOutput = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }
+
+            Eigen::Vector3d random;
+
+            random[0] = noise_a_xy * 2 * (((float)(rand() % 100))/100 - 0.5 + noise_b_xy);
+            random[1] = noise_a_xy * 2 * (((float)(rand() % 100))/100 - 0.5 + noise_b_xy);
+            random[2] = noise_a_z * 2 * (((float)(rand() % 100))/100 - 0.5 + noise_b_z);
+
+            if(time_trajectory>30.0 && time_trajectory<60.0)
+            {
+                _ControlOutput.Throttle[0] = _ControlOutput.Throttle[0] + random[0];
+                _ControlOutput.Throttle[1] = _ControlOutput.Throttle[1] + random[1];
+                _ControlOutput.Throttle[2] = _ControlOutput.Throttle[2] + random[2];
+            }
+
             
             throttle_sp[0] = _ControlOutput.Throttle[0];
             throttle_sp[1] = _ControlOutput.Throttle[1];
@@ -768,6 +789,12 @@ void printf_param()
     cout << "geo_fence_y : "<< geo_fence_y[0] << " [m]  to  "<<geo_fence_y[1] << " [m]"<< endl;
     cout << "geo_fence_z : "<< geo_fence_z[0] << " [m]  to  "<<geo_fence_z[1] << " [m]"<< endl;
     cout << "ppn_kx: "<< ppn_kx<<" [m] "<<endl;
+
+    cout << "noise_a_xy: "<< noise_a_xy<<" [m] "<<endl;
+    cout << "noise_b_xy: "<< noise_b_xy<<" [m] "<<endl;
+
+    cout << "noise_a_z: "<< noise_a_z<<" [m] "<<endl;
+    cout << "noise_b_z: "<< noise_b_z<<" [m] "<<endl;
     
 
 }

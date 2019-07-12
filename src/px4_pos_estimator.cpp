@@ -63,6 +63,7 @@ int flag_use_laser_or_vicon;                               //0:使用mocap数据
 float Use_mocap_raw;
 int linear_window;
 int angular_window;
+float noise_a,noise_b;
 
 rigidbody_state UAVstate;
 //---------------------------------------vicon定位相关------------------------------------------
@@ -89,6 +90,7 @@ px4_command::DroneState _DroneState;
 void printf_info();                                                                       //打印函数
 void send_to_fcu();
 void publish_drone_state();
+void printf_param();
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>回调函数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void laser_cb(const tf2_msgs::TFMessage::ConstPtr& msg)
 {
@@ -186,6 +188,12 @@ int main(int argc, char **argv)
     // window for linear velocity
     nh.param<int>("pos_estimator/angular_window", angular_window, 3);
 
+    nh.param<float>("pos_estimator/noise_a", noise_a, 0.0);
+
+    nh.param<float>("pos_estimator/noise_b", noise_b, 0.0);
+
+    printf_param();
+
     //nh.param<string>("pos_estimator/rigid_body_name", rigid_body_name, '/vrpn_client_node/UAV/pose');
 
 
@@ -240,6 +248,20 @@ int main(int argc, char **argv)
         // get drone state from _state_from_mavros
         _DroneState = _state_from_mavros._DroneState;
         _DroneState.header.stamp = ros::Time::now();
+
+
+        Eigen::Vector3d random;
+
+
+            for (int i=0;i<3;i++)
+            {
+                //if a = 0 b =0, noise = [-1,1]
+                random[i] = noise_a * 2 * (((float)(rand() % 100))/100 - 0.5 + noise_b);
+                _DroneState.velocity[i] = _DroneState.velocity[i] + random[i];
+            }
+
+           // cout << "Random [X Y Z] : " << random[0]<<" " << random[1]<<" "<< random[2]<<endl;
+        
                 
         // 根据Use_mocap_raw来选择位置和速度的来源
         if (Use_mocap_raw == 1)
@@ -340,5 +362,15 @@ void printf_info()
         cout << "Pos_fcu [X Y Z] : " << pos_drone_fcu[0] << " [ m ] "<< pos_drone_fcu[1] <<" [ m ] "<< pos_drone_fcu[2] <<" [ m ] "<<endl;
         cout << "Vel_fcu [X Y Z] : " << vel_drone_fcu[0] << " [m/s] "<< vel_drone_fcu[1] <<" [m/s] "<< vel_drone_fcu[2] <<" [m/s] "<<endl;
         cout << "Att_fcu [R P Y] : " << Att_fcu[0] * 180/M_PI <<" [deg] "<< Att_fcu[1] * 180/M_PI << " [deg] "<< Att_fcu[2] * 180/M_PI<<" [deg] "<<endl;
+
+}
+
+void printf_param()
+{
+    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Parameter <<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+
+    cout << "noise_a: "<< noise_a<<" [m] "<<endl;
+    cout << "noise_b: "<< noise_b<<" [m] "<<endl;
+    
 
 }

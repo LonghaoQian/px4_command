@@ -11,6 +11,12 @@ ppn_kx : 0.2
 ppn_ky : 0.2
 ppn_kz : 0.2
 
+noise_a_xy : 0.05
+noise_b_xy : 0.0
+
+noise_a_z : 0.05
+noise_b_z : 0.0
+
 ## parameter for px4_pos_estimator.cpp
 pos_estimator:
   ## 使用激光SLAM数据orVicon数据 0 for vicon， 1 for 激光SLAM
@@ -19,6 +25,8 @@ pos_estimator:
   Use_mocap_raw : 0
   linear_window : 3
   angular_window : 3
+  noise_a : 0.1
+  noise_b : 0.0
 
 
 ## 飞机参数
