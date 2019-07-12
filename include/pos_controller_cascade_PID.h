@@ -158,8 +158,8 @@ px4_command::ControlOutput pos_controller_cascade_PID::pos_controller
     _velocityController(_DroneState, _Reference_State, delta_time, thrust_sp);
 
     _ControlOutput.Throttle[0] = thrust_sp[0];
-    _ControlOutput.Throttle[0] = thrust_sp[0];
-    _ControlOutput.Throttle[0] = thrust_sp[0];
+    _ControlOutput.Throttle[1] = thrust_sp[1];
+    _ControlOutput.Throttle[2] = thrust_sp[2];
 
     return _ControlOutput;
 }
