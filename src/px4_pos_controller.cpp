@@ -37,6 +37,7 @@
 #include <px4_command/Trajectory.h>
 #include <px4_command/Topic_for_log.h>
 #include <px4_command/Trajectory.h>
+#include <LowPassFilter.h>
 
 #include <px4_command/ControlOutput.h>
 
@@ -58,6 +59,7 @@ float Use_accel;                                            // 1 for use the acc
 int Flag_printf;
 float noise_a_xy,noise_b_xy;
 float noise_a_z,noise_b_z;
+float noise_T;
 // For PPN landing - Silas
 Eigen::Vector3d pos_des_prev;
 Eigen::Vector3d vel_command;
@@ -129,6 +131,7 @@ int main(int argc, char **argv)
 
     nh.param<float>("noise_a_z", noise_a_z, 0.5);
     nh.param<float>("noise_b_z", noise_b_z, 0.0);
+    nh.param<float>("noise_T", noise_T, 0.0);
 
     nh.param<float>("ppn_kx", ppn_kx, 0.0);
     nh.param<float>("ppn_ky", ppn_ky, 0.0);
@@ -143,6 +146,14 @@ int main(int argc, char **argv)
 
     // 位置控制一般选取为50Hz，主要取决于位置状态的更新频率
     ros::Rate rate(50.0);
+
+    LowPassFilter LPF_x;
+    LowPassFilter LPF_y;
+    LowPassFilter LPF_z;
+
+    LPF_x.set_Time_constant(noise_T);
+    LPF_y.set_Time_constant(noise_T);
+    LPF_z.set_Time_constant(noise_T);
 
     // 用于与mavros通讯的类，通过mavros发送控制指令至飞控【本程序->mavros->飞控】
     command_to_mavros _command_to_mavros;
@@ -180,6 +191,8 @@ int main(int argc, char **argv)
     Circle_Trajectory _Circle_Trajectory;
     float time_trajectory = 0.0;
     _Circle_Trajectory.printf_param();
+
+    printf_param();
 
     int check_flag;
     // 这一步是为了程序运行前检查一下参数是否正确
@@ -683,11 +696,18 @@ int main(int argc, char **argv)
 
             Eigen::Vector3d random;
 
-            random[0] = noise_a_xy * 2 * (((float)(rand() % 100))/100 - 0.5 + noise_b_xy);
-            random[1] = noise_a_xy * 2 * (((float)(rand() % 100))/100 - 0.5 + noise_b_xy);
-            random[2] = noise_a_z * 2 * (((float)(rand() % 100))/100 - 0.5 + noise_b_z);
 
-            if(time_trajectory>30.0 && time_trajectory<60.0)
+            random[0] = noise_a_xy * 2 * (((float)(rand() % 100))/100 - 0.5) + noise_b_xy;
+            random[1] = noise_a_xy * 2 * (((float)(rand() % 100))/100 - 0.5) + noise_b_xy;
+            random[2] = noise_a_z * 2 * (((float)(rand() % 100))/100 - 0.5 ) + noise_b_z;
+
+            random[0] = LPF_x.apply(random[0], 0.02);
+            random[1] = LPF_y.apply(random[1], 0.02);
+            random[2] = LPF_z.apply(random[2], 0.02);
+
+
+
+            if(time_trajectory>20.0 && time_trajectory<60.0)
             {
                 _ControlOutput.Throttle[0] = _ControlOutput.Throttle[0] + random[0];
                 _ControlOutput.Throttle[1] = _ControlOutput.Throttle[1] + random[1];
@@ -795,6 +815,8 @@ void printf_param()
 
     cout << "noise_a_z: "<< noise_a_z<<" [m] "<<endl;
     cout << "noise_b_z: "<< noise_b_z<<" [m] "<<endl;
+cout << "noise_T: "<< noise_T<<" [m] "<<endl;
+    
     
 
 }

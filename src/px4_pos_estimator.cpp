@@ -56,6 +56,7 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <sensor_msgs/Range.h>
 #include <px4_command/DroneState.h>
+#include <LowPassFilter.h>
 
 using namespace std;
 //---------------------------------------相关参数-----------------------------------------------
@@ -64,7 +65,7 @@ float Use_mocap_raw;
 int linear_window;
 int angular_window;
 float noise_a,noise_b;
-
+float noise_T;
 rigidbody_state UAVstate;
 //---------------------------------------vicon定位相关------------------------------------------
 Eigen::Vector3d pos_drone_mocap;                          //无人机当前位置 (vicon)
@@ -192,9 +193,20 @@ int main(int argc, char **argv)
 
     nh.param<float>("pos_estimator/noise_b", noise_b, 0.0);
 
+    nh.param<float>("pos_estimator/noise_T", noise_T, 0.5);
+
     printf_param();
 
     //nh.param<string>("pos_estimator/rigid_body_name", rigid_body_name, '/vrpn_client_node/UAV/pose');
+
+
+    LowPassFilter LPF_x;
+    LowPassFilter LPF_y;
+    LowPassFilter LPF_z;
+
+    LPF_x.set_Time_constant(noise_T);
+    LPF_y.set_Time_constant(noise_T);
+    LPF_z.set_Time_constant(noise_T);
 
 
     // 【订阅】cartographer估计位置
@@ -252,15 +264,23 @@ int main(int argc, char **argv)
 
         Eigen::Vector3d random;
 
+        for (int i=0;i<3;i++)
+        {
+            //if a = 0 b =0, noise = [-1,1]
+            random[i] = noise_a * 2 * (((float)(rand() % 100))/100 - 0.5 )  + noise_b;
+        }
 
-            for (int i=0;i<3;i++)
-            {
-                //if a = 0 b =0, noise = [-1,1]
-                random[i] = noise_a * 2 * (((float)(rand() % 100))/100 - 0.5 + noise_b);
-                _DroneState.velocity[i] = _DroneState.velocity[i] + random[i];
-            }
+        random[0] = LPF_x.apply(random[0], 0.01);
+        random[1] = LPF_y.apply(random[1], 0.01);
+        random[2] = LPF_z.apply(random[2], 0.01);
 
-           // cout << "Random [X Y Z] : " << random[0]<<" " << random[1]<<" "<< random[2]<<endl;
+
+        for (int i=0;i<3;i++)
+        {
+            _DroneState.velocity[i] = _DroneState.velocity[i] + random[i];
+        }
+
+        //cout << "Random [X Y Z] : " << random[0]<<" " << random[1]<<" "<< random[2]<<endl;
         
                 
         // 根据Use_mocap_raw来选择位置和速度的来源
@@ -371,6 +391,7 @@ void printf_param()
 
     cout << "noise_a: "<< noise_a<<" [m] "<<endl;
     cout << "noise_b: "<< noise_b<<" [m] "<<endl;
+    cout << "noise_T: "<< noise_T<<" [m] "<<endl;
     
 
 }
