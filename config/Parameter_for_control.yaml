@@ -1,7 +1,7 @@
 ## parameter for px4_pos_controller.cpp
 ## 起飞高度
 Takeoff_height : 1.0
-Disarm_height : 0.10
+Disarm_height : 0.2
 ## 1 for use the accel command
 Use_accel : 0.0
 ## 1 for printf the state, 0 for block
@@ -11,12 +11,15 @@ ppn_kx : 0.2
 ppn_ky : 0.2
 ppn_kz : 0.2
 
-noise_a_xy : 0.05
-noise_b_xy : 0.0
+noise_a_xy : 0.2
+noise_b_xy : 0.05
 
-noise_a_z : 0.05
-noise_b_z : 0.0
-noise_T : 0.5
+noise_a_z : 0.1
+noise_b_z : 0.01
+noise_T : 1.0
+
+noise_start_time : 5.0
+noise_end_time : 30.0
 
 ## parameter for px4_pos_estimator.cpp
 pos_estimator:
@@ -26,9 +29,9 @@ pos_estimator:
   Use_mocap_raw : 0
   linear_window : 3
   angular_window : 3
-  noise_a : 1.0
+  noise_a : 2.0
   noise_b : 0.0
-  noise_T : 0.5
+  noise_T : 1.0
 
 
 ## 飞机参数
@@ -116,9 +119,9 @@ Circle_Trajectory:
   Center_x: 0.0
   Center_y: 0.0
   Center_z: 1.0
-  radius: 1.0
-  linear_vel: 1.0
-  time_total: 70.0
+  radius: 0.0
+  linear_vel: 0.0
+  time_total: 60.0
   direction: 1.0
 
 

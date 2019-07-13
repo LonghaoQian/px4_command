@@ -60,6 +60,8 @@ int Flag_printf;
 float noise_a_xy,noise_b_xy;
 float noise_a_z,noise_b_z;
 float noise_T;
+float noise_start_time;
+float noise_end_time;
 // For PPN landing - Silas
 Eigen::Vector3d pos_des_prev;
 Eigen::Vector3d vel_command;
@@ -132,6 +134,9 @@ int main(int argc, char **argv)
     nh.param<float>("noise_a_z", noise_a_z, 0.5);
     nh.param<float>("noise_b_z", noise_b_z, 0.0);
     nh.param<float>("noise_T", noise_T, 0.0);
+
+        nh.param<float>("noise_start_time", noise_start_time, 5.0);
+    nh.param<float>("noise_end_time", noise_end_time, 10.0);
 
     nh.param<float>("ppn_kx", ppn_kx, 0.0);
     nh.param<float>("ppn_ky", ppn_ky, 0.0);
@@ -705,9 +710,7 @@ int main(int argc, char **argv)
             random[1] = LPF_y.apply(random[1], 0.02);
             random[2] = LPF_z.apply(random[2], 0.02);
 
-
-
-            if(time_trajectory>20.0 && time_trajectory<60.0)
+            if(time_trajectory>noise_start_time && time_trajectory<noise_end_time)
             {
                 _ControlOutput.Throttle[0] = _ControlOutput.Throttle[0] + random[0];
                 _ControlOutput.Throttle[1] = _ControlOutput.Throttle[1] + random[1];
@@ -815,7 +818,10 @@ void printf_param()
 
     cout << "noise_a_z: "<< noise_a_z<<" [m] "<<endl;
     cout << "noise_b_z: "<< noise_b_z<<" [m] "<<endl;
-cout << "noise_T: "<< noise_T<<" [m] "<<endl;
+    cout << "noise_T: "<< noise_T<<" [m] "<<endl;
+
+    cout << "noise_start_time: "<< noise_start_time<<" [s] "<<endl;
+    cout << "noise_end_time: "<< noise_end_time<<" [s] "<<endl;
     
     
 
