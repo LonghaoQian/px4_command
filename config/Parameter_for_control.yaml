@@ -5,20 +5,20 @@ Disarm_height : 0.2
 ## 1 for use the accel command
 Use_accel : 0.0
 ## 1 for printf the state, 0 for block
-Flag_printf : 0.0
+Flag_printf : 1.0
 
 ppn_kx : 0.2
 ppn_ky : 0.2
 ppn_kz : 0.2
 
-noise_a_xy : 0.2
-noise_b_xy : 0.05
+noise_a_xy : 0.0
+noise_b_xy : 0.00
 
-noise_a_z : 0.1
-noise_b_z : 0.01
+noise_a_z : 0.0
+noise_b_z : 0.00
 noise_T : 1.0
 
-noise_start_time : 5.0
+noise_start_time : 100.0
 noise_end_time : 30.0
 
 ## parameter for px4_pos_estimator.cpp
@@ -29,7 +29,7 @@ pos_estimator:
   Use_mocap_raw : 0
   linear_window : 3
   angular_window : 3
-  noise_a : 2.0
+  noise_a : 0.0
   noise_b : 0.0
   noise_T : 1.0
 
@@ -90,8 +90,8 @@ Pos_ude:
   Kp_z : 0.5
   Kd_xy : 2.0
   Kd_Zz : 2.0
-  T_ude_xy : 1.0
-  T_ude_z : 1.0
+  T_ude_xy : 2.0
+  T_ude_z : 2.0
 
 
 # 位置环参数 for passivity
@@ -112,16 +112,16 @@ Pos_ne:
   Kd_Zz : 2.0
   T_ude_xy : 1.0
   T_ude_z : 1.0
-  T_ne : 0.2
+  T_ne : 0.1
 
 # 圆轨迹参数 for Circle_Trajectory
 Circle_Trajectory:
   Center_x: 0.0
   Center_y: 0.0
   Center_z: 1.0
-  radius: 0.0
-  linear_vel: 0.0
-  time_total: 60.0
+  radius: 1.0
+  linear_vel: 1.0
+  time_total: 50.0
   direction: 1.0
 
 

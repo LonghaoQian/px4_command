@@ -33,9 +33,9 @@ int main(int argc, char **argv)
     ros::Publisher move_pub = nh.advertise<px4_command::ControlCommand>("/px4_command/control_command", 10);
 
     //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>参数读取<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    nh.param<float>("setpoint_length", setpoint_length, 1);
+    nh.param<float>("setpoint_length", setpoint_length, 0.5);
     nh.param<float>("T_constant", T_constant, 10.0);
-    nh.param<float>("total_times", total_times, 8.0);
+    nh.param<float>("total_times", total_times, 40.0);
 
 
 
