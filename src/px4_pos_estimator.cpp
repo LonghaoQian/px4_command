@@ -67,6 +67,7 @@ int angular_window;
 float noise_a,noise_b;
 float noise_T;
 rigidbody_state UAVstate;
+rigidbody_state Payloadstate;
 //---------------------------------------vicon定位相关------------------------------------------
 Eigen::Vector3d pos_drone_mocap;                          //无人机当前位置 (vicon)
 Eigen::Quaterniond q_mocap;
@@ -231,7 +232,7 @@ int main(int argc, char **argv)
     state_from_mavros _state_from_mavros;
 
     OptiTrackFeedBackRigidBody UAV("/vrpn_client_node/UAV/pose",nh,linear_window,angular_window);
-
+    OptiTrackFeedBackRigidBody Payload("/vrpn_client_node/Payload/pose",nh,linear_window,angular_window);
     // 频率
     ros::Rate rate(100.0);
 
@@ -247,7 +248,8 @@ int main(int argc, char **argv)
         //利用OptiTrackFeedBackRigidBody类获取optitrack的数据 -- for test -code by longhao
         UAV.RosWhileLoopRun();
         UAV.GetState(UAVstate);
-
+        Payload.RosWhileLoopRun();
+        Payload.GetState(Payloadstate);
         for (int i=0;i<3;i++)
         {
             pos_drone_fcu[i] = _state_from_mavros._DroneState.position[i];                           
@@ -260,7 +262,12 @@ int main(int argc, char **argv)
         // get drone state from _state_from_mavros
         _DroneState = _state_from_mavros._DroneState;
         _DroneState.header.stamp = ros::Time::now();
-
+        // get payload state:
+        for (int i = 0;i<3;i++)
+        {
+            _DroneState.payload_vel[i] = Payloadstate.V_I[i];
+            _DroneState.payload_pos[i] = Payloadstate.Position[i];
+        } 
 
         Eigen::Vector3d random;
 
@@ -382,7 +389,7 @@ void printf_info()
         cout << "Pos_fcu [X Y Z] : " << pos_drone_fcu[0] << " [ m ] "<< pos_drone_fcu[1] <<" [ m ] "<< pos_drone_fcu[2] <<" [ m ] "<<endl;
         cout << "Vel_fcu [X Y Z] : " << vel_drone_fcu[0] << " [m/s] "<< vel_drone_fcu[1] <<" [m/s] "<< vel_drone_fcu[2] <<" [m/s] "<<endl;
         cout << "Att_fcu [R P Y] : " << Att_fcu[0] * 180/M_PI <<" [deg] "<< Att_fcu[1] * 180/M_PI << " [deg] "<< Att_fcu[2] * 180/M_PI<<" [deg] "<<endl;
-
+        cout << "Payload Inertial Velocity [v]:" << _DroneState.payload_vel[0]<< "[m/s]"<<_DroneState.payload_vel[1]<< "[m/s]"<<_DroneState.payload_vel[2]<< "[m/s]"<<endl;
 }
 
 void printf_param()

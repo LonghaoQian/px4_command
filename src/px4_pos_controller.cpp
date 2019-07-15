@@ -38,7 +38,7 @@
 #include <px4_command/Topic_for_log.h>
 #include <px4_command/Trajectory.h>
 #include <LowPassFilter.h>
-
+#include <pos_controller_TIE.h>
 #include <px4_command/ControlOutput.h>
 
 using namespace std;
@@ -169,10 +169,10 @@ int main(int argc, char **argv)
     pos_controller_UDE pos_controller_ude;
     pos_controller_passivity pos_controller_ps;
     pos_controller_NE pos_controller_ne;
-
+    pos_controller_TIE pos_controller_tie;
     // 选择控制律
     int switch_ude;
-    cout << "Please choose the controller: 0 for cascade_PID, 1 for PID, 2 for UDE, 3 for passivity, 4 for NE: "<<endl;
+    cout << "Please choose the controller: 0 for cascade_PID, 1 for PID, 2 for UDE, 3 for passivity, 4 for NE, 5 for tie: "<<endl;
     cin >> switch_ude;
 
     if(switch_ude == 0)
@@ -190,6 +190,9 @@ int main(int argc, char **argv)
     }else if(switch_ude == 4)
     {
         pos_controller_ne.printf_param();
+    }else if(switch_ude == 5)
+    {
+        pos_controller_tie.printf_param();
     }
 
     // 圆形轨迹追踪类
@@ -298,7 +301,11 @@ int main(int argc, char **argv)
             }else if(switch_ude == 4)
             {
                 _ControlOutput = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+            }else if(switch_ude == 5)
+            {
+                _ControlOutput = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }
+
             
             throttle_sp[0] = _ControlOutput.Throttle[0];
             throttle_sp[1] = _ControlOutput.Throttle[1];
@@ -335,6 +342,9 @@ int main(int argc, char **argv)
             }else if(switch_ude == 4)
             {
                 _ControlOutput = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+            }else if(switch_ude == 5)
+            {
+                _ControlOutput = pos_controller_tie.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
             }
             
             throttle_sp[0] = _ControlOutput.Throttle[0];

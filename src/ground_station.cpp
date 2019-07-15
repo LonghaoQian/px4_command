@@ -174,5 +174,7 @@ void printf_info()
     cout << "Error_vel      : " << UAVstate.V_I[0] - _Topic_for_log.Drone_State.velocity[0] << " [m/s] "<< UAVstate.V_I[1] - _Topic_for_log.Drone_State.velocity[1]<<" [m/s] "<< UAVstate.V_I[2] - _Topic_for_log.Drone_State.velocity[2]<<" [m/s] "<<endl;
     cout << "Error_att      : " << UAVstate.Euler[0]*57.3 - _Topic_for_log.Drone_State.attitude[0]*57.3 << " [deg] "<< UAVstate.Euler[1]*57.3 - _Topic_for_log.Drone_State.attitude[1]*57.3<<" [deg] "<< UAVstate.Euler[2]*57.3 - _Topic_for_log.Drone_State.attitude[2]*57.3<<" [deg] "<<endl;
     cout << "Error_att_rate : " << UAVstate.Omega_BI[0]*57.3 - _Topic_for_log.Drone_State.attitude_rate[0]*57.3 << " [deg] "<< UAVstate.Omega_BI[1]*57.3 - _Topic_for_log.Drone_State.attitude_rate[1]*57.3<<" [deg] "<< UAVstate.Omega_BI[2]*57.3 - _Topic_for_log.Drone_State.attitude_rate[2]*57.3<<" [deg] "<<endl;
-
+    cout <<">>>>>>>>>>>>>>>>>>>>>>>>Payload Info [ Longhao ]<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    cout << "Payload Relative Position: " << _Topic_for_log.Drone_State.payload_pos[0] - _Topic_for_log.Drone_State.position[0] << " [ m ] "<<  _Topic_for_log.Drone_State.payload_pos[1] - _Topic_for_log.Drone_State.position[1] <<" [ m ] "<<  _Topic_for_log.Drone_State.payload_pos[2] - _Topic_for_log.Drone_State.position[2] <<" [ m ] "<<endl;
+    cout << "Payload Relative Velocity: " << _Topic_for_log.Drone_State.payload_vel[0] - _Topic_for_log.Drone_State.velocity[0] << " [ m ] "<< _Topic_for_log.Drone_State.payload_vel[1] - _Topic_for_log.Drone_State.velocity[1]<<" [ m ] "<< _Topic_for_log.Drone_State.payload_vel[2] - _Topic_for_log.Drone_State.velocity[2]<<" [ m ] "<<endl;
 }

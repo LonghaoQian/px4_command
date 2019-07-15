@@ -37,6 +37,12 @@ pos_estimator:
 ## 飞机参数
 Quad:
   mass: 1.2
+## payload mass
+Payload:
+  mass: 0.19
+## cable length
+Cable:
+  length: 0.3
 
 ##geo fence for fsc
 geo_fence:
@@ -123,6 +129,16 @@ Circle_Trajectory:
   linear_vel: 1.0
   time_total: 50.0
   direction: 1.0
+
+# 位置环参数 for tie
+Pos_tie:
+  Kp_xy : 0.5
+  Kp_z : 0.5
+  Kv_xy : 2.0
+  Kv_z : 2.0
+  T_tie_xy : 1.0
+  T_tie_z : 1.0
+  Integration: 1.0
 
 
 
