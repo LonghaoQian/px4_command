@@ -41,8 +41,7 @@ class pos_controller_TIE
             pos_tie_nh.param<float>("Pos_tie/Kpv_xy", Kpv[0], 0.0);
             pos_tie_nh.param<float>("Pos_tie/Kpv_xy", Kpv[1], 0.0);
             pos_tie_nh.param<float>("Pos_tie/Kpv_z",  Kpv[2], 0.0);
-            pos_tie_nh.param<float>("Pos_tie/KL_xy", KL[0], 0.0);
-            pos_tie_nh.param<float>("Pos_tie/KL_xy", KL[1], 0.0);
+            pos_tie_nh.param<float>("Pos_tie/KL", KL, 0.0);
 
             pos_tie_nh.param<float>("Limitne/pxy_error_max", pos_error_max[0], 0.6);
             pos_tie_nh.param<float>("Limitne/pxy_error_max", pos_error_max[1], 0.6);
@@ -78,7 +77,7 @@ class pos_controller_TIE
         Eigen::Vector3f Kv;
         Eigen::Vector3f T_tie;
         Eigen::Vector3f Kpv;
-        Eigen::Vector2f KL;
+        float KL;
 
         //Limitation
         Eigen::Vector3f pos_error_max;
@@ -142,7 +141,7 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
 
     for (int i = 0;i<2;i++)
     {
-        r(i) = KL[i]*payload_relative_pos[i];
+        r(i) = payload_relative_pos[i];
         v_p(i) = payload_relative_vel[i];
     }
     
@@ -156,7 +155,8 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
         B(2,0) = 0.1;
         B(2,1) = 0.1;
     }
-    u_p = B*(v_p + r);
+
+    u_p = B*(v_p + KL*r);
     for(int i = 0;i<3;i++)
     {
         u_p[i] = Kpv[i] * u_p[i];
@@ -166,7 +166,7 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
     for (int i = 0; i < 3; i++)
     {
 
-        u_l[i] = Kp[i] * pos_error[i] + Kv[i] * vel_error[i];
+        u_l[i] = Kp[i] * pos_error[i] + Kv[i] * vel_error[i] + u_p[i];
         // additional feedback based on payload relative position:
         u_d[i] = 1.0* integration / T_tie[i] * (Payload_Mass*(1+Kpv[i])* payload_relative_vel[i] + Quad_MASS*_DroneState.velocity[i]  + integral[i])/(Payload_Mass+Quad_MASS);
     }
@@ -199,9 +199,9 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
         u_d[i] = constrain_function(u_d[i], int_max[i]);
     }
     // 期望加速度
-    accel_sp[0] = u_l[0] - u_d[0] - u_p[0];
-    accel_sp[1] = u_l[1] - u_d[1] - u_p[1];
-    accel_sp[2] = u_l[2] - u_d[2] - u_p[3] + 9.8;
+    accel_sp[0] = u_l[0] - u_d[0];
+    accel_sp[1] = u_l[1] - u_d[1];
+    accel_sp[2] = u_l[2] - u_d[2] + 9.8;
     
     // 期望推力 = 期望加速度 × 质量
     // 归一化推力 ： 根据电机模型，反解出归一化推力
