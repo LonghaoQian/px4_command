@@ -38,6 +38,11 @@ class pos_controller_TIE
             pos_tie_nh.param<float>("Pos_tie/Kv_xy", Kv[0], 0.5);
             pos_tie_nh.param<float>("Pos_tie/Kv_xy", Kv[1], 0.5);
             pos_tie_nh.param<float>("Pos_tie/Kv_z",  Kv[2], 0.5);
+            pos_tie_nh.param<float>("Pos_tie/Kpv_xy", Kpv[0], 0.0);
+            pos_tie_nh.param<float>("Pos_tie/Kpv_xy", Kpv[1], 0.0);
+            pos_tie_nh.param<float>("Pos_tie/Kpv_z",  Kpv[2], 0.0);
+            pos_tie_nh.param<float>("Pos_tie/KL_xy", KL[0], 0.0);
+            pos_tie_nh.param<float>("Pos_tie/KL_xy", KL[1], 0.0);
 
             pos_tie_nh.param<float>("Limitne/pxy_error_max", pos_error_max[0], 0.6);
             pos_tie_nh.param<float>("Limitne/pxy_error_max", pos_error_max[1], 0.6);
@@ -53,17 +58,27 @@ class pos_controller_TIE
 
             u_l      = Eigen::Vector3f(0.0,0.0,0.0);
             u_d      = Eigen::Vector3f(0.0,0.0,0.0);
+            u_p      = Eigen::Vector3f(0.0,0.0,0.0);
+            r        = Eigen::Vector2f(0.0,0.0);
+            v_p      = Eigen::Vector2f(0.0,0.0);
             integral = Eigen::Vector3f(0.0,0.0,0.0);
+            B<<1.0,0.0,
+               0.0,1.0,
+               0.0,0.0;
+            Cable_Length_sq = Cable_Length*Cable_Length;
         }
         float integration;
         //Quadrotor and Payload Parameter
         float Quad_MASS;
         float Payload_Mass;
         float Cable_Length;
+        float Cable_Length_sq;
         //Controller parameter for the control law
         Eigen::Vector3f Kp;
         Eigen::Vector3f Kv;
         Eigen::Vector3f T_tie;
+        Eigen::Vector3f Kpv;
+        Eigen::Vector2f KL;
 
         //Limitation
         Eigen::Vector3f pos_error_max;
@@ -73,8 +88,9 @@ class pos_controller_TIE
         float int_start_error;
 
         //积分项
-        Eigen::Vector3f u_l,u_d; //u_l for nominal contorol(PD), u_d for ude control(disturbance estimator)
-
+        Eigen::Vector3f u_l,u_d,u_p; //u_l for nominal contorol(PD), u_d for ude control(disturbance estimator)
+        Eigen::Vector2f v_p, r;
+        Eigen::Matrix<float, 3,2> B;
         Eigen::Vector3f integral;
 
         px4_command::ControlOutput _ControlOutput;
@@ -116,12 +132,43 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
 
 // control law form the tie paper
     float payload_relative_vel[3];
+    float payload_relative_pos[3];
+
+    for(int i=0;i<3;i++)
+    {
+        payload_relative_vel[i] = _DroneState.payload_vel[i] -  _DroneState.velocity[i];// get payload relative velocity
+        payload_relative_pos[i] = _DroneState.payload_pos[i] -  _DroneState.position[i];// get payload relative velocity
+    }
+
+    for (int i = 0;i<2;i++)
+    {
+        r(i) = KL[i]*payload_relative_pos[i];
+        v_p(i) = payload_relative_vel[i];
+    }
+    
+    float sq_r = r(0)*r(0) + r(1)*r(1);
+
+    if (Cable_Length_sq - sq_r>0.01)
+    {
+        B(2,0) = - r(0)/sqrt((Cable_Length_sq - sq_r));
+        B(2,1) = - r(1)/sqrt((Cable_Length_sq - sq_r));
+    }else{
+        B(2,0) = 0.1;
+        B(2,1) = 0.1;
+    }
+    u_p = B*(v_p + r);
+    for(int i = 0;i<3;i++)
+    {
+        u_p[i] = Kpv[i] * u_p[i];
+    }
+
+
     for (int i = 0; i < 3; i++)
     {
-        payload_relative_vel[i] = _DroneState.payload_vel[i] -  _DroneState.velocity[i];
+
         u_l[i] = Kp[i] * pos_error[i] + Kv[i] * vel_error[i];
-        // quad_mass  = total mass = quad + payload mass
-        u_d[i] = 1.0* integration / T_tie[i] * (Payload_Mass* payload_relative_vel[i] + Quad_MASS*_DroneState.velocity[i]  + integral[i]);
+        // additional feedback based on payload relative position:
+        u_d[i] = 1.0* integration / T_tie[i] * (Payload_Mass*(1+Kpv[i])* payload_relative_vel[i] + Quad_MASS*_DroneState.velocity[i]  + integral[i])/(Payload_Mass+Quad_MASS);
     }
 
     // 更新积分项
@@ -152,15 +199,15 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
         u_d[i] = constrain_function(u_d[i], int_max[i]);
     }
     // 期望加速度
-    accel_sp[0] = u_l[0] - u_d[0];
-    accel_sp[1] = u_l[1] - u_d[1];
-    accel_sp[2] = u_l[2] - u_d[2] + 9.8;
+    accel_sp[0] = u_l[0] - u_d[0] - u_p[0];
+    accel_sp[1] = u_l[1] - u_d[1] - u_p[1];
+    accel_sp[2] = u_l[2] - u_d[2] - u_p[3] + 9.8;
     
     // 期望推力 = 期望加速度 × 质量
     // 归一化推力 ： 根据电机模型，反解出归一化推力
     Eigen::Vector3d thrust_sp;
     Eigen::Vector3d throttle_sp;
-    thrust_sp =  px4_command_utils::accelToThrust(accel_sp, 1, tilt_max);
+    thrust_sp =  px4_command_utils::accelToThrust(accel_sp, Payload_Mass+Quad_MASS, tilt_max);
     throttle_sp = px4_command_utils::thrustToThrottle(thrust_sp);
 
     for (int i=0; i<3; i++)
@@ -198,7 +245,7 @@ void pos_controller_TIE::printf_result()
 // 【打印参数函数】
 void pos_controller_TIE::printf_param()
 {
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>tie Parameter <<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Payload control method in TIE paper (Parameter)  <<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
     cout <<"Quad_MASS : "<< Quad_MASS << endl;
     cout <<"Payload_MASS : "<< Payload_Mass << endl;
@@ -215,6 +262,10 @@ void pos_controller_TIE::printf_param()
     cout <<"Kv_x : "<< Kv[0] << endl;
     cout <<"Kv_y : "<< Kv[1] << endl;
     cout <<"Kv_z : "<< Kv[2] << endl;
+
+    cout <<"Kpv_x"<< Kpv[0]<<endl;
+    cout <<"Kpv_y"<< Kpv[1]<<endl;
+    cout <<"Kpv_z"<< Kpv[2]<<endl;
 
     cout <<"Limit:  " <<endl;
     cout <<"pxy_error_max : "<< pos_error_max[0] << endl;

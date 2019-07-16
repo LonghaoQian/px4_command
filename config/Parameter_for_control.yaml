@@ -139,6 +139,9 @@ Pos_tie:
   T_tie_xy : 1.0
   T_tie_z : 1.0
   Integration: 1.0
+  Kpv_xy: 1.0
+  Kpv_z: 1.0
+  KL_xy : 1.0
 
 
 
