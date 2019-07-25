@@ -264,7 +264,9 @@ void OptiTrackFeedBackRigidBody::RosWhileLoopRun()
         FeedbackState=1;
     }else{
         // if the optitrack measurements no longer feedback, when the pose update will stop and we only return 0 velocity
-        SetZeroVelocity();
+        //SetZeroVelocity();
+        //CVPrediction();
+        //CAPrediction();
         FeedbackState=0;
     }
 

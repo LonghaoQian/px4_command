@@ -560,6 +560,9 @@ int main(int argc, char **argv)
                 }else if(switch_ude == 4)
                 {
                     _ControlOutput = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                }else if(switch_ude == 5)
+                {
+                    _ControlOutput = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
                 }
                 
                 throttle_sp[0] = _ControlOutput.Throttle[0];

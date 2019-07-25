@@ -149,8 +149,8 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
 
     if (Cable_Length_sq - sq_r>0.01)
     {
-        B(2,0) = - r(0)/sqrt((Cable_Length_sq - sq_r));
-        B(2,1) = - r(1)/sqrt((Cable_Length_sq - sq_r));
+        B(2,0) =  r(0)/sqrt((Cable_Length_sq - sq_r));
+        B(2,1) =  r(1)/sqrt((Cable_Length_sq - sq_r));
     }else{
         B(2,0) = 0.1;
         B(2,1) = 0.1;
