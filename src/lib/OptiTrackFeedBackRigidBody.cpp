@@ -260,7 +260,7 @@ void OptiTrackFeedBackRigidBody::RosWhileLoopRun()
 {
     if(OptiTrackFlag==1)
     {// update the velocity only when there is OptiTrack feedback
-        CalculateVelocityFromPose();
+        //CalculateVelocityFromPose();
         FeedbackState=1;
     }else{
         // if the optitrack measurements no longer feedback, when the pose update will stop and we only return 0 velocity
@@ -350,6 +350,7 @@ void OptiTrackFeedBackRigidBody::OptiTrackCallback(const geometry_msgs::PoseStam
         // must use head information to distiguish the correct 
         OptiTrackdata = msg; // update optitrack data
         OptiTrackFlag = 1;// signal a new measurement feed has been revcieved.
+        CalculateVelocityFromPose();// calculate the velocity from the new pose. 
 }
 
 OptiTrackFeedBackRigidBody::~OptiTrackFeedBackRigidBody()
