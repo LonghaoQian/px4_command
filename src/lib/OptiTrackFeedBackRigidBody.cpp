@@ -170,7 +170,7 @@ void OptiTrackFeedBackRigidBody::PushRawVelocity(Vector3d& new_linear_velocity, 
      * should fristly start from  i = 2. a(1) = a(2); a(2) = a(3);....; a(N-1) = a(N)
      * secondly a(N) = a_new
     */
-   // linear velocity
+   // linear velocitydfd
     for(int i = 1;i<linear_velocity_window;i++)//first step
     {
         velocity_raw[i-1] = velocity_raw[i];
