@@ -56,6 +56,7 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <sensor_msgs/Range.h>
 #include <px4_command/DroneState.h>
+#include <px4_command/MocapInfo.h>
 #include <LowPassFilter.h>
 
 using namespace std;
@@ -66,8 +67,8 @@ int linear_window;
 int angular_window;
 float noise_a,noise_b;
 float noise_T;
-rigidbody_state UAVstate;
-rigidbody_state Payloadstate;
+//rigidbody_state UAVstate;
+//rigidbody_state Payloadstate;
 //---------------------------------------vicon定位相关------------------------------------------
 Eigen::Vector3d pos_drone_mocap;                          //无人机当前位置 (vicon)
 Eigen::Quaterniond q_mocap;
@@ -88,12 +89,22 @@ Eigen::Vector3d Att_rate_fcu;
 ros::Publisher vision_pub;
 ros::Publisher drone_state_pub;
 px4_command::DroneState _DroneState;  
+px4_command::MocapInfo UAV_motion;
+px4_command::MocapInfo Payload_motion;
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>函数声明<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void printf_info();                                                                       //打印函数
 void send_to_fcu();
 void publish_drone_state();
 void printf_param();
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>回调函数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+void UAV_sb(const px4_command::MocapInfo::ConstPtr& msg)
+{
+    UAV_motion = *msg;
+}
+
+
+
 void laser_cb(const tf2_msgs::TFMessage::ConstPtr& msg)
 {
     //确定是cartographer发出来的/tf信息
@@ -222,6 +233,8 @@ int main(int argc, char **argv)
     // 【订阅】optitrack估计位置
     ros::Subscriber optitrack_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/UAV/pose", 1000, optitrack_cb);
 
+    ros::Subscriber UAV_motion_sub = nh.subscribe<px4_command::MocapInfo>("/px4_command/mocapinfo", 10, UAV_sb);
+
     // 【发布】无人机位置和偏航角 坐标系 ENU系
     //  本话题要发送飞控(通过mavros_extras/src/plugins/vision_pose_estimate.cpp发送), 对应Mavlink消息为VISION_POSITION_ESTIMATE(#??), 对应的飞控中的uORB消息为vehicle_vision_position.msg 及 vehicle_vision_attitude.msg
     vision_pub = nh.advertise<geometry_msgs::PoseStamped>("/mavros/vision_pose/pose", 100);
@@ -231,8 +244,6 @@ int main(int argc, char **argv)
     // 用于与mavros通讯的类，通过mavros接收来至飞控的消息【飞控->mavros->本程序】
     state_from_mavros _state_from_mavros;
 
-    OptiTrackFeedBackRigidBody UAV("/vrpn_client_node/UAV/pose",nh,linear_window,angular_window);
-    OptiTrackFeedBackRigidBody Payload("/vrpn_client_node/Payload/pose",nh,linear_window,angular_window);
     // 频率
     ros::Rate rate(100.0);
 
@@ -245,11 +256,6 @@ int main(int argc, char **argv)
         // 将定位信息及偏航角信息发送至飞控，根据参数flag_use_laser_or_vicon选择定位信息来源
         send_to_fcu();
 
-        //利用OptiTrackFeedBackRigidBody类获取optitrack的数据 -- for test -code by longhao
-        UAV.RosWhileLoopRun();
-        UAV.GetState(UAVstate);
-        Payload.RosWhileLoopRun();
-        Payload.GetState(Payloadstate);
         for (int i=0;i<3;i++)
         {
             pos_drone_fcu[i] = _state_from_mavros._DroneState.position[i];                           
@@ -262,12 +268,6 @@ int main(int argc, char **argv)
         // get drone state from _state_from_mavros
         _DroneState = _state_from_mavros._DroneState;
         _DroneState.header.stamp = ros::Time::now();
-        // get payload state:
-        for (int i = 0;i<3;i++)
-        {
-            _DroneState.payload_vel[i] = Payloadstate.V_I[i];
-            _DroneState.payload_pos[i] = Payloadstate.Position[i];
-        } 
 
         Eigen::Vector3d random;
 
@@ -302,11 +302,16 @@ int main(int argc, char **argv)
         {
             for (int i=0;i<3;i++)
             {
-                _DroneState.position[i] = UAVstate.Position[i];
-                _DroneState.velocity[i] = UAVstate.V_I[i];
+                _DroneState.position[i] = UAV_motion.position[i];
+                _DroneState.velocity[i] = UAV_motion.velocity[i];
             }
         }
-
+        // get payload state:
+        //for (int i = 0;i<3;i++)
+        //{
+         //   _DroneState.payload_vel[i] = Payloadstate.V_I[i];
+           // _DroneState.payload_pos[i] = Payloadstate.Position[i];
+        //} 
         drone_state_pub.publish(_DroneState);
 
         // 打印

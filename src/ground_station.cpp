@@ -14,6 +14,7 @@
 #include <px4_command/DroneState.h>
 #include <px4_command/TrajectoryPoint.h>
 #include <px4_command/AttitudeReference.h>
+#include <px4_command/MocapInfo.h>
 
 #include <px4_command/Trajectory.h>
 //msg 头文件
@@ -38,11 +39,13 @@
 using namespace std;
 //---------------------------------------相关参数-----------------------------------------------
 px4_command::Topic_for_log _Topic_for_log;
-
+px4_command::MocapInfo UAV_motion;
+px4_command::MocapInfo Payload_motion;
 Eigen::Vector3d pos_drone_mocap;                          //无人机当前位置 (vicon)
 Eigen::Quaterniond q_mocap;
 Eigen::Vector3d Euler_mocap;                              //无人机当前姿态 (vicon)
 rigidbody_state UAVstate;
+rigidbody_state Payloadstate;
 Eigen::Quaterniond q_fcu_target;
 Eigen::Vector3d euler_fcu_target;
 float Thrust_target;
@@ -103,11 +106,14 @@ int main(int argc, char **argv)
 
     ros::Subscriber attitude_target_sub = nh.subscribe<mavros_msgs::AttitudeTarget>("/mavros/setpoint_raw/target_attitude", 10,att_target_cb);
 
+    // publish 
+    ros::Publisher motion_pub = nh.advertise<px4_command::MocapInfo>("/px4_command/mocapinfo", 10);
+
     // 频率
-    ros::Rate rate(10.0);
+    ros::Rate rate(100.0);
 
     OptiTrackFeedBackRigidBody UAV("/vrpn_client_node/UAV/pose",nh,3,3);
-
+    OptiTrackFeedBackRigidBody Payload("/vrpn_client_node/Payload/pose",nh,3,3);
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     while(ros::ok())
     {
@@ -119,6 +125,27 @@ int main(int argc, char **argv)
 
         UAV.RosWhileLoopRun();
         UAV.GetState(UAVstate);
+        Payload.RosWhileLoopRun();
+        Payload.GetState(Payloadstate);
+        UAV_motion.header.stamp = ros::Time::now();
+
+        for(int i = 0;i<3;i++)
+        {
+            UAV_motion.position[i] = UAVstate.Position(i);
+            UAV_motion.velocity[i] = UAVstate.V_I(i);
+            UAV_motion.angular_velocity[i] =  UAVstate.Omega_BI(i);
+            UAV_motion.Euler[i] = UAVstate.Euler(i);
+
+            Payload_motion.position[i] = Payloadstate.Position(i);
+            Payload_motion.velocity[i] = Payloadstate.V_I(i);
+            Payload_motion.angular_velocity[i] =  Payloadstate.Omega_BI(i);
+            Payload_motion.Euler[i] = Payloadstate.Euler(i);
+
+        }
+
+
+
+        motion_pub.publish(UAV_motion);
 
         //打印
         printf_info();
@@ -177,4 +204,9 @@ void printf_info()
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>Payload Info [ Longhao ]<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
     cout << "Payload Relative Position: " << _Topic_for_log.Drone_State.payload_pos[0] - _Topic_for_log.Drone_State.position[0] << " [ m ] "<<  _Topic_for_log.Drone_State.payload_pos[1] - _Topic_for_log.Drone_State.position[1] <<" [ m ] "<<  _Topic_for_log.Drone_State.payload_pos[2] - _Topic_for_log.Drone_State.position[2] <<" [ m ] "<<endl;
     cout << "Payload Relative Velocity: " << _Topic_for_log.Drone_State.payload_vel[0] - _Topic_for_log.Drone_State.velocity[0] << " [ m ] "<< _Topic_for_log.Drone_State.payload_vel[1] - _Topic_for_log.Drone_State.velocity[1]<<" [ m ] "<< _Topic_for_log.Drone_State.payload_vel[2] - _Topic_for_log.Drone_State.velocity[2]<<" [ m ] "<<endl;
+    cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>Mocap_UAV_Topic<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"<<endl;
+    cout << "Mocap_UAV_Position"<<UAV_motion.position[0]<<"m"<<UAV_motion.position[1]<<"m"<<UAV_motion.position[2]<<"m"<<endl;
+    cout << "Mocap_UAV_velocity"<<UAV_motion.velocity[0]<<"m/s"<<UAV_motion.velocity[1]<<"m/s"<<UAV_motion.velocity[2]<<"m/s"<<endl;
+    cout << "Mocap_UAV_angular_velocity"<<UAV_motion.angular_velocity[0]<<"rad/s"<<UAV_motion.angular_velocity[1]<<"rad/s"<<UAV_motion.angular_velocity[2]<<"rad/s"<<endl;
+    cout << "Mocap_UAV_Euler"<<UAV_motion.Euler[0]<<"rad"<<UAV_motion.Euler[1]<<"rad"<<UAV_motion.Euler[2]<<"rad"<<endl;
 }
