@@ -101,6 +101,12 @@ add_dependencies(ground_station px4_command_gencpp)
 target_link_libraries(ground_station ${catkin_LIBRARIES})
 target_link_libraries(ground_station OptiTrackFeedbackRigidBody)
 
+##optitrack_sender.cpp
+add_executable(optitrack_sender src/optitrack_sender.cpp)
+add_dependencies(optitrack_sender px4_command_gencpp)
+target_link_libraries(optitrack_sender ${catkin_LIBRARIES})
+target_link_libraries(optitrack_sender OptiTrackFeedbackRigidBody)
+
 ###### Test File ##########
 
 ###### Utilities File ##########

@@ -233,7 +233,7 @@ int main(int argc, char **argv)
     // 【订阅】optitrack估计位置
     ros::Subscriber optitrack_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/UAV/pose", 1000, optitrack_cb);
 
-    ros::Subscriber UAV_motion_sub = nh.subscribe<px4_command::MocapInfo>("/px4_command/mocapinfo", 10, UAV_sb);
+    ros::Subscriber UAV_motion_sub = nh.subscribe<px4_command::MocapInfo>("/px4_command/UAV", 10, UAV_sb);
 
     // 【发布】无人机位置和偏航角 坐标系 ENU系
     //  本话题要发送飞控(通过mavros_extras/src/plugins/vision_pose_estimate.cpp发送), 对应Mavlink消息为VISION_POSITION_ESTIMATE(#??), 对应的飞控中的uORB消息为vehicle_vision_position.msg 及 vehicle_vision_attitude.msg
