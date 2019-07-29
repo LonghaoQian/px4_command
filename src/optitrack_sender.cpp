@@ -24,6 +24,7 @@ int main(int argc, char **argv)
 
     OptiTrackFeedBackRigidBody UAV("/vrpn_client_node/UAV/pose",nh,3,3);
     OptiTrackFeedBackRigidBody Payload("/vrpn_client_node/Payload/pose",nh,3,3);
+    int notfeedbackcounter = 3;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     while(ros::ok())
     {
@@ -31,11 +32,9 @@ int main(int argc, char **argv)
         ros::spinOnce();
 
         //利用OptiTrackFeedBackRigidBody类获取optitrack的数据
-        //UAV.GetOptiTrackState();
-
-        UAV.RosWhileLoopRun();
+        UAV.FeedbackDetector(3);
+        Payload.FeedbackDetector(3);
         UAV.GetState(UAVstate);
-        Payload.RosWhileLoopRun();
         Payload.GetState(Payloadstate);
         UAV_motion.header.stamp = ros::Time::now();
 

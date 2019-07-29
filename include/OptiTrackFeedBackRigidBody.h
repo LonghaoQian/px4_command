@@ -33,6 +33,7 @@ struct rigidbody_state{
     Matrix3d R_IB; // rotation matrix
     Matrix3d R_BI; //
     Vector3d Euler;// euler angle
+    bool isFeedbackNomral;
     double time_stamp;
 };
 
@@ -40,9 +41,10 @@ class OptiTrackFeedBackRigidBody{
 
     //-------Optitrack Related-----///
     geometry_msgs::PoseStamped OptiTrackdata;
-    unsigned int OptiTrackFlag; // OptiTrackState 0: no data feed,: 1 data feed present
+    bool OptiTrackFlag; // OptiTrackState 0: no data feed,: 1 data feed present
     void OptiTrackCallback(const geometry_msgs::PoseStamped& msg);   
-    unsigned int FeedbackState;// 0 no feedback, 1 has feedback
+    bool FeedbackState;
+    int feedback_detector_counter;
     ros::Subscriber subOptiTrack;// OptiTrack Data
     //--------Filter Parameters-------//
     unsigned int linear_velocity_window; // window size
@@ -70,7 +72,8 @@ public:
     int GetOptiTrackState();
     void GetState(rigidbody_state& state);
     void GetRaWVelocity(Vector3d& linear_velocity,Vector3d& angular_velocity);
-    void RosWhileLoopRun();// This function should be put into ros while loop
+    void RosWhileLoopRun();
+    void FeedbackDetector(int num_of_cycles);// detect whether the optitrack feedback is normal
     void GetEulerAngleFromQuaterion_NormalConvention(double (&eulerangle)[3]);
     void GetEulerAngleFromQuaterion_OptiTrackYUpConvention(double (&eulerangle)[3]);
     void Veemap(Matrix3d& cross_matrix, Vector3d& vector);
