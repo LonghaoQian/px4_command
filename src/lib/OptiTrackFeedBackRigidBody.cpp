@@ -60,8 +60,9 @@ OptiTrackFeedBackRigidBody::OptiTrackFeedBackRigidBody(const char* name,ros::Nod
                     0,0,1;                    
     }
     // Initialize flag
-    OptiTrackFlag = 0;
-    FeedbackState = 0;
+    OptiTrackFlag = false;
+    FeedbackState = false;
+    feedback_detector_counter = 0;
 }
 
 void OptiTrackFeedBackRigidBody::CalculateVelocityFromPose()
@@ -228,6 +229,7 @@ void OptiTrackFeedBackRigidBody::GetState(rigidbody_state& state)
     state.quaterion(1) = pose[1].q1;
     state.quaterion(2) = pose[1].q2;
     state.quaterion(3) = pose[1].q3;
+    state.isFeedbackNomral = OptiTrackFlag;
 }
 void OptiTrackFeedBackRigidBody::GetRaWVelocity(Vector3d& linear_velocity,Vector3d& angular_velocity)
 {
@@ -258,23 +260,11 @@ void  OptiTrackFeedBackRigidBody::SetZeroVelocity()
 
 void OptiTrackFeedBackRigidBody::RosWhileLoopRun()
 {
-    if(OptiTrackFlag==1)
-    {// update the velocity only when there is OptiTrack feedback
-        //CalculateVelocityFromPose();
-        FeedbackState=1;
-    }else{
-        // if the optitrack measurements no longer feedback, when the pose update will stop and we only return 0 velocity
-        //SetZeroVelocity();
-        //CVPrediction();
-        //CAPrediction();
-        FeedbackState=0;
-    }
 
-    OptiTrackFlag = 0;// reset the feedback flag to 0
 }
 int OptiTrackFeedBackRigidBody::GetOptiTrackState()
 {
-    if (FeedbackState==1) {
+    if (FeedbackState==true) {
       ROS_INFO("OptiTrack:Normal");
     }else{
       ROS_INFO("OptiTrack:No FeedBack");
@@ -349,7 +339,7 @@ void OptiTrackFeedBackRigidBody::OptiTrackCallback(const geometry_msgs::PoseStam
 {
         // must use head information to distiguish the correct 
         OptiTrackdata = msg; // update optitrack data
-        OptiTrackFlag = 1;// signal a new measurement feed has been revcieved.
+        OptiTrackFlag = true;// signal a new measurement feed has been revcieved.
         CalculateVelocityFromPose();// calculate the velocity from the new pose. 
 }
 
@@ -385,4 +375,27 @@ void OptiTrackFeedBackRigidBody::Hatmap(Vector3d& vector, Matrix3d& cross_matrix
     cross_matrix(2,1) = vector(0);
     cross_matrix(2,2) = 0.0;
 
+}
+void OptiTrackFeedBackRigidBody::FeedbackDetector(int num_of_cycles)
+{
+    /*
+    if the OptiTrackFlag is true, reset feedback_detector_counter to 0
+    else the OptiTrackFlag is false add feedback_detector_counter ++ 
+    if feedback_detector_counter reaches the num_of_cycles, send out a warning
+    */
+    if(OptiTrackFlag==true)
+    {
+        FeedbackState=true;
+        feedback_detector_counter = 0;
+        ROS_INFO( "OPTITRACK FEEDBACK NORMAL"); 
+    }else{
+
+        FeedbackState=false;
+        feedback_detector_counter++;
+        if(feedback_detector_counter>=num_of_cycles)
+        {
+             ROS_WARN( "OPTITRACK FEEDBACK LOST!!"); 
+        }
+    }
+    OptiTrackFlag = false; 
 }

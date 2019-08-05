@@ -102,9 +102,10 @@ void UAV_sb(const px4_command::MocapInfo::ConstPtr& msg)
 {
     UAV_motion = *msg;
 }
-
-
-
+void Payload_sb(const px4_command::MocapInfo::ConstPtr& msg)
+{
+    Payload_motion = *msg;
+}
 void laser_cb(const tf2_msgs::TFMessage::ConstPtr& msg)
 {
     //确定是cartographer发出来的/tf信息
@@ -233,7 +234,8 @@ int main(int argc, char **argv)
     // 【订阅】optitrack估计位置
     ros::Subscriber optitrack_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/UAV/pose", 1000, optitrack_cb);
 
-    ros::Subscriber UAV_motion_sub = nh.subscribe<px4_command::MocapInfo>("/px4_command/UAV", 10, UAV_sb);
+    ros::Subscriber UAV_motion_sub = nh.subscribe<px4_command::MocapInfo>("/px4_command/UAV", 1000, UAV_sb);
+    ros::Subscriber Payload_motion_sub = nh.subscribe<px4_command::MocapInfo>("/px4_command/Payload", 1000, Payload_sb);
 
     // 【发布】无人机位置和偏航角 坐标系 ENU系
     //  本话题要发送飞控(通过mavros_extras/src/plugins/vision_pose_estimate.cpp发送), 对应Mavlink消息为VISION_POSITION_ESTIMATE(#??), 对应的飞控中的uORB消息为vehicle_vision_position.msg 及 vehicle_vision_attitude.msg
@@ -306,12 +308,12 @@ int main(int argc, char **argv)
                 _DroneState.velocity[i] = UAV_motion.velocity[i];
             }
         }
-        // get payload state:
-        //for (int i = 0;i<3;i++)
-        //{
-         //   _DroneState.payload_vel[i] = Payloadstate.V_I[i];
-           // _DroneState.payload_pos[i] = Payloadstate.Position[i];
-        //} 
+        //get payload state from mocap
+        for (int i = 0;i<3;i++)
+        {
+           _DroneState.payload_vel[i] = Payload_motion.velocity[i];
+           _DroneState.payload_pos[i] = Payload_motion.position[i];
+        } 
         drone_state_pub.publish(_DroneState);
 
         // 打印
