@@ -54,7 +54,7 @@ int main(int argc, char **argv)
            cout<< "Rigid 1 R_BI: \n" << RigidBody1state.R_BI << endl;
            cout<< "Rigid 1 Rotation Test: \n" << RigidBody1state.R_IB * RigidBody1state.R_BI<< endl;
            cout<< "Rigid 1 Euler: \n" <<RigidBody1state.Euler*57.3<<endl;
-           cout<< "Rigid 1 quaterion: \n" <<RigidBody1state.quaterion<<endl;
+           cout<< "Rigid 1 quaternion: \n" <<RigidBody1state.quaternion<<endl;
            //Rigidbody1_recorder.StopRecording();
            break;
         }

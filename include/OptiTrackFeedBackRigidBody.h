@@ -25,7 +25,7 @@ struct optitrack_pose{
 };
 
 struct rigidbody_state{
-    Vector4d quaterion;
+    Vector4d quaternion;
     Vector3d Position;// inertial position
     Vector3d V_I; // inertial velocity
     Matrix3d Omega_Cross; // angular velocity skew
