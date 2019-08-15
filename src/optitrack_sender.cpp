@@ -18,12 +18,12 @@ int main(int argc, char **argv)
     ros::NodeHandle nh("~");
 
     // publish 
-    ros::Publisher UAV_motion_pub = nh.advertise<px4_command::MocapInfo>("/px4_command/cf1", 1000);
+    ros::Publisher UAV_motion_pub = nh.advertise<px4_command::MocapInfo>("/px4_command/UAV", 1000);
     ros::Publisher Payload_motion_pub = nh.advertise<px4_command::MocapInfo>("/px4_command/Payload", 1000);
     // 频率
-    ros::Rate rate(50.0);
+    ros::Rate rate(60.0);
 
-    OptiTrackFeedBackRigidBody UAV("/vrpn_client_node/cf1/pose",nh,3,3);
+    OptiTrackFeedBackRigidBody UAV("/vrpn_client_node/UAV/pose",nh,3,3);
     OptiTrackFeedBackRigidBody Payload("/vrpn_client_node/Payload/pose",nh,3,3);
     int notfeedbackcounter = 3;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
