@@ -46,6 +46,7 @@ class OptiTrackFeedBackRigidBody{
     bool FeedbackState;
     int feedback_detector_counter;
     ros::Subscriber subOptiTrack;// OptiTrack Data
+    const char* TopicName;
     //--------Filter Parameters-------//
     unsigned int linear_velocity_window; // window size
     unsigned int angular_velocity_window; // window size
