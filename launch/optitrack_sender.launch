@@ -16,5 +16,5 @@
  #- SecondTracker
  </rosparam>
  </node>
- <node pkg = "px4_command" name = "optitrack_sender1" type = "optitrack_sender" output="screen" args="UAV Payload"/>
+ <node pkg = "px4_command" name = "optitrack_sender1" type = "optitrack_sender" output="screen"/>
 </launch>

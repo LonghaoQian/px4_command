@@ -27,23 +27,7 @@ int main(int argc, char **argv)
     ros::Publisher Payload_motion_pub = nh.advertise<px4_command::MocapInfo>("/px4_command/Payload", 1000);
     // 频率
     ros::Rate rate(60.0);
-    std::vector<SubTopic> TopicList;
-    if (argc > 1)
-    {
-        std::cout<<"++++++++RECEIVEING MOCAP INFO FROM THE FOLLOWING TOPICS:++++++++"<<std::endl;
-        for( int i = 1; i< argc; i++) {
-            SubTopic topic;
-            strcpy (topic.str,"/vrpn_client_node/");
-            strcat (topic.str,argv[i]);
-            strcat (topic.str,"/pose");
-            TopicList.push_back(topic);
-            std::cout << topic.str << std::endl;
-        }
-        std::cout<<"-----------------------------------------------------------------"<<std::endl;   
-    } else {
-        ROS_WARN("NO TOPIC NAME SPECIFIED!");
-    }
-    OptiTrackFeedBackRigidBody UAV(TopicList[0].str,nh,3,3);
+    OptiTrackFeedBackRigidBody UAV("/vrpn_client_node/UAV/pose",nh,3,3);
     OptiTrackFeedBackRigidBody Payload("/vrpn_client_node/Payload/pose",nh,3,3);
     int notfeedbackcounter = 3;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -54,7 +38,7 @@ int main(int argc, char **argv)
 
         //利用OptiTrackFeedBackRigidBody类获取optitrack的数据
         UAV.FeedbackDetector(1);
-        //Payload.FeedbackDetector(3);
+        //Payload.FeedbackDetector(1);
         UAV.GetState(UAVstate);
         Payload.GetState(Payloadstate);
         UAV_motion.header.stamp = ros::Time::now();
@@ -77,6 +61,8 @@ int main(int argc, char **argv)
         }
         UAV_motion_pub.publish(UAV_motion);
         Payload_motion_pub.publish(Payload_motion);
+
+        
         rate.sleep();
     }
     return 0;
