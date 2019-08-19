@@ -19,6 +19,7 @@ OptiTrackFeedBackRigidBody::OptiTrackFeedBackRigidBody(const char* name,ros::Nod
     }
     // set up subscriber to vrpn optitrack beedback
     subOptiTrack = n.subscribe(name, 1, &OptiTrackFeedBackRigidBody::OptiTrackCallback,this);
+    TopicName = name;
     //Initialize all velocity
     for(int i =0;i<max_windowsize;i++)
     {
@@ -225,10 +226,10 @@ void OptiTrackFeedBackRigidBody::GetState(rigidbody_state& state)
     state.Euler(0) = euler_temp[0];// euler angle
     state.Euler(1) = euler_temp[1];// euler angle
     state.Euler(2) = euler_temp[2];// euler angle
-    state.quaterion(0) = pose[1].q0;
-    state.quaterion(1) = pose[1].q1;
-    state.quaterion(2) = pose[1].q2;
-    state.quaterion(3) = pose[1].q3;
+    state.quaternion(0) = pose[1].q0;
+    state.quaternion(1) = pose[1].q1;
+    state.quaternion(2) = pose[1].q2;
+    state.quaternion(3) = pose[1].q3;
     state.isFeedbackNomral = OptiTrackFlag;
 }
 void OptiTrackFeedBackRigidBody::GetRaWVelocity(Vector3d& linear_velocity,Vector3d& angular_velocity)
@@ -382,19 +383,35 @@ void OptiTrackFeedBackRigidBody::FeedbackDetector(int num_of_cycles)
     if the OptiTrackFlag is true, reset feedback_detector_counter to 0
     else the OptiTrackFlag is false add feedback_detector_counter ++ 
     if feedback_detector_counter reaches the num_of_cycles, send out a warning
-    */
-    if(OptiTrackFlag==true)
-    {
-        FeedbackState=true;
-        feedback_detector_counter = 0;
-        ROS_INFO( "OPTITRACK FEEDBACK NORMAL"); 
-    }else{
 
-        FeedbackState=false;
-        feedback_detector_counter++;
-        if(feedback_detector_counter>=num_of_cycles)
+    the info will only be printed once upon feedback status changing
+    */
+    bool isFeedbackStateChanged = false;
+    if (OptiTrackFlag == true)
+    {
+        if (FeedbackState == false)
         {
-             ROS_WARN( "OPTITRACK FEEDBACK LOST!!"); 
+            isFeedbackStateChanged = true;
+        }
+        FeedbackState = true;
+        feedback_detector_counter = 0;// reset the counter to zero
+    }else {
+        feedback_detector_counter++;
+        if (feedback_detector_counter >= num_of_cycles)
+        {
+            if (FeedbackState == true)
+            {
+            isFeedbackStateChanged = true;
+            }
+             FeedbackState  =false;
+        }
+    }
+    if ( isFeedbackStateChanged ) 
+    {
+        if (FeedbackState) {
+            ROS_INFO("OPTITRACK FEEDBACK NORMAL, TOPIC: %s", TopicName); 
+        } else {
+             ROS_WARN( "OPTITRACK FEEDBACK LOST!!, TOPIC: %s", TopicName); 
         }
     }
     OptiTrackFlag = false; 

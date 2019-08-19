@@ -25,7 +25,7 @@ struct optitrack_pose{
 };
 
 struct rigidbody_state{
-    Vector4d quaterion;
+    Vector4d quaternion;
     Vector3d Position;// inertial position
     Vector3d V_I; // inertial velocity
     Matrix3d Omega_Cross; // angular velocity skew
@@ -46,6 +46,7 @@ class OptiTrackFeedBackRigidBody{
     bool FeedbackState;
     int feedback_detector_counter;
     ros::Subscriber subOptiTrack;// OptiTrack Data
+    const char* TopicName;
     //--------Filter Parameters-------//
     unsigned int linear_velocity_window; // window size
     unsigned int angular_velocity_window; // window size
