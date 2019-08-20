@@ -3,9 +3,6 @@
 #include <Eigen/Eigen>
 #include <px4_command/Mocap.h>
 #include <OptiTrackFeedBackRigidBody.h>
-
-#include <vector>
-
 px4_command::Mocap UAV_motion;
 px4_command::Mocap Payload_motion;
 
@@ -15,8 +12,6 @@ struct SubTopic
 {
     char str[100];
 };
-
-
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "optitrack_sender");

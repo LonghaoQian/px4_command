@@ -107,6 +107,11 @@ add_dependencies(optitrack_sender px4_command_gencpp)
 target_link_libraries(optitrack_sender ${catkin_LIBRARIES})
 target_link_libraries(optitrack_sender OptiTrackFeedbackRigidBody)
 
+##px4_pos_estimator_pure_vision.cpp
+add_executable(px4_pos_estimator_pure_vision src/px4_pos_estimator_pure_vision.cpp)
+add_dependencies(px4_pos_estimator_pure_vision px4_command_gencpp)
+target_link_libraries(px4_pos_estimator_pure_vision ${catkin_LIBRARIES})
+
 ###### Test File ##########
 
 ###### Utilities File ##########
