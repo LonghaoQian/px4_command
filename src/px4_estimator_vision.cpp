@@ -1,34 +1,17 @@
 /***************************************************************************************************************************
- * px4_pos_estimator.cpp
+ * px4_estimator_vision.cpp
  *
- * Author: Qyp
+ * Author: Longhao Qian
  *
- * Update Time: 2019.3.10
+ * Update Time: 2019.8.20
  *
- * 说明: mavros位置估计程序
- *      1. 订阅激光SLAM (cartorgrapher_ros节点) 发布的位置信息,从laser坐标系转换至NED坐标系
- *      2. 订阅Mocap设备 (vrpn-client-ros节点) 发布的位置信息，从mocap坐标系转换至NED坐标系
+ * 说明: mavros位置估计程序 (optitrack only)
+ *      1. subscribe position and velocity data of drone and payload from ground station via Mocap topic
  *      3. 订阅飞控发布的位置、速度及欧拉角信息，作对比用
  *      4. 存储飞行数据，实验分析及作图使用
  *      5. 选择激光SLAM或者Mocap设备作为位置来源，发布位置及偏航角(xyz+yaw)给飞控
  *
 ***************************************************************************************************************************/
-/***************************************************************************************************************************
-* px4_pos_controller.cpp
-*
-* Author: Qyp
-*
-* Update Time: 2019.3.16
-*
-* Introduction:  PX4 Position Estimator using external positioning equipment
-*         1. Subscribe position and yaw information from Lidar SLAM node(cartorgrapher_ros节点), transfrom from laser frame to ENU frame
-*         2. Subscribe position and yaw information from Vicon node(vrpn-client-ros节点), transfrom from vicon frame to ENU frame
-*         3. Send the position and yaw information to FCU using Mavros package (/mavros/mocap/pose or /mavros/vision_estimate/pose)
-*         4. Subscribe position and yaw information from FCU, used for compare
-***************************************************************************************************************************/
-
-
-//头文件
 #include <ros/ros.h>
 
 #include <iostream>
@@ -91,7 +74,9 @@ ros::Publisher drone_state_pub;
 px4_command::DroneState _DroneState;  
 px4_command::Mocap UAV_motion;
 px4_command::Mocap Payload_motion;
-
+bool UAVsubFlag;
+bool PaylaodsubFlag;
+bool MocapOK;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>函数声明<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void printf_info();                                                                       //打印函数
 void send_to_fcu();
@@ -101,10 +86,12 @@ void printf_param();
 void UAV_sb(const px4_command::Mocap::ConstPtr& msg)
 {
     UAV_motion = *msg;
+    UAVsubFlag = true;
 }
 void Payload_sb(const px4_command::Mocap::ConstPtr& msg)
 {
     Payload_motion = *msg;
+    PaylaodsubFlag = true;
 }
 void laser_cb(const tf2_msgs::TFMessage::ConstPtr& msg)
 {
@@ -163,15 +150,13 @@ void optitrack_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
     //位置 -- optitrack系 到 ENU系
     //Frame convention 0: Z-up -- 1: Y-up (See the configuration in the motive software)
     int optitrack_frame = 0; 
-    if(optitrack_frame == 0)
-    {
+    if( optitrack_frame == 0) {
         // Read the Drone Position from the Vrpn Package [Frame: Vicon]  (Vicon to ENU frame)
         pos_drone_mocap = Eigen::Vector3d(msg->pose.position.x,msg->pose.position.y,msg->pose.position.z);
         // Read the Quaternion from the Vrpn Package [Frame: Vicon[ENU]]
         q_mocap = Eigen::Quaterniond(msg->pose.orientation.w, msg->pose.orientation.x, msg->pose.orientation.y, msg->pose.orientation.z);
     }
-    else
-    {
+    else {
         // Read the Drone Position from the Vrpn Package [Frame: Vicon]  (Vicon to ENU frame)
         pos_drone_mocap = Eigen::Vector3d(-msg->pose.position.x,msg->pose.position.z,msg->pose.position.y);
         // Read the Quaternion from the Vrpn Package [Frame: Vicon[ENU]]
@@ -210,7 +195,6 @@ int main(int argc, char **argv)
 
     printf_param();
 
-    //nh.param<string>("pos_estimator/rigid_body_name", rigid_body_name, '/vrpn_client_node/UAV/pose');
 
 
     LowPassFilter LPF_x;
@@ -247,7 +231,9 @@ int main(int argc, char **argv)
     state_from_mavros _state_from_mavros;
 
     // 频率
-    ros::Rate rate(100.0);
+    ros::Rate rate(60.0);
+
+    MocapOK = false;
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     while(ros::ok())
@@ -316,8 +302,6 @@ int main(int argc, char **argv)
         } 
         drone_state_pub.publish(_DroneState);
 
-        // 打印
-        // printf_info();
         rate.sleep();
     }
 
