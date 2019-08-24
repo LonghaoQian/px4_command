@@ -79,8 +79,8 @@ void GetAttitude(const sensor_msgs::Imu::ConstPtr& msg) {
     _DroneState.attitude[1] = euler_fcu[1];
     _DroneState.attitude[2] = euler_fcu[2];
     _DroneState.attitude_rate[0] = msg->angular_velocity.x;
-    _DroneState.attitude_rate[1] = msg->angular_velocity.x;
-    _DroneState.attitude_rate[2] = msg->angular_velocity.x;
+    _DroneState.attitude_rate[1] = msg->angular_velocity.y;
+    _DroneState.attitude_rate[2] = msg->angular_velocity.z;
 }
 int main(int argc, 
          char **argv) {
@@ -93,7 +93,12 @@ int main(int argc,
     ros::Subscriber Attitude_sub       = nh.subscribe<sensor_msgs::Imu>("/mavros/imu/data", 100, GetAttitude);
     // publisher
     ros::Publisher drone_state_pub = nh.advertise<px4_command::DroneState>("/px4_command/drone_state", 100);
-
+    /*【发布】无人机位置和偏航角 坐标系 ENU系 
+    本话题要发送飞控(通过mavros_extras/src/plugins/vision_pose_estimate.cpp发送), 
+    对应Mavlink消息为VISION_POSITION_ESTIMATE(#??), 对应的飞控中的uORB消息为vehicle_vision_position.msg
+    及 vehicle_vision_attitude.msg */ 
+    ros::Publisher vision_pub = nh.advertise<geometry_msgs::PoseStamped>("/mavros/vision_pose/pose", 100);
+    geometry_msgs::PoseStamped vision;// vision data
     // ROS frequency
     ros::Rate rate(50.0);
 
@@ -104,6 +109,16 @@ int main(int argc,
     {
         //回调一次 更新传感器状态
         ros::spinOnce();
+        vision.pose.position.x = UAV_motion.position[0];
+        vision.pose.position.y = UAV_motion.position[1];
+        vision.pose.position.z = UAV_motion.position[2];
+        vision.pose.orientation.w = UAV_motion.quaternion[0];
+        vision.pose.orientation.x = UAV_motion.quaternion[1];
+        vision.pose.orientation.y = UAV_motion.quaternion[2];
+        vision.pose.orientation.z = UAV_motion.quaternion[3];
+        vision.header.stamp = ros::Time::now();
+        vision_pub.publish(vision);
+
         _DroneState.header.stamp = ros::Time::now();
         MocapOK = true; // reset the mocap flag to false
         if ( !UAVsubFlag ) {
