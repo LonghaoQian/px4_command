@@ -84,6 +84,11 @@ add_executable(px4_pos_controller src/px4_pos_controller.cpp)
 add_dependencies(px4_pos_controller px4_command_gencpp) 
 target_link_libraries(px4_pos_controller ${catkin_LIBRARIES})
 
+##px4_multidrone_pos_controller.cpp
+add_executable(px4_multidrone_pos_controller src/px4_multidrone_pos_controller.cpp)
+add_dependencies(px4_multidrone_pos_controller px4_command_gencpp) 
+target_link_libraries(px4_multidrone_pos_controller ${catkin_LIBRARIES})
+
 ##px4_pos_estimator.cpp
 add_executable(px4_pos_estimator src/px4_pos_estimator.cpp)
 add_dependencies(px4_pos_estimator px4_command_gencpp)

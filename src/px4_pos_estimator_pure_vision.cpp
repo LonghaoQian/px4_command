@@ -8,8 +8,7 @@
  * 说明: mavros位置估计程序 (optitrack only)
  *      1. subscribe position and velocity data of drone and payload from ground station via Mocap topic
  *      3. 订阅飞控发布的位置、速度及欧拉角信息，作对比用
- *      4. 存储飞行数据，实验分析及作图使用
- *      5. 选择激光SLAM或者Mocap设备作为位置来源，发布位置及偏航角(xyz+yaw)给飞控
+ *      4. 存储飞行数据，实验分析及作图使用    
  *
 ***************************************************************************************************************************/
 #include <ros/ros.h>
