@@ -16,8 +16,8 @@
 #include <ros/ros.h>
 #include <Eigen/Eigen>
 #include <iostream>
-#include <state_from_mavros.h>
-#include <command_to_mavros.h>
+#include <state_from_mavros_multidrone.h>
+#include <command_to_mavros_multidrone.h>
 
 /**********************************----------------include controller class-----------*****************************/
 
@@ -95,15 +95,15 @@ void Command_cb(const px4_command::ControlCommand::ConstPtr& msg)
 {
     Command_Now = *msg;
     // 无人机一旦接受到Land指令，则会屏蔽其他指令
-    if(Command_Last.Mode == command_to_mavros::Land)
+    if(Command_Last.Mode == command_to_mavros_multidrone::Land)
     {
-        Command_Now.Mode = command_to_mavros::Land;
+        Command_Now.Mode = command_to_mavros_multidrone::Land;
     }
 
     // Check for geo fence: If drone is out of the geo fence, it will land now.
     if(check_failsafe() == 1)
     {
-        Command_Now.Mode = command_to_mavros::Land;
+        Command_Now.Mode = command_to_mavros_multidrone::Land;
     }
 }
 
@@ -124,20 +124,23 @@ int main(int argc, char **argv)
     SubTopic px4_commmand_drone_state;
     PubTopic px4_command_topic_for_log;
     // add preflex:
-    strcpy (px4_commmand_control_command.str,"/UAV"); 
-    strcpy (px4_commmand_drone_state.str,"/UAV"); 
-    strcpy (px4_command_topic_for_log.str,"/UAV"); 
+    strcpy (px4_commmand_control_command.str,"/uav"); 
+    strcpy (px4_commmand_drone_state.str,"/uav"); 
+    strcpy (px4_command_topic_for_log.str,"/uav"); 
+    char ID[20];
     if ( argc > 1) {
     // if ID is specified as the second argument 
         strcat (px4_commmand_control_command.str,argv[1]);
         strcat (px4_commmand_drone_state.str,argv[1]);
         strcat (px4_command_topic_for_log.str,argv[1]);
-        ROS_INFO("UAV ID specified as: UAV%s", argv[1]);
+        strcpy (ID,argv[1]);
+        ROS_INFO("UAV ID specified as: uav%s", argv[1]);
     } else {
         // if ID is not specified, then set the drone to UAV0
         strcat (px4_commmand_control_command.str,"0");
         strcat (px4_commmand_drone_state.str,"0");
         strcat (px4_command_topic_for_log.str,"0");
+        strcpy (ID,"0");
         ROS_WARN("NO UAV ID specified, set ID to 0.");
     }
     strcat (px4_commmand_control_command.str,"/px4_command/control_command");
@@ -145,8 +148,8 @@ int main(int argc, char **argv)
     strcat (px4_command_topic_for_log.str,"/px4_command/topic_for_log");
 
     ROS_INFO("Subscribe ControlCommand from: %s", px4_commmand_control_command.str);
-    ROS_INFO("Subscribe DroneState from: %s", px4_commmand_control_command.str);
-    ROS_INFO("Publish Topic_for_log to: %s", px4_commmand_control_command.str);
+    ROS_INFO("Subscribe DroneState from: %s", px4_commmand_drone_state.str);
+    ROS_INFO("Publish Topic_for_log to: %s", px4_command_topic_for_log.str);
 
     // 本话题来自根据需求自定义的上层模块，比如track_land.cpp 比如move.cpp
     ros::Subscriber Command_sub = nh.subscribe<px4_command::ControlCommand>(px4_commmand_control_command.str, 100, Command_cb);
@@ -173,7 +176,8 @@ int main(int argc, char **argv)
     ros::Rate rate(50.0);
 
     // 用于与mavros通讯的类，通过mavros发送控制指令至飞控【本程序->mavros->飞控】
-    command_to_mavros _command_to_mavros;
+    /*TODO change this to multidrone case*/
+    command_to_mavros_multidrone _command_to_mavros(ID);
 
     // cpid is used for single UAV position control
     pos_controller_cascade_PID pos_controller_cascade_pid;
@@ -246,9 +250,9 @@ int main(int argc, char **argv)
     Takeoff_position[2] = _DroneState.position[2];
 
     // Initialize command:  默认设置：Idle模式 电机怠速旋转 等待来自上层的控制指令
-    Command_Now.Mode = command_to_mavros::Idle;
+    Command_Now.Mode = command_to_mavros_multidrone::Idle;
     Command_Now.Command_ID = 0;
-    Command_Now.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;
+    Command_Now.Reference_State.Sub_mode  = command_to_mavros_multidrone::XYZ_POS;
     Command_Now.Reference_State.position_ref[0] = 0;
     Command_Now.Reference_State.position_ref[1] = 0;
     Command_Now.Reference_State.position_ref[2] = 0;
@@ -278,15 +282,15 @@ int main(int argc, char **argv)
 
         switch (Command_Now.Mode) {
         // 【Idle】 怠速旋转，此时可以切入offboard模式，但不会起飞。
-        case command_to_mavros::Idle:
+        case command_to_mavros_multidrone::Idle:
             _command_to_mavros.idle();
             break;
 
         // 【Takeoff】 从摆放初始位置原地起飞至指定高度，偏航角也保持当前角度
-        case command_to_mavros::Takeoff:
+        case command_to_mavros_multidrone::Takeoff:
             Command_to_gs.Mode = Command_Now.Mode;
             Command_to_gs.Command_ID = Command_Now.Command_ID;
-            Command_to_gs.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;
+            Command_to_gs.Reference_State.Sub_mode  = command_to_mavros_multidrone::XYZ_POS;
             Command_to_gs.Reference_State.position_ref[0] = Takeoff_position[0];
             Command_to_gs.Reference_State.position_ref[1] = Takeoff_position[1];
             Command_to_gs.Reference_State.position_ref[2] = Takeoff_position[2] + Takeoff_height;
@@ -318,7 +322,7 @@ int main(int argc, char **argv)
             break;
 
         // 【Move_ENU】 ENU系移动。只有PID算法中才有追踪速度的选项，其他控制只能追踪位置
-        case command_to_mavros::Move_ENU:
+        case command_to_mavros_multidrone::Move_ENU:
             Command_to_gs = Command_Now;
             _ControlOutput = pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
 
@@ -338,12 +342,12 @@ int main(int argc, char **argv)
             break;
         
         // 【Land】 降落。当前位置原地降落，降落后会自动上锁，且切换为mannual模式
-        case command_to_mavros::Land:
+        case command_to_mavros_multidrone::Land:
             Command_to_gs.Mode = Command_Now.Mode;
             Command_to_gs.Command_ID = Command_Now.Command_ID;
-            if (Command_Last.Mode != command_to_mavros::Land)
+            if (Command_Last.Mode != command_to_mavros_multidrone::Land)
             {
-                Command_to_gs.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;
+                Command_to_gs.Reference_State.Sub_mode  = command_to_mavros_multidrone::XYZ_POS;
                 Command_to_gs.Reference_State.position_ref[0] = _DroneState.position[0];
                 Command_to_gs.Reference_State.position_ref[1] = _DroneState.position[1];
                 Command_to_gs.Reference_State.position_ref[2] = Takeoff_position[2];
@@ -399,7 +403,7 @@ int main(int argc, char **argv)
             break;
 
         // 【Disarm】 紧急上锁。直接上锁，不建议使用，危险。
-        case command_to_mavros::Disarm:
+        case command_to_mavros_multidrone::Disarm:
             Command_to_gs.Mode = Command_Now.Mode;
             Command_to_gs.Command_ID = Command_Now.Command_ID;
             
@@ -424,7 +428,7 @@ int main(int argc, char **argv)
             break;
 
         // Trajectory_Tracking to be desigened
-        case command_to_mavros::Trajectory_Tracking:
+        case command_to_mavros_multidrone::Trajectory_Tracking:
             break;
         }
 
