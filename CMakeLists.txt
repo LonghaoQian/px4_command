@@ -84,11 +84,21 @@ add_executable(px4_pos_controller src/px4_pos_controller.cpp)
 add_dependencies(px4_pos_controller px4_command_gencpp) 
 target_link_libraries(px4_pos_controller ${catkin_LIBRARIES})
 
+##px4_multidrone_pos_controller.cpp
+add_executable(px4_multidrone_pos_controller src/px4_multidrone_pos_controller.cpp)
+add_dependencies(px4_multidrone_pos_controller px4_command_gencpp) 
+target_link_libraries(px4_multidrone_pos_controller ${catkin_LIBRARIES})
+
 ##px4_pos_estimator.cpp
 add_executable(px4_pos_estimator src/px4_pos_estimator.cpp)
 add_dependencies(px4_pos_estimator px4_command_gencpp)
 target_link_libraries(px4_pos_estimator ${catkin_LIBRARIES})
 target_link_libraries(px4_pos_estimator OptiTrackFeedbackRigidBody)
+
+##px4_multidrone_pos_estimator.cpp
+add_executable(px4_multidrone_pos_estimator src/px4_multidrone_pos_estimator.cpp)
+add_dependencies(px4_multidrone_pos_estimator px4_command_gencpp)
+target_link_libraries(px4_multidrone_pos_estimator ${catkin_LIBRARIES})
 
 ##px4_sender.cpp
 add_executable(px4_sender src/px4_sender.cpp)
@@ -111,6 +121,11 @@ target_link_libraries(optitrack_sender OptiTrackFeedbackRigidBody)
 add_executable(px4_pos_estimator_pure_vision src/px4_pos_estimator_pure_vision.cpp)
 add_dependencies(px4_pos_estimator_pure_vision px4_command_gencpp)
 target_link_libraries(px4_pos_estimator_pure_vision ${catkin_LIBRARIES})
+
+##px4_multidrone_pos_estimator_pure_vision.cpp
+add_executable(px4_multidrone_pos_estimator_pure_vision src/px4_multidrone_pos_estimator_pure_vision.cpp)
+add_dependencies(px4_multidrone_pos_estimator_pure_vision px4_command_gencpp)
+target_link_libraries(px4_multidrone_pos_estimator_pure_vision ${catkin_LIBRARIES})
 
 ###### Test File ##########
 

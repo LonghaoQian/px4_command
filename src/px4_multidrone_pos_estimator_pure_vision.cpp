@@ -1,12 +1,13 @@
 /***************************************************************************************************************************
- * px4_estimator_vision.cpp
+ * px4_multidrone_pos_estimator_pure_vision.cpp
  *
  * Author: Longhao Qian
  *
- * Update Time: 2019.8.20
+ * Update Time: 2019.8.31
  *
  * 说明: mavros位置估计程序 (optitrack only)
  *      1. subscribe position and velocity data of drone and payload from ground station via Mocap topic
+ *      2. for multi drone implmentation. auto add UAV number to pub and sub topics
  *      3. 订阅飞控发布的位置、速度及欧拉角信息，作对比用
  *      4. 存储飞行数据，实验分析及作图使用    
  *
@@ -38,13 +39,21 @@
 #include <px4_command/Mocap.h>
 
 using namespace std;
+struct SubTopic
+{
+    char str[100];
+};
+struct PubTopic
+{
+    char str[100];
+};
 px4_command::DroneState _DroneState;  
 px4_command::Mocap UAV_motion;
 px4_command::Mocap Payload_motion;
 bool UAVsubFlag;
 bool PaylaodsubFlag;
 bool MocapOK;
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>回调函数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>     Callbacks   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void GetUAVState(const px4_command::Mocap::ConstPtr& msg) {
     UAV_motion = *msg;
     for ( int i = 0; i < 3; i ++) {
@@ -83,27 +92,69 @@ void GetAttitude(const sensor_msgs::Imu::ConstPtr& msg) {
 }
 int main(int argc, 
          char **argv) {
-    ros::init(argc, argv, "px4_pos_estimator_pure_vision");
+    ros::init(argc, argv, "px4_multidrone_pos_estimator_pure_vision");
     ros::NodeHandle nh("~");
+    ros::Rate rate(50.0);// ROS frequency
+
+    /*----------- determine the  ID of the drone -----------------------------*/
+    SubTopic mocap_UAV;
+    SubTopic mavros_state;
+    SubTopic mavros_imu_data;
+    PubTopic px4_command_drone_state;
+    PubTopic mavros_vision_pose_pose;
+    // add preflex: (mavros and px4_command use lower case uav, while mocap use upper case UAV)
+    strcpy (mocap_UAV.str,"/mocap/UAV"); 
+    strcpy (mavros_state.str,"/uav"); 
+    strcpy (mavros_imu_data.str,"/uav"); 
+    strcpy (px4_command_drone_state.str,"/uav"); 
+    strcpy (mavros_vision_pose_pose.str,"/uav"); 
+    if ( argc > 1) {
+    // if ID is specified as the second argument 
+        strcat (mocap_UAV.str,argv[1]);
+        strcat (mavros_state.str,argv[1]);
+        strcat (mavros_imu_data.str,argv[1]);
+        strcat (px4_command_drone_state.str,argv[1]);
+        strcat (mavros_vision_pose_pose.str,argv[1]);
+        ROS_INFO("UAV ID specified as: UAV%s", argv[1]);
+    } else {
+        // if ID is not specified, then set the drone to UAV0
+        strcat (mocap_UAV.str,"0");
+        strcat (mavros_state.str,"0");
+        strcat (mavros_imu_data.str,"0");
+        strcat (px4_command_drone_state.str,"0");
+        strcat (mavros_vision_pose_pose.str,"0");
+        ROS_WARN("NO UAV ID specified, set ID to 0.");
+    }
+    
+    strcat (mavros_state.str,"/mavros/state");
+    strcat (mavros_imu_data.str,"/mavros/imu/data");
+    strcat (px4_command_drone_state.str,"/px4_command/drone_state");
+    strcat (mavros_vision_pose_pose.str,"/mavros/vision_pose/pose");
+
+
+    ROS_INFO("Subscribe uav Mocap from: %s", mocap_UAV.str);
+    ROS_INFO("Subscribe payload from: /mocap/Payload");
+    ROS_INFO("Subscribe mavros_msgs::State from: %s", mavros_state.str);
+    ROS_INFO("Subscribe IMU from: %s", mavros_imu_data.str); 
+    ROS_INFO("Publish DroneState to: %s", px4_command_drone_state.str);
+    ROS_INFO("Publish PoseStamped to: %s", mavros_vision_pose_pose.str);
     // subscriber
-    ros::Subscriber UAV_motion_sub     = nh.subscribe<px4_command::Mocap>("/mocap/UAV", 1000, GetUAVState);
+    ros::Subscriber UAV_motion_sub     = nh.subscribe<px4_command::Mocap>(mocap_UAV.str, 1000, GetUAVState);
     ros::Subscriber Payload_motion_sub = nh.subscribe<px4_command::Mocap>("/mocap/Payload", 1000, GetPayloadState);
-    ros::Subscriber MavrosState_sub    = nh.subscribe<mavros_msgs::State>("/mavros/state", 100, GetMavrosState);
-    ros::Subscriber Attitude_sub       = nh.subscribe<sensor_msgs::Imu>("/mavros/imu/data", 100, GetAttitude);
+    ros::Subscriber MavrosState_sub    = nh.subscribe<mavros_msgs::State>(mavros_state.str, 100, GetMavrosState);
+    ros::Subscriber Attitude_sub       = nh.subscribe<sensor_msgs::Imu>(mavros_imu_data.str, 100, GetAttitude);
     // publisher
-    ros::Publisher drone_state_pub = nh.advertise<px4_command::DroneState>("/px4_command/drone_state", 100);
+    ros::Publisher drone_state_pub = nh.advertise<px4_command::DroneState>(px4_command_drone_state.str, 100);
     /*【发布】无人机位置和偏航角 坐标系 ENU系 
     本话题要发送飞控(通过mavros_extras/src/plugins/vision_pose_estimate.cpp发送), 
     对应Mavlink消息为VISION_POSITION_ESTIMATE(#??), 对应的飞控中的uORB消息为vehicle_vision_position.msg
     及 vehicle_vision_attitude.msg */ 
-    ros::Publisher vision_pub = nh.advertise<geometry_msgs::PoseStamped>("/mavros/vision_pose/pose", 100);
+    ros::Publisher vision_pub = nh.advertise<geometry_msgs::PoseStamped>(mavros_vision_pose_pose.str, 100);
     geometry_msgs::PoseStamped vision;// vision data
-    // ROS frequency
-    ros::Rate rate(50.0);
-
+    
     const int MocapTolerance = 3;
     int NoFeedBackCounter = 0;
-    
+    ROS_INFO("Start the estimator...");
     while(ros::ok())
     {
         //回调一次 更新传感器状态
@@ -116,7 +167,7 @@ int main(int argc,
         vision.pose.orientation.y = UAV_motion.quaternion[2];
         vision.pose.orientation.z = UAV_motion.quaternion[3];
         vision.header.stamp = ros::Time::now();
-        vision_pub.publish(vision);
+        vision_pub.publish(vision);// send vision measurment to fcu
 
         _DroneState.header.stamp = ros::Time::now();
         MocapOK = true; // reset the mocap flag to false
@@ -142,11 +193,9 @@ int main(int argc,
                 _DroneState.mocapOK = true;
             }
         }
+        /*TODO add a ros_warn and ros_info to show the mocap info*/
         drone_state_pub.publish(_DroneState);
         rate.sleep();
     }
     return 0;
 }
-
-
-

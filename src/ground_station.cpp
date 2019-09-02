@@ -170,7 +170,6 @@ void printf_info()
 
     px4_command_utils::prinft_attitude_reference(_Topic_for_log.Attitude_Reference);
 
-
     cout <<">>>>>>>>>>>>>>>>>>>>>>>> Control Output  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
     
     cout << "u_l [X Y Z]  : " << _Topic_for_log.Control_Output.u_l[0] << " [ ] "<< _Topic_for_log.Control_Output.u_l[1] <<" [ ] "<< _Topic_for_log.Control_Output.u_l[2] <<" [ ] "<<endl;
