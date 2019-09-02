@@ -174,12 +174,8 @@ int main(int argc,
         if ( !UAVsubFlag ) {
             MocapOK = false;
         }
-        if ( !PaylaodsubFlag ) {
-            MocapOK = false;
-        }
         // reset the sub flag to false
         UAVsubFlag = false;
-        PaylaodsubFlag = false;
         // determine whether the mocap feedback is normal
         _DroneState.mocapOK = true;
         if (MocapOK) {
