@@ -427,7 +427,7 @@ int main(int argc, char **argv)
 
             break;
 
-        // Trajectory_Tracking to be desigened
+        /*-------------- TODO: change this into payload carry control ---------------*/
         case command_to_mavros_multidrone::Trajectory_Tracking:
             break;
         }

@@ -152,7 +152,7 @@ int main(int argc,
     ros::Publisher vision_pub = nh.advertise<geometry_msgs::PoseStamped>(mavros_vision_pose_pose.str, 100);
     geometry_msgs::PoseStamped vision;// vision data
     
-    const int MocapTolerance = 3;
+    const int MocapTolerance = 2;
     int NoFeedBackCounter = 0;
     ROS_INFO("Start the estimator...");
     while(ros::ok())
