@@ -8,7 +8,7 @@ project(px4_command)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  message_generation  
+  message_generation
   roscpp
   geometry_msgs
   sensor_msgs
@@ -47,7 +47,7 @@ add_message_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  geometry_msgs 
+  geometry_msgs
   sensor_msgs
   std_msgs
 )
@@ -81,12 +81,12 @@ add_library(KeyboardEvent src/lib/KeyboardEvent.cpp)
 
 ##px4_pos_controller.cpp
 add_executable(px4_pos_controller src/px4_pos_controller.cpp)
-add_dependencies(px4_pos_controller px4_command_gencpp) 
+add_dependencies(px4_pos_controller px4_command_gencpp)
 target_link_libraries(px4_pos_controller ${catkin_LIBRARIES})
 
 ##px4_multidrone_pos_controller.cpp
 add_executable(px4_multidrone_pos_controller src/px4_multidrone_pos_controller.cpp)
-add_dependencies(px4_multidrone_pos_controller px4_command_gencpp) 
+add_dependencies(px4_multidrone_pos_controller px4_command_gencpp)
 target_link_libraries(px4_multidrone_pos_controller ${catkin_LIBRARIES})
 
 ##px4_pos_estimator.cpp
@@ -160,6 +160,14 @@ target_link_libraries(OptiTrackTest KeyboardEvent)
 add_executable(set_mode src/Utilities/set_mode.cpp)
 add_dependencies(set_mode px4_command_gencpp)
 target_link_libraries(set_mode ${catkin_LIBRARIES})
+
+add_executable(set_uav0_mode src/Utilities/set_uav0_mode.cpp)
+add_dependencies(set_uav0_mode px4_command_gencpp)
+target_link_libraries(set_uav0_mode ${catkin_LIBRARIES})
+
+add_executable(set_uav1_mode src/Utilities/set_uav1_mode.cpp)
+add_dependencies(set_uav1_mode px4_command_gencpp)
+target_link_libraries(set_uav1_mode ${catkin_LIBRARIES})
 
 add_executable(eigen_test src/Utilities/eigen_test.cpp)
 add_dependencies(eigen_test px4_command_gencpp)
