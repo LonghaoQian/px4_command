@@ -15,6 +15,8 @@ uint8 Land=5
 uint8 Disarm=6
 uint8 PPN_land=7
 uint8 Trajectory_Tracking=8
+uint8 Payload_Stabilization=9
+uint8 Payload_Land=10
 
 ## 控制参考量 
 ## 位置参考量：位置、速度、加速度、加加速度、加加加速度

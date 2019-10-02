@@ -169,6 +169,8 @@ class command_to_mavros_multidrone
         Disarm,
         PPN_land,
         Trajectory_Tracking,
+        Payload_Stabilization,
+        Payload_Land,
     };
 
     enum Submode_Type

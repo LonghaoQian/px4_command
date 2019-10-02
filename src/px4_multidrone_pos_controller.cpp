@@ -34,7 +34,8 @@
 #include <px4_command/Topic_for_log.h>
 #include <px4_command/Trajectory.h>
 #include <px4_command/ControlOutput.h>
-
+#include <px4_command/PayloadPoseCommand.h>
+#include <payload_controller_GNC.h>
 using namespace std;
 
 struct SubTopic
@@ -100,12 +101,18 @@ void Command_cb(const px4_command::ControlCommand::ConstPtr& msg)
         Command_Now.Mode = command_to_mavros_multidrone::Land;
     }
 
+
+
     // Check for geo fence: If drone is out of the geo fence, it will land now.
     if(check_failsafe() == 1)
     {
         Command_Now.Mode = command_to_mavros_multidrone::Land;
     }
 }
+
+//void PayloadPoseTargetSub(const px4_command::PayloadPoseCommand& msg) {
+ //   PayloadPoseTarget = *msg;
+//}
 
 void drone_state_cb(const px4_command::DroneState::ConstPtr& msg)
 {
@@ -154,6 +161,9 @@ int main(int argc, char **argv)
     // 本话题来自根据需求自定义的上层模块，比如track_land.cpp 比如move.cpp
     ros::Subscriber Command_sub = nh.subscribe<px4_command::ControlCommand>(px4_commmand_control_command.str, 100, Command_cb);
 
+    // subscribe payload pose target
+    //ros::Subscriber Payload_Command_sub = nh.subscribe<px4_command::PayloadPoseCommand>("/payload/px4_command/control_command",100,PayloadPoseTargetSub);
+
     // 本话题来自根据需求自定px4_pos_estimator.cpp
     ros::Subscriber drone_state_sub = nh.subscribe<px4_command::DroneState>(px4_commmand_drone_state.str, 100, drone_state_cb);
 
@@ -185,10 +195,9 @@ int main(int argc, char **argv)
     pos_controller_cascade_pid.printf_param();
     // methods of payload stabilization with single UAVs
     pos_controller_TIE pos_controller_tie;
-
     // methods of payload stabilization with multiple UAVs
     /*TODO*/
-
+    payload_controller_GNC pos_controller_GNC(ID);
     // pick control law will be specified in parameter files
     int SingleUAVPayloadController;
     int CooperativePayload;
@@ -206,7 +215,7 @@ int main(int argc, char **argv)
     }
     switch (CooperativePayload) {
         case 0: {
-            /*TODO: pos_controller_tcst.printf_param();*/
+            pos_controller_GNC.printf_param();
             break;
         }
         case 1: {
@@ -218,7 +227,7 @@ int main(int argc, char **argv)
             break;
         }
         default: {
-            //pos_controller_tcst.printf_param();
+            pos_controller_GNC.printf_param();
             break;
         }
     }
@@ -343,7 +352,6 @@ int main(int argc, char **argv)
                 _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
             }
             break;
-
         // 【Land】 降落。当前位置原地降落，降落后会自动上锁，且切换为mannual模式
         case command_to_mavros_multidrone::Land:
             Command_to_gs.Mode = Command_Now.Mode;
@@ -403,6 +411,81 @@ int main(int argc, char **argv)
 
             break;
 
+        case command_to_mavros_multidrone::Payload_Stabilization: 
+            Command_to_gs = Command_Now;
+
+            _ControlOutput = pos_controller_GNC.payload_controller(_DroneState, Command_to_gs.Reference_State,dt);
+            
+            throttle_sp[0] = _ControlOutput.Throttle[0];
+            throttle_sp[1] = _ControlOutput.Throttle[1];
+            throttle_sp[2] = _ControlOutput.Throttle[2];
+
+            _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, 0);
+
+            if (Use_accel > 0.5) {
+                _command_to_mavros.send_accel_setpoint(throttle_sp,0);
+            } else {
+                _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
+            }
+            break;
+
+
+        case command_to_mavros_multidrone::Payload_Land :{
+            Command_to_gs.Mode = Command_Now.Mode;
+            Command_to_gs.Command_ID = Command_Now.Command_ID;
+            if (Command_Last.Mode != command_to_mavros_multidrone::Land)
+            {
+                Command_to_gs.Reference_State.Sub_mode  = command_to_mavros_multidrone::XYZ_POS;
+                Command_to_gs.Reference_State.position_ref[0] = _DroneState.position[0];
+                Command_to_gs.Reference_State.position_ref[1] = _DroneState.position[1];
+                Command_to_gs.Reference_State.position_ref[2] = Takeoff_position[2];
+                Command_to_gs.Reference_State.velocity_ref[0] = 0;
+                Command_to_gs.Reference_State.velocity_ref[1] = 0;
+                Command_to_gs.Reference_State.velocity_ref[2] = 0;
+                Command_to_gs.Reference_State.acceleration_ref[0] = 0;
+                Command_to_gs.Reference_State.acceleration_ref[1] = 0;
+                Command_to_gs.Reference_State.acceleration_ref[2] = 0;
+                Command_to_gs.Reference_State.yaw_ref = _DroneState.attitude[2]; //rad
+            }
+
+            _ControlOutput = pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+
+            throttle_sp[0] = _ControlOutput.Throttle[0];
+            throttle_sp[1] = _ControlOutput.Throttle[1];
+            throttle_sp[2] = _ControlOutput.Throttle[2];
+
+            _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
+
+            if(Use_accel > 0.5) {
+                _command_to_mavros.send_accel_setpoint(throttle_sp,Command_to_gs.Reference_State.yaw_ref);
+            }else
+            {
+                _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
+            }
+
+            //如果距离起飞高度小于15厘米，则直接上锁并切换为手动模式；
+            if(_DroneState.position[2] - Takeoff_position[2] < Disarm_height)
+            {
+
+                ROS_INFO("Below landing height, disarming.");
+
+              /*  if(_DroneState.mode == "OFFBOARD") {
+                    _command_to_mavros.mode_cmd.request.custom_mode = "MANUAL";
+                    _command_to_mavros.set_mode_client.call(_command_to_mavros.mode_cmd);
+                }*/
+
+                if(_DroneState.armed) {
+                    _command_to_mavros.arm_cmd.request.value = false;
+                    _command_to_mavros.arming_client.call(_command_to_mavros.arm_cmd);
+                }
+
+                if (_command_to_mavros.arm_cmd.response.success)
+                {
+                    ROS_INFO("Disarm successfully!");
+                }
+            }
+            break;
+        }
         // 【Disarm】 紧急上锁。直接上锁，不建议使用，危险。
         case command_to_mavros_multidrone::Disarm:
             Command_to_gs.Mode = Command_Now.Mode;
@@ -427,10 +510,6 @@ int main(int argc, char **argv)
             }
 
             break;
-
-        /*-------------- TODO: change this into payload carry control ---------------*/
-        case command_to_mavros_multidrone::Trajectory_Tracking:
-            break;
         }
 
         if(Flag_printf == 1)
@@ -441,7 +520,7 @@ int main(int argc, char **argv)
             // 打印上层控制指令
             px4_command_utils::printf_command_control(Command_to_gs);
             // 打印位置控制器中间计算量
-            pos_controller_cascade_pid.printf_result();
+            pos_controller_GNC.printf_result();
             // 打印位置控制器输出结果
             px4_command_utils::prinft_attitude_reference(_AttitudeReference);
         }else if(((int)(cur_time*10) % 50) == 0)

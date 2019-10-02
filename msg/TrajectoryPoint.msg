@@ -30,3 +30,7 @@ float32[3] acceleration_ref      ## [m/s^2]
 float32 yaw_ref                  ## [rad]
 ## float32 yaw_rate_ref             ## [rad/s] 
 ## float32 yaw_acceleration_ref     ## [rad/s] 
+
+## attitude angle reference for payload control 
+float32 pitch_ref ## [rad]
+float32 roll_ref  ## [rad]

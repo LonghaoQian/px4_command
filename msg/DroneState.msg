@@ -19,6 +19,7 @@ float32[3] attitude_rate            ## [rad/s]
 
 float32[3] payload_vel              ## [m/s]
 float32[3] payload_pos              ## [m]
-
+float32[4] payload_quaternion       ## []
+float32[3] payload_angular_vel      ## [rad/s]
 ## Flag showing whether the mocap msg has been updated very loop
 bool mocapOK                        

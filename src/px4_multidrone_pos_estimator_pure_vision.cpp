@@ -53,7 +53,7 @@ px4_command::Mocap Payload_motion;
 bool UAVsubFlag;
 bool PaylaodsubFlag;
 bool MocapOK;
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>     Callbacks   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>   Callbacks   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void GetUAVState(const px4_command::Mocap::ConstPtr& msg) {
     UAV_motion = *msg;
     for ( int i = 0; i < 3; i ++) {
@@ -66,8 +66,14 @@ void GetPayloadState(const px4_command::Mocap::ConstPtr& msg) {
     Payload_motion = *msg;
     for ( int i = 0; i < 3; i ++) {
         _DroneState.payload_vel[i] = Payload_motion.velocity[i];
-        _DroneState.payload_pos[i] = Payload_motion.position[i];              
+        _DroneState.payload_pos[i] = Payload_motion.position[i];
+        _DroneState.payload_angular_vel[i] = Payload_motion.angular_velocity[i]; 
     }
+
+    for (int i = 0; i < 4; i++) {
+        _DroneState.payload_quaternion[i] = Payload_motion.quaternion[i];
+    }
+
     PaylaodsubFlag = true;
 }
 void GetMavrosState(const mavros_msgs::State::ConstPtr &msg) {

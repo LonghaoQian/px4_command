@@ -5,7 +5,7 @@ Disarm_height : 0.3
 ## 1 for use the accel command
 Use_accel : 0.0
 ## 1 for printf the state, 0 for block
-Flag_printf : 1.0
+Flag_printf : 0.0
 
 ppn_kx : 0.2
 ppn_ky : 0.2
@@ -39,7 +39,7 @@ Quad:
   mass: 1.6
 ## payload mass
 Payload:
-  mass: 0.7
+  mass: 0.5
 ## cable length
 Cable:
   length: 0.9
@@ -142,36 +142,3 @@ Pos_tie:
   Kpv_xy: 1.0
   Kpv_z: 1.0
   KL : 1.0
-
-# parameter for payload cooperative control 
-uav0_Pos_GNC:
-  mass : 1.45
-  cablelength : 0.8
-  TetherOffset_x: 0.8
-  TetherOffset_y: 0
-  TetherOffset_z: 0.15
-  PayloadSharingPortion : 0.5
-
-uav1_Pos_GNC:
-  mass : 1.45
-  cablelength : 0.8
-  TetherOffset_x: -0.8
-  TetherOffset_y: 0
-  TetherOffset_z: 0.15
-  PayloadSharingPortion: 0.5
-
-Pos_GNC:
-  kv_xy : 0.2
-  Kv_z  : 0.5
-  kR_xy : 0.2
-  kR_z  : 0.2
-  kL    : 0.7
-  Kphi_xy : 3
-  Kphi_z  : 3
-  fp_max_x : 2
-  fp_max_y : 2
-  fp_max_z : 3
-
-  
-
-

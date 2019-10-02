@@ -1,11 +1,11 @@
 /***************************************************************************************************************************
 * math_utils.h
 *
-* Author: Qyp
+* Author: Longhao Qian
 *
-* Update Time: 2019.3.16
+* Update Time: 2019.9.23
 *
-* Introduction:  math utils functions 数学工具函数
+* Introduction:  math utils functions 
 *
 *               1、转换 ref to https://github.com/PX4/Matrix/blob/56b069956da141da244926ed7000e89b2ba6c731/matrix/Euler.hpp
 ***************************************************************************************************************************/
@@ -54,7 +54,16 @@ Eigen::Vector3d quaternion_to_euler(const Eigen::Quaterniond &q)
     return ans;
 }
 
-//旋转矩阵转欧拉角
+Eigen::Vector3d quaternion_to_euler2(const Eigen::Vector4f& quat)
+{
+    Eigen::Vector3d ans;
+    ans[0] = atan2(2.0 * (quat[3] * quat[2] + quat[0] * quat[1]), 1.0 - 2.0 * (quat[1] * quat[1] + quat[2] * quat[2]));
+    ans[1] = asin(2.0 * (quat[2] * quat[0] - quat[3] * quat[1]));
+    ans[2] = atan2(2.0 * (quat[3] * quat[0] + quat[1] * quat[2]), 1.0 - 2.0 * (quat[2] * quat[2] + quat[3] * quat[3]));
+    return ans;
+}
+
+//rotation matrix to euler anlge
 void rotation_to_euler(const Eigen::Matrix3d& dcm, Eigen::Vector3d& euler_angle)
 {
     double phi_val = atan2(dcm(2, 1), dcm(2, 2));
@@ -76,7 +85,6 @@ void rotation_to_euler(const Eigen::Matrix3d& dcm, Eigen::Vector3d& euler_angle)
     euler_angle(2) = psi_val;
 }
 
-
 //constrain_function
 float constrain_function(float data, float Max)
 {
@@ -89,6 +97,7 @@ float constrain_function(float data, float Max)
         return data;
     }
 }
+
 
 //constrain_function2
 float constrain_function2(float data, float Min,float Max)
@@ -124,8 +133,7 @@ float sign_function(float data)
 }
 
 // min function
-float min(float data1,float data2)
-{
+float min(float data1,float data2) {
     if(data1>=data2)
     {
         return data2;
@@ -136,5 +144,86 @@ float min(float data1,float data2)
     }
 }
 
+Eigen::Vector3f Veemap(const Eigen::Matrix3f& cross_matrix) {
+    Eigen::Vector3f vector;
+    vector(0) = -cross_matrix(1,2);
+    vector(1) = cross_matrix(0,2);
+    vector(2) = -cross_matrix(0,1);
+    return vector;
+}
+Eigen::Matrix3f Hatmap(const Eigen::Vector3f& vector) {
+    /*
+
+    r^x = [0 -r3 r2;
+           r3 0 -r1;
+          -r2 r1 0]
+    */
+    Eigen::Matrix3f cross_matrix;
+    cross_matrix(0,0) = 0.0;
+    cross_matrix(0,1) = - vector(2);
+    cross_matrix(0,2) = vector(1);
+
+    cross_matrix(1,0) = vector(2);
+    cross_matrix(1,1) = 0.0;
+    cross_matrix(1,2) = - vector(0);
+
+    cross_matrix(2,0) = - vector(1);
+    cross_matrix(2,1) = vector(0);
+    cross_matrix(2,2) = 0.0;
+    return cross_matrix;
+}
+Eigen::Matrix3f QuaterionToRotationMatrix(const Eigen::Vector4f& quaternion) {
+    Eigen::Matrix3f R_IB;
+
+    /* take a special note at the order of the quaterion
+    pose[1].q0 = OptiTrackdata.pose.orientation.w;
+    pose[1].q1 = OptiTrackdata.pose.orientation.x;
+    pose[1].q2 = OptiTrackdata.pose.orientation.y;
+    pose[1].q3 = OptiTrackdata.pose.orientation.z;
+    
+    //update the auxiliary matrix
+    /*
+    L = [-q1 q0 q3 -q2;
+         -q2 -q3 q0 q1;
+         -q3 q2 -q1 q0]
+    R = [-q1 q0 -q3 q2;
+         -q2 q3 q0 -q1;
+         -q3 -q2 q1 q0]
+    R_IB = RL^T
+    */
+    Eigen::Matrix<float,3,4> L,R;
+    L(0,0) = - quaternion(1);
+    L(1,0) = - quaternion(2);
+    L(2,0) = - quaternion(3);
+
+    L(0,1) = quaternion(0);
+    L(1,2) = quaternion(0);
+    L(2,3) = quaternion(0);
+
+    L(0,2) = quaternion(3);
+    L(0,3) = - quaternion(2);
+    L(1,1) = - quaternion(3);
+    L(1,3) = quaternion(1);
+    L(2,1) = quaternion(2);
+    L(2,2) = - quaternion(1);
+
+    R(0,0) = - quaternion(1);
+    R(1,0) = - quaternion(2);
+    R(2,0) = - quaternion(3);
+
+    R(0,1) = quaternion(0);
+    R(1,2) = quaternion(0);
+    R(2,3) = quaternion(0);
+
+    R(0,2) = - quaternion(3);
+    R(0,3) =  quaternion(2);
+    R(1,1) =  quaternion(3);
+    R(1,3) = -quaternion(1);
+    R(2,1) = -quaternion(2);
+    R(2,2) =  quaternion(1); 
+
+    R_IB = R * L.transpose();
+    return R_IB;
+}
 
 #endif
