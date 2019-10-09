@@ -23,16 +23,15 @@ noise_end_time : 30.0
 
 ## parameter for px4_pos_estimator.cpp
 pos_estimator:
-  ## 使用激光SLAM数据orVicon数据 0 for vicon， 1 for 激光SLAM
-  flag_use_laser_or_vicon : 0
-  ## 0 for use the data from fcu, 1 for use the mocap raw data(only position), 2 for use the mocap raw data(position and velocity)
-  Use_mocap_raw : 0
-  linear_window : 3
-  angular_window : 3
-  noise_a : 0.0
-  noise_b : 0.0
-  noise_T : 1.0
-
+## 使用激光SLAM数据orVicon数据 0 for vicon， 1 for 激光SLAM
+flag_use_laser_or_vicon : 0
+## 0 for use the data from fcu, 1 for use the mocap raw data(only position), 2 for use the mocap raw data(position and velocity)
+Use_mocap_raw : 0
+linear_window : 3
+angular_window : 3
+noise_a : 0.0
+noise_b : 0.0
+noise_T : 1.0
 
 ## 飞机参数
 Quad:
@@ -46,12 +45,12 @@ Cable:
 
 ##geo fence for fsc
 geo_fence:
-  x_min: -1.2
-  x_max: 1.2
-  y_min: -1.0
-  y_max: 1.0
+  x_min: -1.6
+  x_max:  1.5
+  y_min: -1.2
+  y_max:  1.2
   z_min: -0.05
-  z_max: 1.8
+  z_max:  1.8
 
 ## 限制参数
 Limit:
@@ -98,7 +97,6 @@ Pos_ude:
   Kd_z : 2.0
   T_ude_xy : 2.0
   T_ude_z : 2.0
-
 
 # 位置环参数 for passivity
 Pos_passivity:
@@ -160,17 +158,34 @@ uav1_Pos_GNC:
   TetherOffset_z: 0.15
   PayloadSharingPortion: 0.5
 
+uav2_Pos_GNC:
+  mass : 1.45
+  cablelength : 0
+  TetherOffset_x: 0
+  TetherOffset_y: 0
+  TetherOffset_z: 0
+  PayloadSharingPortion: 0
+
 Pos_GNC:
+  Type: 0 # 0 for baseline controller 1 for robust controller
+  num_drone : 2
   kv_xy : 0.2
   Kv_z  : 0.5
+  kvi_xy : 0.02
+  kvi_z  : 0.05
   kR_xy : 0.2
   kR_z  : 0.2
-  kL    : 0.7
+  kL    : 0.5
   Kphi_xy : 3
-  Kphi_z  : 3
+  Kphi_z  : 3  
   fp_max_x : 2
   fp_max_y : 2
   fp_max_z : 3
+  lambda_j : 1
+  lambda_T : 1
+  lambda_R : 1
+  kF_xy : 0.4
+  kF_z : 0.5
 
   
 

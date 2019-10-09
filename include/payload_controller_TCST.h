@@ -1,5 +1,5 @@
-#ifndef PAYLOAD_CONTROLLER_GNC_H
-#define PAYLOAD_CONTROLLER_GNC_H
+#ifndef PAYLOAD_CONTROLLER_TCST_H
+#define PAYLOAD_CONTROLLER_TCST_H
 
 #include <Eigen/Eigen>
 #include <math.h>
@@ -15,12 +15,12 @@
 
 using namespace std;
 
-class payload_controller_GNC
+class payload_controller_TCST
 {
     public:
 
         //Constructor
-        payload_controller_GNC(char drone_ID[20]):
+        payload_controller_TCST(char drone_ID[20]):
             payload_controller_nh("~")
         {
             // use drone ID to get the correct name for parameters
@@ -49,10 +49,6 @@ class payload_controller_GNC
             Kphi <<1.0,0.0,0.0,
                    0.0,1.0,0.0,
                    0.0,0.0,1.0;    
-            kvi << 1.0,0.0,0.0,
-                   0.0,1.0,0.0,
-                   0.0,0.0,1.0;
-            
             payload_controller_nh.param<float>("Pos_GNC/kv_xy", kv(0,0), 0.2);
             payload_controller_nh.param<float>("Pos_GNC/kv_xy", kv(1,1), 0.2);
             payload_controller_nh.param<float>("Pos_GNC/Kv_z",  kv(2,2), 0.4);
@@ -60,10 +56,6 @@ class payload_controller_GNC
             payload_controller_nh.param<float>("Pos_GNC/kR_xy" , kR(0,0), 0.2);
             payload_controller_nh.param<float>("Pos_GNC/kR_xy" , kR(1,1), 0.2);
             payload_controller_nh.param<float>("Pos_GNC/kR_z"  , kR(2,2), 0.4);
-
-            payload_controller_nh.param<float>("Pos_GNC/kvi_xy" , kvi(0,0), 0.02);
-            payload_controller_nh.param<float>("Pos_GNC/kv1_xy" , kvi(1,1), 0.02);
-            payload_controller_nh.param<float>("Pos_GNC/kvi_z"  , kvi(2,2), 0.04);
 
             payload_controller_nh.param<float>("Pos_GNC/kL", kL, 0.5);
 
@@ -75,17 +67,15 @@ class payload_controller_GNC
             payload_controller_nh.param<float>("Limitne/pxy_error_max", pos_error_max[1], 0.6);
             payload_controller_nh.param<float>("Limit/pz_error_max" ,   pos_error_max[2], 1.0);
 
-            payload_controller_nh.param<float>("Limit/pxy_int_max"  ,  int_max[0], 1);
-            payload_controller_nh.param<float>("Limit/pxy_int_max"  ,  int_max[1], 1);
-            payload_controller_nh.param<float>("Limit/pz_int_max"   ,  int_max[2], 1);
+            payload_controller_nh.param<float>("Limit/pxy_int_max"  ,  int_max[0], 0.5);
+            payload_controller_nh.param<float>("Limit/pxy_int_max"  ,  int_max[1], 0.5);
+            payload_controller_nh.param<float>("Limit/pz_int_max"   ,  int_max[2], 0.5);
             payload_controller_nh.param<float>("Limit/tilt_max", tilt_max, 20.0);
             payload_controller_nh.param<float>("Limit/int_start_error"  , int_start_error, 0.3);
 
             payload_controller_nh.param<float>("Pos_GNC/fp_max_x", fp_max(0),1);
             payload_controller_nh.param<float>("Pos_GNC/fp_max_y", fp_max(1),1);
             payload_controller_nh.param<float>("Pos_GNC/fp_max_z", fp_max(2),1);
-
-            payload_controller_nh.param<int>("Pos_GNC/num_drone",num_drone);
 
             u_l = Eigen::Vector3f(0.0,0.0,0.0);
             u_d = Eigen::Vector3f(0.0,0.0,0.0);
@@ -105,20 +95,15 @@ class payload_controller_GNC
                  0.0,0.0;
             Cable_Length_sq = Cable_Length * Cable_Length;
             TotalLiftedMass = Payload_Mass* PayloadSharingPortion + Quad_MASS;
+            /*nodes receiving */
 
-            IntegralPose<<0.0,
-                          0.0,
-                          0.0;
-            IntegralAttitude <<0.0,
-                               0.0,
-                               0.0;              
         }
 
         //Printf the controller parameter
         void printf_param();
         void printf_result();
         // [Input: Current state, Reference state, sub_mode, dt; Output: AttitudeReference;]
-        px4_command::ControlOutput payload_controller(const px4_command::DroneState&      _DroneState, 
+        px4_command::ControlOutput payload_controller(const px4_command::DroneState& _DroneState, 
                                                       const px4_command::TrajectoryPoint& _Reference_State, 
                                                       float dt);
         // control command
@@ -127,7 +112,6 @@ class payload_controller_GNC
     private:
         ros::NodeHandle payload_controller_nh; // ros node for loading parameters
         /*configuration parameters*/
-        int num_drone;
         float Quad_MASS;
         float Payload_Mass;
         float TotalLiftedMass;
@@ -141,7 +125,6 @@ class payload_controller_GNC
         Eigen::Matrix3f kv;
         Eigen::Matrix3f kR;
         Eigen::Matrix3f Kphi;
-        Eigen::Matrix3f kvi;
         float kL;
         // payload attitude and quadrotor relative state
         Eigen::Matrix3f R_IP;
@@ -172,11 +155,10 @@ class payload_controller_GNC
         // normalized control input
         Eigen::Vector3f u_l;
         Eigen::Vector3f u_d;
-        Eigen::Vector3f IntegralPose;
-        Eigen::Vector3f IntegralAttitude;
+
 };
 
-px4_command::ControlOutput payload_controller_GNC::payload_controller(
+px4_command::ControlOutput payload_controller_TCST::payload_controller(
     const px4_command::DroneState& _DroneState, 
     const px4_command::TrajectoryPoint& _Reference_State, 
     float dt)
@@ -238,11 +220,7 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
     pos_error = pos_error/scale_p;
 
     angle_error = 0.5* Veemap(R_IPd.transpose()*R_IP- R_IP.transpose() * R_IPd);
-    if (num_drone<3)
-    {
-         angle_error(0) = 0;
-    }
-    
+
     /* put a hard constraint on the angle_error */
     
     //or (int i = 0; i<3;i++) {
@@ -256,33 +234,44 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
     for (int i = 0; i < 3; i++)
     {
         U(i) =  constrain_function(U(i), fp_max(i));
+        u_d(i) = 0;
+        // additional feedback based on payload relative position:
     }
-    for (int i=0; i<3; i++)
+    u_l = - Kphi * (Vj+kv*pos_error -  kR * R_IP * TetherOffsetCross * angle_error + kL*B_j*r_j);
+
+    /*Step 5 calculate Delta_j_hat based on quadrotor acceleration feedback */
+
+    /*Step 6 calculate Delta_T and Delta_R based on last control force */
+
+    /*TO DO use intergral to facilitate robust control*/
+    /*for (int i=0; i<3; i++)
     {
         if(abs(pos_error[i]) < int_start_error)
         {
-           
-            IntegralPose(i) += pos_error(i) * dt;
+            //integral[i] += pos_error[i] * dt;
+            integral[i] += ( -Kp[i]*pos_error[i] - Kv[i] * vel_error[i]) * dt;
 
-            if(abs(IntegralPose(i) > int_max[i]))
+            if(abs(integral[i]) > int_max[i])
             {
                 cout << "Integral saturation! " << " [0-1-2] "<< i <<endl;
-                cout << "[integral]: "<< IntegralPose(i)<<" [int_max]: "<<int_max[i]<<" [m/s] "<<endl;
+                cout << "[integral]: "<< integral[i]<<" [int_max]: "<<int_max[i]<<" [m/s] "<<endl;
             }
 
-            IntegralPose(i) = constrain_function(IntegralPose(i), int_max[i]);
+            integral[i] = constrain_function(integral[i], int_max[i]);
         }else
         {
-            IntegralPose(i) = 0;
+            integral[i] = 0;
         }
 
         // If not in OFFBOARD mode, set all intergral to zero.
         if(_DroneState.mode != "OFFBOARD")
         {
-            IntegralPose(i) = 0;
+            integral[i] = 0;
         }
-    }
-    u_l = - Kphi * (Vj+kv*(pos_error + kvi * IntegralPose)-  kR * R_IP * TetherOffsetCross * angle_error + kL*B_j*r_j);
+        u_d[i] = constrain_function(u_d[i], int_max[i]);
+    }*/
+
+
     // desired acceleration
     accel_sp[0] = u_l[0] - u_d[0];
     accel_sp[1] = u_l[1] - u_d[1];
@@ -307,9 +296,9 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
 
 }
 
-void payload_controller_GNC::printf_result()
+void payload_controller_TCST::printf_result()
 {
-    cout <<">>>>>>>>  GNC 2019 Paylaod Pose Controller  <<<<<<<" <<endl;
+    cout <<">>>>>>>>>>>>>>>>>>>>>>  TCST 2019 Paylaod Pose Controller  <<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
     //固定的浮点显示
     cout.setf(ios::fixed);
@@ -325,7 +314,6 @@ void payload_controller_GNC::printf_result()
     cout << "u_l [X Y Z] : " << u_l[0] << " [N] "<< u_l[1]<<" [N] "<<u_l[2]<<" [N] "<<endl;
     //cout << "int [X Y Z] : " << integral[0] << " [N] "<< integral[1]<<" [N] "<<integral[2]<<" [N] "<<endl;
     cout << "u_d [X Y Z] : " << u_d[0] << " [N] "<< u_d[1]<<" [N] "<<u_d[2]<<" [N] "<<endl;
-    cout << "IntegralPose [X Y Z] : " << IntegralPose(0) << " [N] " << IntegralPose(1) << " [N] " << IntegralPose(2) <<" [N] "<<endl;
     cout << "r_j [X Y] : " << r_j(0) << " [m] " << r_j(1) << " [m] " <<endl;
     cout << "v_j [X Y] : " << v_j(0) << " [m/s] "<< v_j(1) << " [m/s] " << endl;
     cout << "pos_error [X Y Z] : " << pos_error[0] << " [m] " <<  pos_error[1] << " [m] " <<  pos_error[2] << " [m] " << endl;
@@ -334,22 +322,22 @@ void payload_controller_GNC::printf_result()
     // verify the target quaternion has been calculated:
     Eigen::Vector3d Euler_Target = quaternion_to_euler2(AttitudeTargetQuaternionv);
     cout << "Euler_Target_roll : "  << Euler_Target(0)*57.3 << " [DEG] ";
-    cout << "pitch : " << Euler_Target(1)*57.3 << " [DEG] ";
-    cout << "yaw : "   << Euler_Target(2)*57.3 << " [DEG] ";
+    cout << "Euler_Target_pitch : " << Euler_Target(1)*57.3 << " [DEG] ";;
+    cout << "Euler_Target_yaw : "   << Euler_Target(2)*57.3 << " [DEG] ";;
     cout << endl;
 
     // verify that the 
     Eigen::Vector3d Euler = quaternion_to_euler2(AttitudeQuaternionv);
     cout << "Euler_roll : "  << Euler(0)*57.3 << " [DEG] ";
-    cout << "pitch : " << Euler(1)*57.3 << " [DEG] ";
-    cout << "yaw : "   << Euler(2)*57.3 << " [DEG] ";
+    cout << "Euler_pitch : " << Euler(1)*57.3 << " [DEG] ";
+    cout << "Euler_yaw : "   << Euler(2)*57.3 << " [DEG] ";
     cout << endl;
 }
 
 // print out controller parameters
-void payload_controller_GNC::printf_param()
+void payload_controller_TCST::printf_param()
 {
-    cout <<">>>>>>>> Payload control method in GNC 2019 paper (Parameter)  <<<<<<<<<" <<endl;
+    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Payload control method in TCST 2019 paper (Parameter)  <<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
     cout <<"UAV ID : "<<uav_pref<<endl;
     cout <<"Quad_MASS : "<< Quad_MASS << endl;
     cout <<"Payload_MASS : "<< Payload_Mass << endl;
@@ -362,9 +350,7 @@ void payload_controller_GNC::printf_param()
     cout <<"kv_x : "<< kv(0,0) << endl;
     cout <<"kv_y : "<< kv(1,1) << endl;
     cout <<"kv_z : "<< kv(2,2) << endl;
-    cout <<"kvi_x : "<< kvi(0,0) << endl;
-    cout <<"kvi_y : "<< kvi(1,1) << endl;
-    cout <<"kvi_z : "<< kvi(2,2) << endl;
+
     cout <<"kR_x : "<< kR(0,0)<<endl;
     cout <<"kR_y : "<< kR(1,1)<<endl;
     cout <<"kR_z : "<< kR(2,2)<<endl;

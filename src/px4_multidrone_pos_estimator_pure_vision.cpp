@@ -100,7 +100,7 @@ int main(int argc,
          char **argv) {
     ros::init(argc, argv, "px4_multidrone_pos_estimator_pure_vision");
     ros::NodeHandle nh("~");
-    ros::Rate rate(50.0);// ROS frequency
+    ros::Rate rate(50.0);
 
     /*----------- determine the  ID of the drone -----------------------------*/
     SubTopic mocap_UAV;
