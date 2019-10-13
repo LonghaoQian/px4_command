@@ -17,6 +17,7 @@
 #include <iostream>
 #include <vector>
 #include <Eigen/Eigen>
+
 #include <math_utils.h>
 #include <mavros_msgs/State.h>
 #include <Frame_tf_utils.h>
@@ -37,20 +38,32 @@
 #include <tf2_msgs/TFMessage.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <sensor_msgs/Imu.h>
+
 #include <px4_command/DroneState.h>
 #include <px4_command/Mocap.h>
-
+#include <px4_command/AddonForce.h>
+#include <px4_command/FleetStatus.h>
 using std::vector;
 using std::string;
-struct SubTopic
-{
-    char str[100];
-};
-struct PubTopic
-{
-    char str[100];
-};
 
+px4_command::FleetStatus uav0_status;
+px4_command::FleetStatus uav1_status;
+px4_command::FleetStatus uav2_status;
+px4_command::FleetStatus uav3_status;
+
+
+void GetUAV0Status(const px4_command::FleetStatus::ConstPtr& msg){
+
+}
+void GetUAV1Status(const px4_command::FleetStatus::ConstPtr& msg){
+
+}
+void GetUAV2Status(const px4_command::FleetStatus::ConstPtr& msg){
+
+}
+void GetUAV3Status(const px4_command::FleetStatus::ConstPtr& msg){
+
+}
 int main(int argc, 
          char **argv) 
 {
@@ -58,65 +71,74 @@ int main(int argc,
     ros::NodeHandle nh("~");
     ros::Rate rate(50.0);
 
-    int numofdrones = 1;
-    nh.param<int>("Pos_TCST/num_drone", numofdrones, 1);
-/*------------sub */
-/*----------- determine the  ID of the drone -----------------------------*/
-    SubTopic mocap_UAV;
-    SubTopic mavros_state;
-    SubTopic mavros_imu_data;
-    PubTopic px4_command_drone_state;
-    PubTopic mavros_vision_pose_pose;
+    int num_of_drones = 1;
+    float payload_mass = 0;
+    float total_quadmass = 0;
+    float lambda_T = 0;
+    float lambda_R = 0;
 
+    nh.param<int>("Pos_GNC/num_drone", num_of_drones,1);
 
-
-    // add preflex: (mavros and px4_command use lower case uav, while mocap use upper case UAV)
-    strcpy (mocap_UAV.str,"/mocap/UAV"); 
-    strcpy (mavros_state.str,"/uav"); 
-    strcpy (mavros_imu_data.str,"/uav"); 
-    strcpy (px4_command_drone_state.str,"/uav"); 
-    strcpy (mavros_vision_pose_pose.str,"/uav"); 
-    if ( argc > 1) {
-    // if ID is specified as the second argument 
-        strcat (mocap_UAV.str,argv[1]);
-        strcat (mavros_state.str,argv[1]);
-        strcat (mavros_imu_data.str,argv[1]);
-        strcat (px4_command_drone_state.str,argv[1]);
-        strcat (mavros_vision_pose_pose.str,argv[1]);
-        ROS_INFO("UAV ID specified as: UAV%s", argv[1]);
-    } else {
-        // if ID is not specified, then set the drone to UAV0
-        strcat (mocap_UAV.str,"0");
-        strcat (mavros_state.str,"0");
-        strcat (mavros_imu_data.str,"0");
-        strcat (px4_command_drone_state.str,"0");
-        strcat (mavros_vision_pose_pose.str,"0");
-        ROS_WARN("NO UAV ID specified, set ID to 0.");
+    for (int i = 0; i < num_of_drones ; i ++) {
+        // reset names:
+        temp_uav_pref = "uav";
+        temp_uav_pref = temp_uav_pref + to_string(i);
+        main_handle.param<float>(temp_uav_pref+"_Pos_GNC/TetherOffset_x", temp_t_j(0), 0.5);
+        main_handle.param<float>(temp_uav_pref+"_Pos_GNC/TetherOffset_y", temp_t_j(1), 0);
+        main_handle.param<float>(temp_uav_pref+"_Pos_GNC/TetherOffset_z", temp_t_j(2), 0); 
+        main_handle.param<float>(temp_uav_pref+"_Pos_GNC/PayloadSharingPortion", temp_a_j, 0); 
+        D += temp_a_j * Hatmap(temp_t_j)* Hatmap(temp_t_j);
     }
-    
-    strcat (mavros_state.str,"/mavros/state");
-    strcat (px4_command_drone_state.str,"/px4_command/drone_state");
-    strcat (mavros_vision_pose_pose.str,"/mavros/vision_pose/pose");
 
-    ROS_INFO("The total number of drones is: %d", numofdrones);
-    ROS_INFO("Subscribe uav Mocap from: %s", mocap_UAV.str);
-    ROS_INFO("Subscribe payload from: /mocap/Payload");
-    ROS_INFO("Subscribe mavros_msgs::State from: %s", mavros_state.str);
-    ROS_INFO("Subscribe IMU from: %s", mavros_imu_data.str); 
+    ros::Subscriber subUAV0status = nh.subscribe<px4_command::FleetStatus>("/uav0/px4_command/fleetstatus", 100, GetUAV0Status);
+    ros::Subscriber subUAV1status = nh.subscribe<px4_command::FleetStatus>("/uav1/px4_command/fleetstatus", 100, GetUAV1Status);
+    ros::Subscriber subUAV2status = nh.subscribe<px4_command::FleetStatus>("/uav2/px4_command/fleetstatus", 100, GetUAV2Status);
+    ros::Subscriber subUAV3status = nh.subscribe<px4_command::FleetStatus>("/uav3/px4_command/fleetstatus", 100, GetUAV3Status);
+    ros::Subscriber subDronestate = nh.subscribe<px4_command::DroneState> ("/uav0/px4_command/dronestate", 100, GetUAV3Status);
+    ros::Publisher  pubAddonForce = nh.advertise<px4_command::AddonForce> ("/uav0/px4_command/addonforce", 1000);
 
+/*--------Print Parameters-----------*/
 
 
-    ros::Subscriber MavrosState_sub    = nh.subscribe<mavros_msgs::State>(mavros_state.str, 100, GetMavrosState);
-    ros::Subscriber Attitude_sub       = nh.subscribe<sensor_msgs::Imu>(mavros_imu_data.str, 100, GetAttitude);
-
+    px4_command::AddonForce    _AddonForce;
+    Eigen::Vector3f Delta_T;
+    Eigen::Vector3f Delta_pt;
+    Eigen::Vector3f Delta_R;
+    Eigen::Vector3f Delta_rt;
+    Delta_T<< 0.0,
+              0.0,
+              0.0,
+    Delta_R<< 0.0,
+              0.0,
+              0.0,
+    Delta_pt<< 0.0,
+              0.0,
+              0.0,
+    Delta_rt<< 0.0,
+              0.0,
+              0.0,
     ROS_INFO("Start the interdrone communication...");
-
+    float last_time = px4_command_utils::get_time_in_sec(begin_time);
+    float dt = 0;
     while(ros::ok())
     {
-        //回调一次 更新传感器状态
+        cur_time = px4_command_utils::get_time_in_sec(begin_time);
+        dt = cur_time  - last_time;
+        dt = constrain_function2(dt, 0.01, 0.03);
+        last_time = cur_time;
+
         ros::spinOnce();
 
+        if(_DroneState.mode != "OFFBOARD") {
+        Delta_j<< 0.0,
+                  0.0,
+                  0.0; 
+        } else {
 
+        Delta_T +=  lambda_T * (Quad_MASS * dot_vqj - f_L_j - Delta_j);
+        }
+
+        pubAddonForce.publish(_AddonForce);
         rate.sleep();
     }
     return 0;

@@ -238,29 +238,16 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
     pos_error = pos_error/scale_p;
 
     angle_error = 0.5* Veemap(R_IPd.transpose()*R_IP- R_IP.transpose() * R_IPd);
-    if (num_drone<3)
+    if (num_drone<3) // if only two drones are involved, we have to remove one control axis
     {
          angle_error(0) = 0;
     }
-    
     /* put a hard constraint on the angle_error */
+    angle_error = constrain_vector(angle_error, 0.4);
     
-    //or (int i = 0; i<3;i++) {
-    //    if (angle_error(i)>angular_error_max(i)) {
-    //        angle_error(i) = angular_error_max(i);
-     //   }    
-    //}
-
-    /*Step 4 calculate control force  control law form the GNC 2019 paper*/
-    Eigen::Vector3f U = Vp+kv*pos_error - R_IP * TetherOffsetCross*(Omega_p + kR*angle_error) + B_j*(v_j + kL*r_j);
-    for (int i = 0; i < 3; i++)
-    {
-        U(i) =  constrain_function(U(i), fp_max(i));
-    }
-    for (int i=0; i<3; i++)
-    {
-        if(abs(pos_error[i]) < int_start_error)
-        {
+    /*Step 4 calculate control law form the GNC 2019 paper*/
+    for (int i=0; i<3; i++) {
+        if(abs(pos_error[i]) < int_start_error) {
            
             IntegralPose(i) += pos_error(i) * dt;
 
@@ -271,18 +258,19 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
             }
 
             IntegralPose(i) = constrain_function(IntegralPose(i), int_max[i]);
-        }else
-        {
+        }else {
             IntegralPose(i) = 0;
         }
-
         // If not in OFFBOARD mode, set all intergral to zero.
-        if(_DroneState.mode != "OFFBOARD")
-        {
+        if(_DroneState.mode != "OFFBOARD") {
             IntegralPose(i) = 0;
         }
     }
-    u_l = - Kphi * (Vj+kv*(pos_error + kvi * IntegralPose)-  kR * R_IP * TetherOffsetCross * angle_error + kL*B_j*r_j);
+    Eigen::Vector3f U = Vp + kv*(pos_error + kvi * IntegralPose) 
+                      - R_IP * TetherOffsetCross*(Omega_p + kR * angle_error) 
+                      + B_j*(v_j + kL*r_j);
+    // u_l = - Kphi * (Vj+kv*(pos_error + kvi * IntegralPose)-  kR * R_IP * TetherOffsetCross * angle_error + kL*B_j*r_j);
+    u_l = - Kphi * U;
     // desired acceleration
     accel_sp[0] = u_l[0] - u_d[0];
     accel_sp[1] = u_l[1] - u_d[1];

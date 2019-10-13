@@ -95,6 +95,9 @@ void GetAttitude(const sensor_msgs::Imu::ConstPtr& msg) {
     _DroneState.attitude_rate[0] = msg->angular_velocity.x;
     _DroneState.attitude_rate[1] = msg->angular_velocity.y;
     _DroneState.attitude_rate[2] = msg->angular_velocity.z;
+    _DroneState.acceleration[0] = msg->linear_acceleration.x;
+    _DroneState.acceleration[1] = msg->linear_acceleration.y;
+    _DroneState.acceleration[2] = msg->linear_acceleration.z;
 }
 int main(int argc, 
          char **argv) {
@@ -195,7 +198,7 @@ int main(int argc,
                 _DroneState.mocapOK = true;
             }
         }
-        /*TODO add a ros_warn and ros_info to show the mocap info*/
+        
         drone_state_pub.publish(_DroneState);
         rate.sleep();
     }

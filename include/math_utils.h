@@ -115,6 +115,23 @@ float constrain_function2(float data, float Min,float Max)
     }
 }
 
+// vector based constraint 
+
+Eigen::VectorXf constrain_vector(const Eigen::VectorXf& input, float Max_norm)
+{
+    Eigen::VectorXf result;
+
+    float norm = input.norm();
+
+    if (norm > Max_norm)
+    {
+        result = input / norm *  Max_norm;
+        return result;
+    } else {
+        return input;
+    }
+}
+
 //sign_function
 float sign_function(float data)
 {

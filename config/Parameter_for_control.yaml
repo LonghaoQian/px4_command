@@ -22,16 +22,16 @@ noise_start_time : 100.0
 noise_end_time : 30.0
 
 ## parameter for px4_pos_estimator.cpp
-pos_estimator:
+pos_estimator: 
 ## 使用激光SLAM数据orVicon数据 0 for vicon， 1 for 激光SLAM
-flag_use_laser_or_vicon : 0
+  flag_use_laser_or_vicon : 0
 ## 0 for use the data from fcu, 1 for use the mocap raw data(only position), 2 for use the mocap raw data(position and velocity)
-Use_mocap_raw : 0
-linear_window : 3
-angular_window : 3
-noise_a : 0.0
-noise_b : 0.0
-noise_T : 1.0
+  Use_mocap_raw : 0
+  linear_window : 3
+  angular_window : 3
+  noise_a : 0.0
+  noise_b : 0.0
+  noise_T : 1.0
 
 ## 飞机参数
 Quad:
@@ -159,6 +159,14 @@ uav1_Pos_GNC:
   PayloadSharingPortion: 0.5
 
 uav2_Pos_GNC:
+  mass : 1.45
+  cablelength : 0
+  TetherOffset_x: 0
+  TetherOffset_y: 0
+  TetherOffset_z: 0
+  PayloadSharingPortion: 0
+
+uav3_Pos_GNC:
   mass : 1.45
   cablelength : 0
   TetherOffset_x: 0

@@ -16,14 +16,14 @@
 #include <ros/ros.h>
 #include <Eigen/Eigen>
 #include <iostream>
+
 #include <state_from_mavros_multidrone.h>
 #include <command_to_mavros_multidrone.h>
 
-/**********************************----------------include controller class-----------*****************************/
-
 #include <pos_controller_cascade_PID.h>
 #include <pos_controller_TIE.h>
-
+#include <payload_controller_GNC.h>
+#include <payload_controller_TCST.h>
 /*--------------------------utility classes-----------------------*/
 #include <px4_command_utils.h>
 #include <px4_command/ControlCommand.h>
@@ -35,7 +35,6 @@
 #include <px4_command/Trajectory.h>
 #include <px4_command/ControlOutput.h>
 #include <px4_command/PayloadPoseCommand.h>
-#include <payload_controller_GNC.h>
 using namespace std;
 
 struct SubTopic
@@ -198,6 +197,7 @@ int main(int argc, char **argv)
     // methods of payload stabilization with multiple UAVs
     /*TODO*/
     payload_controller_GNC pos_controller_GNC(ID);
+    payload_controller_TCST pose_controller_GNC(ID,nh);
     // pick control law will be specified in parameter files
     int SingleUAVPayloadController;
     int CooperativePayload;

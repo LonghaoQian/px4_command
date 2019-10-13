@@ -14,8 +14,9 @@ float32 time_from_start             ## [s]
 float32[3] position                 ## [m]
 float32[3] velocity                 ## [m/s]
 float32[3] attitude                 ## [rad]
-geometry_msgs/Quaternion attitude_q ## 四元数
+geometry_msgs/Quaternion attitude_q ## []
 float32[3] attitude_rate            ## [rad/s]
+float32[3] acceleration             ## [m/s^2] defined in 
 
 float32[3] payload_vel              ## [m/s]
 float32[3] payload_pos              ## [m]

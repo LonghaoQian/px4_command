@@ -42,6 +42,8 @@ add_message_files(
   Topic_for_log.msg
   ControlOutput.msg
   Mocap.msg
+  AddonForce.msg
+  FleetStatus.msg
 )
 
 ## Generate added messages and services with any dependencies listed here
@@ -57,7 +59,7 @@ catkin_package(
   CATKIN_DEPENDS  message_runtime
 )
 
-
+add_compile_options(-std=c++11)
 ###########
 ## Build ##
 ###########
