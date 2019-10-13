@@ -44,6 +44,7 @@ add_message_files(
   Mocap.msg
   AddonForce.msg
   FleetStatus.msg
+  PayloadPoseCommand.msg
 )
 
 ## Generate added messages and services with any dependencies listed here
@@ -88,6 +89,7 @@ target_link_libraries(px4_pos_controller ${catkin_LIBRARIES})
 
 ##px4_multidrone_pos_controller.cpp
 add_executable(px4_multidrone_pos_controller src/px4_multidrone_pos_controller.cpp)
+add_dependencies(px4_multidrone_pos_controller px4_command_generate_messages_cpp)
 add_dependencies(px4_multidrone_pos_controller px4_command_gencpp)
 target_link_libraries(px4_multidrone_pos_controller ${catkin_LIBRARIES})
 
