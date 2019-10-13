@@ -38,7 +38,7 @@ Quad:
   mass: 1.6
 ## payload mass
 Payload:
-  mass: 0.7
+  mass: 0.78
 ## cable length
 Cable:
   length: 0.9
@@ -144,18 +144,18 @@ Pos_tie:
 # parameter for payload cooperative control 
 uav0_Pos_GNC:
   mass : 1.45
-  cablelength : 0.8
-  TetherOffset_x: 0.8
+  cablelength : 0.91
+  TetherOffset_x: 0.99
   TetherOffset_y: 0
-  TetherOffset_z: 0.15
+  TetherOffset_z: 0
   PayloadSharingPortion : 0.5
 
 uav1_Pos_GNC:
-  mass : 1.45
-  cablelength : 0.8
-  TetherOffset_x: -0.8
+  mass : 0.6
+  cablelength : 0.91
+  TetherOffset_x: -0.99
   TetherOffset_y: 0
-  TetherOffset_z: 0.15
+  TetherOffset_z: 0
   PayloadSharingPortion: 0.5
 
 uav2_Pos_GNC:
@@ -184,8 +184,8 @@ Pos_GNC:
   kR_xy : 0.2
   kR_z  : 0.2
   kL    : 0.5
-  Kphi_xy : 3
-  Kphi_z  : 3  
+  Kphi_xy : 2.5
+  Kphi_z  : 2.5  
   fp_max_x : 2
   fp_max_y : 2
   fp_max_z : 3
