@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<launch>
+<arg name="uavID" default="uav0"/>
+   <group ns="$(arg uavID)" >
+	<arg name="ID" value="$(eval arg('uavID')[-1:])"/>
+	<arg name="fcu_url" default="/dev/ttyUSB0:921600"/>
+        <include file="$(find mavros)/launch/px4.launch">
+            <arg name="fcu_url" value="$(arg fcu_url)"/>
+        </include>
+   </group>
+</launch>
+
