@@ -433,12 +433,12 @@ int main(int argc, char **argv)
         case command_to_mavros_multidrone::Payload_Land :{
             Command_to_gs.Mode = Command_Now.Mode;
             Command_to_gs.Command_ID = Command_Now.Command_ID;
-            if (Command_Last.Mode != command_to_mavros_multidrone::Land)
+            if (Command_Last.Mode != command_to_mavros_multidrone::Payload_Land)
             {
                 Command_to_gs.Reference_State.Sub_mode  = command_to_mavros_multidrone::XYZ_POS;
                 Command_to_gs.Reference_State.position_ref[0] = _DroneState.position[0];
                 Command_to_gs.Reference_State.position_ref[1] = _DroneState.position[1];
-                Command_to_gs.Reference_State.position_ref[2] = Takeoff_position[2];
+                Command_to_gs.Reference_State.position_ref[2] = 0.5; // set 0.5 for quadrotor hovering height
                 Command_to_gs.Reference_State.velocity_ref[0] = 0;
                 Command_to_gs.Reference_State.velocity_ref[1] = 0;
                 Command_to_gs.Reference_State.velocity_ref[2] = 0;
@@ -458,31 +458,8 @@ int main(int argc, char **argv)
 
             if(Use_accel > 0.5) {
                 _command_to_mavros.send_accel_setpoint(throttle_sp,Command_to_gs.Reference_State.yaw_ref);
-            }else
-            {
+            }else {
                 _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
-            }
-
-            //如果距离起飞高度小于15厘米，则直接上锁并切换为手动模式；
-            if(_DroneState.position[2] - Takeoff_position[2] < Disarm_height)
-            {
-
-                ROS_INFO("Below landing height, disarming.");
-
-              /*  if(_DroneState.mode == "OFFBOARD") {
-                    _command_to_mavros.mode_cmd.request.custom_mode = "MANUAL";
-                    _command_to_mavros.set_mode_client.call(_command_to_mavros.mode_cmd);
-                }*/
-
-                if(_DroneState.armed) {
-                    _command_to_mavros.arm_cmd.request.value = false;
-                    _command_to_mavros.arming_client.call(_command_to_mavros.arm_cmd);
-                }
-
-                if (_command_to_mavros.arm_cmd.response.success)
-                {
-                    ROS_INFO("Disarm successfully!");
-                }
             }
             break;
         }

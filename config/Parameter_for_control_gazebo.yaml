@@ -1,0 +1,200 @@
+## parameter for px4_pos_controller.cpp
+## 起飞高度
+Takeoff_height : 0.3
+Disarm_height : 0.3
+## 1 for use the accel command
+Use_accel : 0.0
+## 1 for printf the state, 0 for block
+Flag_printf : 1.0
+
+ppn_kx : 0.2
+ppn_ky : 0.2
+ppn_kz : 0.2
+
+noise_a_xy : 0.0
+noise_b_xy : 0.00
+
+noise_a_z : 0.0
+noise_b_z : 0.00
+noise_T : 1.0
+
+noise_start_time : 100.0
+noise_end_time : 30.0
+
+## parameter for px4_pos_estimator.cpp
+pos_estimator: 
+## 使用激光SLAM数据orVicon数据 0 for vicon， 1 for 激光SLAM
+  flag_use_laser_or_vicon : 0
+## 0 for use the data from fcu, 1 for use the mocap raw data(only position), 2 for use the mocap raw data(position and velocity)
+  Use_mocap_raw : 0
+  linear_window : 3
+  angular_window : 3
+  noise_a : 0.0
+  noise_b : 0.0
+  noise_T : 1.0
+
+## 飞机参数
+Quad:
+  mass: 1.6
+## payload mass
+Payload:
+  mass: 0.69
+## cable length
+Cable:
+  length: 0.9
+
+##geo fence for fsc
+geo_fence:
+  x_min: -1.6
+  x_max:  1.5
+  y_min: -1.2
+  y_max:  1.2
+  z_min: -0.05
+  z_max:  1.8
+
+## 限制参数
+Limit:
+  pxy_error_max: 10.0
+  vxy_error_max: 10.0
+  pz_error_max: 10.0
+  vz_error_max: 10.0
+  pxy_int_max : 10.0
+  pz_int_max : 10.0
+  tilt_max: 20.0
+  int_start_error: 10.0
+
+  XY_VEL_MAX : 10.0
+  Z_VEL_MAX : 10.0
+
+# 位置环参数 - cascade pid
+Pos_cascade_pid:
+   Kp_xy : 0.95
+   Kp_z : 1.0
+   Kp_vxvy : 0.09
+   Kp_vz : 0.2
+   Ki_vxvy : 0.02
+   Ki_vz : 0.02
+   Kd_vxvy : 0.01
+   Kd_vz : 0.0
+   Hover_throttle : 0.45
+   MPC_VELD_LP: 5.0
+
+# 位置环参数 - normal pid
+Pos_pid:
+  Kp_xy : 2.5
+  Kp_z : 2.5
+  Ki_xy : 0.5
+  Ki_z : 0.5
+  Kd_xy : 3.0
+  Kd_z : 3.0
+
+
+# 位置环参数 for ude
+Pos_ude:
+  Kp_xy : 0.5
+  Kp_z : 0.5
+  Kd_xy : 2.0
+  Kd_z : 2.0
+  T_ude_xy : 2.0
+  T_ude_z : 2.0
+
+# 位置环参数 for passivity
+Pos_passivity:
+  Kp_xy : 0.5
+  Kp_z : 0.5
+  Kd_xy : 2.0
+  Kd_z : 2.0
+  T_ude_xy : 1.0
+  T_ude_z : 1.0
+  T_ps: 0.2
+
+# 位置环参数 for ne
+Pos_ne:
+  Kp_xy : 0.5
+  Kp_z : 0.5
+  Kd_xy : 2.0
+  Kd_z : 2.0
+  T_ude_xy : 1.0
+  T_ude_z : 1.0
+  T_ne : 0.1
+
+# 圆轨迹参数 for Circle_Trajectory
+Circle_Trajectory:
+  Center_x: 0.0
+  Center_y: 0.0
+  Center_z: 1.0
+  radius: 1.0
+  linear_vel: 1.0
+  time_total: 50.0
+  direction: 1.0
+
+# 位置环参数 for tie
+Pos_tie:
+  Kp_xy : 0.5
+  Kp_z : 0.5
+  Kv_xy : 2.0
+  Kv_z : 2.0
+  T_tie_xy : 1.0
+  T_tie_z : 1.0
+  Integration: 1.0
+  Kpv_xy: 1.0
+  Kpv_z: 1.0
+  KL : 1.0
+
+# parameter for payload cooperative control 
+uav0_Pos_GNC:
+  mass : 1.45
+  cablelength : 0.8
+  TetherOffset_x: 0.8
+  TetherOffset_y: 0
+  TetherOffset_z: 0.15
+  PayloadSharingPortion : 0.5
+
+uav1_Pos_GNC:
+  mass : 1.45
+  cablelength : 0.8
+  TetherOffset_x: -0.8
+  TetherOffset_y: 0
+  TetherOffset_z: 0.15
+  PayloadSharingPortion: 0.5
+
+uav2_Pos_GNC:
+  mass : 1.45
+  cablelength : 0
+  TetherOffset_x: 0
+  TetherOffset_y: 0
+  TetherOffset_z: 0
+  PayloadSharingPortion: 0
+
+uav3_Pos_GNC:
+  mass : 1.45
+  cablelength : 0
+  TetherOffset_x: 0
+  TetherOffset_y: 0
+  TetherOffset_z: 0
+  PayloadSharingPortion: 0
+
+Pos_GNC:
+  Type: 0 # 0 for baseline controller 1 for robust controller
+  num_drone : 2
+  kv_xy : 0.2
+  Kv_z  : 0.5
+  kvi_xy : 0.02
+  kvi_z  : 0.05
+  kR_xy : 0.2
+  kR_z  : 0.2
+  kL    : 0.4
+  Kphi_xy : 3
+  Kphi_z  : 3 
+  fp_max_x : 2
+  fp_max_y : 2
+  fp_max_z : 3
+  lambda_j : 1
+  lambda_T : 1
+  lambda_R : 1
+  kF_xy : 0.4
+  kF_z : 0.5
+
+  
+
+
