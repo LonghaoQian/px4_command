@@ -53,7 +53,7 @@ px4_command::FleetStatus uav3_status;
 
 
 void GetUAV0Status(const px4_command::FleetStatus::ConstPtr& msg){
-
+    
 }
 void GetUAV1Status(const px4_command::FleetStatus::ConstPtr& msg){
 

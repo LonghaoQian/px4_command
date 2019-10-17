@@ -12,33 +12,26 @@
 #include <px4_command/TrajectoryPoint.h>
 #include <px4_command/AttitudeReference.h>
 #include <px4_command/ControlOutput.h>
-
-using namespace std;
-
+#include <px4_command/ControlParameter.h>
+using std::string;
+using std::iostream;
 class payload_controller_GNC
 {
     public:
-
-        //Constructor
-        payload_controller_GNC(char drone_ID[20]):
-            payload_controller_nh("~")
+        payload_controller_GNC(char drone_ID[20],ros::NodeHandle& main_handle) 
         {
             // use drone ID to get the correct name for parameters
-            //uav_pref  = uav_pref + "uav";
-            //for (int i = 0; i<20;i++) {
-            //    uav_pref = uav_pref + drone_ID[i];
-            //}
             uav_pref = "uav";
             uav_pref = uav_pref + drone_ID[0];
-            payload_controller_nh.param<float>(uav_pref + "_Pos_GNC/mass", Quad_MASS, 1.0);
-            payload_controller_nh.param<float>(uav_pref + "_Pos_GNC/cablelength", Cable_Length, 1.0);
+            main_handle.param<float>(uav_pref + "_Pos_GNC/mass", Quad_MASS, 1.0);
+            main_handle.param<float>(uav_pref + "_Pos_GNC/cablelength", Cable_Length, 1.0);
 
-            payload_controller_nh.param<float>(uav_pref + "_Pos_GNC/TetherOffset_x", TetherOffset(0), 0.5);
-            payload_controller_nh.param<float>(uav_pref + "_Pos_GNC/TetherOffset_y", TetherOffset(1), 0);
-            payload_controller_nh.param<float>(uav_pref + "_Pos_GNC/TetherOffset_z", TetherOffset(2), 0);
+            main_handle.param<float>(uav_pref + "_Pos_GNC/TetherOffset_x", TetherOffset(0), 0.5);
+            main_handle.param<float>(uav_pref + "_Pos_GNC/TetherOffset_y", TetherOffset(1), 0);
+            main_handle.param<float>(uav_pref + "_Pos_GNC/TetherOffset_z", TetherOffset(2), 0);
 
-            payload_controller_nh.param<float>(uav_pref + "_Pos_GNC/PayloadSharingPortion", PayloadSharingPortion, 0.5);
-            payload_controller_nh.param<float>("Payload/mass", Payload_Mass, 1.0);
+            main_handle.param<float>(uav_pref + "_Pos_GNC/PayloadSharingPortion", PayloadSharingPortion, 0.5);
+            main_handle.param<float>("Payload/mass", Payload_Mass, 1.0);
 
             kv<< 1.0,0.0,0.0,
                    0.0,1.0,0.0,
@@ -53,39 +46,38 @@ class payload_controller_GNC
                    0.0,1.0,0.0,
                    0.0,0.0,1.0;
             
-            payload_controller_nh.param<float>("Pos_GNC/kv_xy", kv(0,0), 0.2);
-            payload_controller_nh.param<float>("Pos_GNC/kv_xy", kv(1,1), 0.2);
-            payload_controller_nh.param<float>("Pos_GNC/Kv_z",  kv(2,2), 0.4);
+            main_handle.param<float>("Pos_GNC/kv_xy", kv(0,0), 0.2);
+            main_handle.param<float>("Pos_GNC/kv_xy", kv(1,1), 0.2);
+            main_handle.param<float>("Pos_GNC/Kv_z",  kv(2,2), 0.4);
 
-            payload_controller_nh.param<float>("Pos_GNC/kR_xy" , kR(0,0), 0.2);
-            payload_controller_nh.param<float>("Pos_GNC/kR_xy" , kR(1,1), 0.2);
-            payload_controller_nh.param<float>("Pos_GNC/kR_z"  , kR(2,2), 0.4);
+            main_handle.param<float>("Pos_GNC/kR_xy" , kR(0,0), 0.2);
+            main_handle.param<float>("Pos_GNC/kR_xy" , kR(1,1), 0.2);
+            main_handle.param<float>("Pos_GNC/kR_z"  , kR(2,2), 0.4);
 
-            payload_controller_nh.param<float>("Pos_GNC/kvi_xy" , kvi(0,0), 0.02);
-            payload_controller_nh.param<float>("Pos_GNC/kv1_xy" , kvi(1,1), 0.02);
-            payload_controller_nh.param<float>("Pos_GNC/kvi_z"  , kvi(2,2), 0.04);
+            main_handle.param<float>("Pos_GNC/kvi_xy" , kvi(0,0), 0.02);
+            main_handle.param<float>("Pos_GNC/kv1_xy" , kvi(1,1), 0.02);
+            main_handle.param<float>("Pos_GNC/kvi_z"  , kvi(2,2), 0.04);
 
-            payload_controller_nh.param<float>("Pos_GNC/kL", kL, 0.5);
+            main_handle.param<float>("Pos_GNC/kL"     ,  kL, 0.5);
+            main_handle.param<float>("Pos_GNC/Kphi_xy",  Kphi(0,0), 1);
+            main_handle.param<float>("Pos_GNC/Kphi_xy",  Kphi(1,1), 1);
+            main_handle.param<float>("Pos_GNC/Kphi_z" ,  Kphi(2,2), 1);
 
-            payload_controller_nh.param<float>("Pos_GNC/Kphi_xy",  Kphi(0,0), 1);
-            payload_controller_nh.param<float>("Pos_GNC/Kphi_xy",  Kphi(1,1), 1);
-            payload_controller_nh.param<float>("Pos_GNC/Kphi_z",   Kphi(2,2), 1);
+            main_handle.param<float>("Limitne/pxy_error_max", pos_error_max[0], 0.6);
+            main_handle.param<float>("Limitne/pxy_error_max", pos_error_max[1], 0.6);
+            main_handle.param<float>("Limit/pz_error_max" ,   pos_error_max[2], 1.0);
 
-            payload_controller_nh.param<float>("Limitne/pxy_error_max", pos_error_max[0], 0.6);
-            payload_controller_nh.param<float>("Limitne/pxy_error_max", pos_error_max[1], 0.6);
-            payload_controller_nh.param<float>("Limit/pz_error_max" ,   pos_error_max[2], 1.0);
+            main_handle.param<float>("Limit/pxy_int_max"  ,  int_max[0], 1);
+            main_handle.param<float>("Limit/pxy_int_max"  ,  int_max[1], 1);
+            main_handle.param<float>("Limit/pz_int_max"   ,  int_max[2], 1);
+            main_handle.param<float>("Limit/tilt_max", tilt_max, 20.0);
+            main_handle.param<float>("Limit/int_start_error"  , int_start_error, 0.3);
 
-            payload_controller_nh.param<float>("Limit/pxy_int_max"  ,  int_max[0], 1);
-            payload_controller_nh.param<float>("Limit/pxy_int_max"  ,  int_max[1], 1);
-            payload_controller_nh.param<float>("Limit/pz_int_max"   ,  int_max[2], 1);
-            payload_controller_nh.param<float>("Limit/tilt_max", tilt_max, 20.0);
-            payload_controller_nh.param<float>("Limit/int_start_error"  , int_start_error, 0.3);
+            main_handle.param<float>("Pos_GNC/fp_max_x", fp_max(0),1);
+            main_handle.param<float>("Pos_GNC/fp_max_y", fp_max(1),1);
+            main_handle.param<float>("Pos_GNC/fp_max_z", fp_max(2),1);
 
-            payload_controller_nh.param<float>("Pos_GNC/fp_max_x", fp_max(0),1);
-            payload_controller_nh.param<float>("Pos_GNC/fp_max_y", fp_max(1),1);
-            payload_controller_nh.param<float>("Pos_GNC/fp_max_z", fp_max(2),1);
-
-            payload_controller_nh.param<int>("Pos_GNC/num_drone",num_drone);
+            main_handle.param<int>("Pos_GNC/num_drone",num_drone,1);
 
             u_l = Eigen::Vector3f(0.0,0.0,0.0);
             u_d = Eigen::Vector3f(0.0,0.0,0.0);
@@ -94,15 +86,15 @@ class payload_controller_GNC
 
             TetherOffsetCross = Hatmap(TetherOffset);
 
-            R_IP<< 1.0,0.0,0.0,
+            R_IP << 1.0,0.0,0.0,
                    0.0,1.0,0.0,
                    0.0,0.0,1.0;
             R_IPd<< 1.0,0.0,0.0,
                    0.0,1.0,0.0,
                    0.0,0.0,1.0;
-            B_j<<1.0,0.0,
-                 0.0,1.0,
-                 0.0,0.0;
+            B_j << 1.0,0.0,
+                   0.0,1.0,
+                   0.0,0.0;
             Cable_Length_sq = Cable_Length * Cable_Length;
             TotalLiftedMass = Payload_Mass* PayloadSharingPortion + Quad_MASS;
 
@@ -111,21 +103,49 @@ class payload_controller_GNC
                           0.0;
             IntegralAttitude <<0.0,
                                0.0,
-                               0.0;              
+                               0.0; 
+            ParamSrv.request.controllername = uav_pref + " Payload Pos_GNC";
+            ParamSrv.request.dronemass   = Quad_MASS;
+            ParamSrv.request.cablelength = Cable_Length;
+            ParamSrv.request.a_j         = PayloadSharingPortion;
+            ParamSrv.request.payloadmass = Payload_Mass;
+            ParamSrv.request.num_drone   = num_drone;
+            ParamSrv.request.t_jx        = TetherOffset(0);
+            ParamSrv.request.t_jy        = TetherOffset(1);
+            ParamSrv.request.t_jz        = TetherOffset(2);
+            ParamSrv.request.kv_xy       = kv(0,0);
+            ParamSrv.request.Kv_z        = kv(2,2);
+            ParamSrv.request.kvi_xy      = kvi(0,0);
+            ParamSrv.request.kvi_z       = kvi(2,2);
+            ParamSrv.request.kR_xy       = kR(0,0);
+            ParamSrv.request.kR_z        = kR(2,2);
+            ParamSrv.request.kL          = kL;
+            ParamSrv.request.Kphi_xy     = Kphi(0,0);
+            ParamSrv.request.Kphi_z      = Kphi(2,2);
+            ParamSrv.request.pxy_error_max = pos_error_max[0];
+            ParamSrv.request.pz_error_max  = pos_error_max[2];
+            ParamSrv.request.pxy_int_max = int_max[0];
+            ParamSrv.request.pz_int_max  = int_max[2];
+            ParamSrv.request.tilt_max    = tilt_max;
+            ParamSrv.request.int_start_error = int_start_error;
+            ParamSrv.request.fp_max_x = fp_max(0);
+            ParamSrv.request.fp_max_y = fp_max(1);
+            ParamSrv.request.fp_max_z = fp_max(2);
+            clientSendParameter = main_handle.serviceClient<px4_command::ControlParameter>("/" + uav_pref + "/px4_command/parameters");             
         }
-
         //Printf the controller parameter
         void printf_param();
         void printf_result();
         // [Input: Current state, Reference state, sub_mode, dt; Output: AttitudeReference;]
         px4_command::ControlOutput payload_controller(const px4_command::DroneState&      _DroneState, 
                                                       const px4_command::TrajectoryPoint& _Reference_State, 
-                                                      float dt);
+                                                      float dt);                                            
         // control command
         Eigen::Vector3d accel_sp;
         px4_command::ControlOutput _ControlOutput;
     private:
-        ros::NodeHandle payload_controller_nh; // ros node for loading parameters
+        ros::ServiceClient   clientSendParameter;
+        px4_command::ControlParameter ParamSrv;
         /*configuration parameters*/
         int num_drone;
         float Quad_MASS;
@@ -179,7 +199,7 @@ class payload_controller_GNC
 px4_command::ControlOutput payload_controller_GNC::payload_controller(
     const px4_command::DroneState& _DroneState, 
     const px4_command::TrajectoryPoint& _Reference_State, 
-    float dt)
+    float dt) 
 {
     /* step 1: convert roll pitch yaw command to rotation matrix command*/
     AttitudeTargetEuler(0) = (double)_Reference_State.roll_ref;
@@ -336,12 +356,19 @@ void payload_controller_GNC::printf_result()
 
 // print out controller parameters
 void payload_controller_GNC::printf_param()
-{
+{    
+    if (clientSendParameter.call(ParamSrv)) {
+       ROS_INFO("Parameter sent to ground station");
+    }
+     else {
+       ROS_WARN("Failed to connect ground station");
+    }
     cout <<">>>>>>>> Payload control method in GNC 2019 paper (Parameter)  <<<<<<<<<" <<endl;
     cout <<"UAV ID : "<<uav_pref<<endl;
     cout <<"Quad_MASS : "<< Quad_MASS << endl;
     cout <<"Payload_MASS : "<< Payload_Mass << endl;
     cout <<"Cable_Length : "<< Cable_Length << endl;
+    cout <<"Num of Drones: " << num_drone <<endl;
     cout <<"Tether Offset x : "<< TetherOffset(0) << " [m] ";
     cout <<"Tether Offset y : "<< TetherOffset(1) << " [m] ";
     cout <<"Tether Offset z : "<< TetherOffset(2) << " [m] ";

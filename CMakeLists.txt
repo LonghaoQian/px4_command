@@ -47,6 +47,11 @@ add_message_files(
   PayloadPoseCommand.msg
 )
 
+add_service_files(
+  FILES
+  ControlParameter.srv
+)
+
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES

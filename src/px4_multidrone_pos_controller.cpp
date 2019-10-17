@@ -193,11 +193,11 @@ int main(int argc, char **argv)
     ROS_INFO("cascade pid is used for single UAV control. ");
     pos_controller_cascade_pid.printf_param();
     // methods of payload stabilization with single UAVs
-    pos_controller_TIE pos_controller_tie;
+    pos_controller_TIE      pos_controller_tie;
     // methods of payload stabilization with multiple UAVs
     /*TODO*/
-    payload_controller_GNC pos_controller_GNC(ID);
-    payload_controller_TCST pose_controller_GNC(ID,nh);
+    payload_controller_GNC  pos_controller_GNC(ID,nh);
+    //payload_controller_TCST pos_controller_GNC(ID,nh);
     // pick control law will be specified in parameter files
     int SingleUAVPayloadController;
     int CooperativePayload;
@@ -235,6 +235,8 @@ int main(int argc, char **argv)
     /******-------------------print parameters ---------------------******/
     printf_param();
 
+    /* set the parameter field on the ground station */
+    
     int check_flag;
     // 这一步是为了程序运行前检查一下参数是否正确
     // 输入1,继续，其他，退出程序

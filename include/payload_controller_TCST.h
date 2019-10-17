@@ -96,6 +96,7 @@ class payload_controller_TCST
                                                                             1000,
                                                                             &payload_controller_TCST::GetAddonForce, 
                                                                             this);
+            //clientSendParameter =  = n.serviceClient<beginner_tutorials::AddTwoInts>("add_two_ints");
             /* initialize the disturbance estimation */
             Delta_pt << 0.0,
                        0.0,
@@ -130,6 +131,9 @@ class payload_controller_TCST
                 D += temp_a_j * Hatmap(temp_t_j)* Hatmap(temp_t_j);
             }
             E_j = PayloadSharingPortion * TetherOffsetCross * D.inverse();
+
+
+            ParamSrv.request.controllername = uav_pref + " Payload Pos_GNC";
         }
         //Printf the controller parameter
         void printf_param();
@@ -147,6 +151,8 @@ class payload_controller_TCST
     private:
         ros::Publisher             pubFleetState;
         ros::Subscriber            subAddonForce;
+        ros::ServiceClient   clientSendParameter;
+        px4_command::ControlParameter ParamSrv;
         px4_command::AddonForce    _AddonForce;
         px4_command::FleetStatus   _FleetStatus;
         /*drone state*/
@@ -428,6 +434,8 @@ void payload_controller_TCST::printf_result()
 // print out controller parameters
 void payload_controller_TCST::printf_param()
 {
+    // use roserive to transport data to the ground station
+
     cout <<">>>>>>>> Payload control method in TCST 2019 paper (Parameter)  <<<<<" <<endl;
     cout <<"UAV ID : "<<uav_pref<<endl;
     cout <<"Quad_MASS : "<< Quad_MASS << endl;
