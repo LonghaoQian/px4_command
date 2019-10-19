@@ -263,7 +263,7 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
          angle_error(0) = 0;
     }
     /* put a hard constraint on the angle_error */
-    angle_error = constrain_vector(angle_error, 0.4);
+    angle_error = constrain_vector(angle_error, 0.7);
     
     /*Step 4 calculate control law form the GNC 2019 paper*/
     for (int i=0; i<3; i++) {

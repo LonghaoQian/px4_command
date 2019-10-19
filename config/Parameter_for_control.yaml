@@ -178,12 +178,12 @@ Pos_GNC:
   Type: 0 # 0 for baseline controller 1 for robust controller
   num_drone : 2
   kv_xy : 0.2
-  Kv_z  : 0.5
+  Kv_z  : 0.4
   kvi_xy : 0.02
-  kvi_z  : 0.05
+  kvi_z  : 0.04
   kR_xy : 0.2
   kR_z  : 0.2
-  kL    : 0.5
+  kL    : 0.4
   Kphi_xy : 2.5
   Kphi_z  : 2.5  
   fp_max_x : 2

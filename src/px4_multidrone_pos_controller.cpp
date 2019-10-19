@@ -238,8 +238,7 @@ int main(int argc, char **argv)
     /* set the parameter field on the ground station */
     
     int check_flag;
-    // 这一步是为了程序运行前检查一下参数是否正确
-    // 输入1,继续，其他，退出程序
+    // check the data output on 
     ROS_INFO("Please check the parameter and setting, enter 1 to continue, else for quit: ");
     cin >> check_flag;
     if(check_flag != 1)
@@ -248,7 +247,7 @@ int main(int argc, char **argv)
         return -1;
     }
     ROS_INFO("Parameter ok. Ready to start controller ...");
-    // 先读取一些飞控的数据
+    // waiting for the 
     for(int i=0;i<50;i++)
     {
         ros::spinOnce();
@@ -315,7 +314,7 @@ int main(int argc, char **argv)
             Command_to_gs.Reference_State.acceleration_ref[1] = 0;
             Command_to_gs.Reference_State.acceleration_ref[2] = 0;
             Command_to_gs.Reference_State.yaw_ref = _DroneState.attitude[2]; //rad
-            /*-----------  --------------*/
+            /*-----------   --------------*/
 
             _ControlOutput = pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
 
@@ -440,7 +439,7 @@ int main(int argc, char **argv)
                 Command_to_gs.Reference_State.Sub_mode  = command_to_mavros_multidrone::XYZ_POS;
                 Command_to_gs.Reference_State.position_ref[0] = _DroneState.position[0];
                 Command_to_gs.Reference_State.position_ref[1] = _DroneState.position[1];
-                Command_to_gs.Reference_State.position_ref[2] = 0.5; // set 0.5 for quadrotor hovering height
+                Command_to_gs.Reference_State.position_ref[2] = 0.7; // set 0.7 for quadrotor hovering height
                 Command_to_gs.Reference_State.velocity_ref[0] = 0;
                 Command_to_gs.Reference_State.velocity_ref[1] = 0;
                 Command_to_gs.Reference_State.velocity_ref[2] = 0;
