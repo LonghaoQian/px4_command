@@ -3,6 +3,8 @@ float32 dronemass
 float32 cablelength
 float32 a_j
 float32 payloadmass
+float32 motor_slope
+float32 motor_intercept 
 int32 num_drone
 float32 t_jx
 float32 t_jy

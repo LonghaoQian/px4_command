@@ -143,20 +143,24 @@ Pos_tie:
 
 # parameter for payload cooperative control 
 uav0_Pos_GNC:
-  mass : 1.45
+  mass : 1.67
   cablelength : 0.91
   TetherOffset_x: 0.99
   TetherOffset_y: 0
   TetherOffset_z: 0
   PayloadSharingPortion : 0.5
+  motor_slope: 0.079
+  motor_intercept: 0.188
 
 uav1_Pos_GNC:
-  mass : 0.6
+  mass : 0.94
   cablelength : 0.91
   TetherOffset_x: -0.99
   TetherOffset_y: 0
   TetherOffset_z: 0
   PayloadSharingPortion: 0.5
+  motor_slope: 0.149
+  motor_intercept: 0.074
 
 uav2_Pos_GNC:
   mass : 1.45
@@ -165,6 +169,8 @@ uav2_Pos_GNC:
   TetherOffset_y: 0
   TetherOffset_z: 0
   PayloadSharingPortion: 0
+  motor_slope: 0.3
+  motor_intercept: 0.1
 
 uav3_Pos_GNC:
   mass : 1.45
@@ -173,19 +179,21 @@ uav3_Pos_GNC:
   TetherOffset_y: 0
   TetherOffset_z: 0
   PayloadSharingPortion: 0
+  motor_slope: 0.3
+  motor_intercept: 0.1
 
 Pos_GNC:
   Type: 0 # 0 for baseline controller 1 for robust controller
   num_drone : 2
-  kv_xy : 0.2
-  Kv_z  : 0.4
-  kvi_xy : 0.02
-  kvi_z  : 0.04
-  kR_xy : 0.2
+  kv_xy : 0.5
+  Kv_z  : 0.5
+  kvi_xy : 0.1
+  kvi_z  : 0.1
+  kR_xy : 0.3
   kR_z  : 0.2
-  kL    : 0.4
-  Kphi_xy : 2.5
-  Kphi_z  : 2.5  
+  kL    : 0.3
+  Kphi_xy : 3
+  Kphi_z  : 5 
   fp_max_x : 2
   fp_max_y : 2
   fp_max_z : 3

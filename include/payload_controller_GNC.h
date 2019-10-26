@@ -79,6 +79,9 @@ class payload_controller_GNC
 
             main_handle.param<int>("Pos_GNC/num_drone",num_drone,1);
 
+            main_handle.param<double>(uav_pref + "_Pos_GNC/motor_slope", motor_slope,0.3);
+            main_handle.param<double>(uav_pref + "_Pos_GNC/motor_intercept", motor_intercept, 0);
+
             u_l = Eigen::Vector3f(0.0,0.0,0.0);
             u_d = Eigen::Vector3f(0.0,0.0,0.0);
             r_j = Eigen::Vector2f(0.0,0.0);
@@ -110,6 +113,8 @@ class payload_controller_GNC
             ParamSrv.request.a_j         = PayloadSharingPortion;
             ParamSrv.request.payloadmass = Payload_Mass;
             ParamSrv.request.num_drone   = num_drone;
+            ParamSrv.request.motor_slope = (float)motor_slope;
+            ParamSrv.request.motor_intercept = (float)motor_intercept;
             ParamSrv.request.t_jx        = TetherOffset(0);
             ParamSrv.request.t_jy        = TetherOffset(1);
             ParamSrv.request.t_jz        = TetherOffset(2);
@@ -148,6 +153,8 @@ class payload_controller_GNC
         px4_command::ControlParameter ParamSrv;
         /*configuration parameters*/
         int num_drone;
+        double motor_slope;
+        double motor_intercept;
         float Quad_MASS;
         float Payload_Mass;
         float TotalLiftedMass;
@@ -301,7 +308,7 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
     Eigen::Vector3d thrust_sp;
     Eigen::Vector3d throttle_sp;
     thrust_sp =  px4_command_utils::accelToThrust(accel_sp, TotalLiftedMass, tilt_max);
-    throttle_sp = px4_command_utils::thrustToThrottle(thrust_sp);
+    throttle_sp = px4_command_utils::thrustToThrottleLinear(thrust_sp, motor_slope, motor_intercept);
 
     for (int i=0; i<3; i++)
     {

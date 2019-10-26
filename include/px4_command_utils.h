@@ -265,6 +265,14 @@ Eigen::Vector3d thrustToThrottle(const Eigen::Vector3d& thrust_sp)
     return throttle_sp; 
 }
 
+Eigen::Vector3d thrustToThrottleLinear(const Eigen::Vector3d& thrust_sp, double slope, double intercept)
+{
+    Eigen::Vector3d throttle_sp;
+    //Linear motor model
+    throttle_sp = (slope * thrust_sp.norm() + intercept) * thrust_sp.normalized();
+    return throttle_sp; 
+}
+
 //Throttle to Attitude
 //Thrust to Attitude
 //Input: desired thrust (desired throttle [0,1]) and yaw_sp(rad)
