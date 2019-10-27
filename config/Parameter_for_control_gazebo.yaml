@@ -186,7 +186,7 @@ uav3_Pos_GNC:
 Pos_GNC:
   Type: 0 # 0 for baseline controller 1 for robust controller
   num_drone : 2
-  kv_xy : 0.5
+  kv_xy : 0.4
   Kv_z  : 0.5
   kvi_xy : 0.1
   kvi_z  : 0.4
