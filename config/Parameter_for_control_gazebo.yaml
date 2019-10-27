@@ -188,8 +188,8 @@ Pos_GNC:
   num_drone : 2
   kv_xy : 0.5
   Kv_z  : 0.5
-  kvi_xy : 0.7
-  kvi_z  : 0.1
+  kvi_xy : 0.1
+  kvi_z  : 0.4
   kR_xy : 0.3
   kR_z  : 0.2
   kL    : 0.35
