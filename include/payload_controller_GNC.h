@@ -13,6 +13,7 @@
 #include <px4_command/AttitudeReference.h>
 #include <px4_command/ControlOutput.h>
 #include <px4_command/ControlParameter.h>
+#include <px4_command/AuxiliaryState.h>
 using std::string;
 using std::iostream;
 class payload_controller_GNC
@@ -82,6 +83,8 @@ class payload_controller_GNC
             main_handle.param<double>(uav_pref + "_Pos_GNC/motor_slope", motor_slope,0.3);
             main_handle.param<double>(uav_pref + "_Pos_GNC/motor_intercept", motor_intercept, 0);
 
+            main_handle.param<bool>("Pos_GNC/PubAuxiliaryState", isPubAuxiliaryState , false);
+
             u_l = Eigen::Vector3f(0.0,0.0,0.0);
             u_d = Eigen::Vector3f(0.0,0.0,0.0);
             r_j = Eigen::Vector2f(0.0,0.0);
@@ -136,9 +139,13 @@ class payload_controller_GNC
             ParamSrv.request.fp_max_x = fp_max(0);
             ParamSrv.request.fp_max_y = fp_max(1);
             ParamSrv.request.fp_max_z = fp_max(2);
-            clientSendParameter = main_handle.serviceClient<px4_command::ControlParameter>("/" + uav_pref + "/px4_command/parameters");             
+            clientSendParameter = main_handle.serviceClient<px4_command::ControlParameter>("/" + uav_pref + "/px4_command/parameters"); 
+            if (isPubAuxiliaryState)  {
+                pubAuxiliaryState   = main_handle.advertise<px4_command::AuxiliaryState > ("/" + uav_pref + "/px4_command/auxiliarystate", 1000);
+            }
         }
         //Printf the controller parameter
+        void pubauxiliarystate();
         void printf_param();
         void printf_result();
         // [Input: Current state, Reference state, sub_mode, dt; Output: AttitudeReference;]
@@ -151,7 +158,9 @@ class payload_controller_GNC
     private:
         ros::ServiceClient   clientSendParameter;
         px4_command::ControlParameter ParamSrv;
+        ros::Publisher       pubAuxiliaryState;
         /*configuration parameters*/
+        bool isPubAuxiliaryState;
         int num_drone;
         double motor_slope;
         double motor_intercept;
@@ -164,6 +173,7 @@ class payload_controller_GNC
         Eigen::Vector3f TetherOffset;
         Eigen::Matrix3f TetherOffsetCross;
         float  PayloadSharingPortion;
+        px4_command:: AuxiliaryState Auxstate;
         //Controller parameter for the control law
         Eigen::Matrix3f kv;
         Eigen::Matrix3f kR;
@@ -310,6 +320,10 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
     thrust_sp =  px4_command_utils::accelToThrust(accel_sp, TotalLiftedMass, tilt_max);
     throttle_sp = px4_command_utils::thrustToThrottleLinear(thrust_sp, motor_slope, motor_intercept);
 
+    if (isPubAuxiliaryState) {
+        pubauxiliarystate();
+    }
+
     for (int i=0; i<3; i++)
     {
         _ControlOutput.u_l[i] = u_l[i];
@@ -320,6 +334,38 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
 
     return _ControlOutput;
 
+}
+
+void payload_controller_GNC::pubauxiliarystate() 
+{
+        Auxstate.IntegralPose_x = IntegralPose(0);
+        Auxstate.IntegralPose_y = IntegralPose(1);
+        Auxstate.IntegralPose_z = IntegralPose(2);
+
+        Auxstate.r_jx = r_j(0);
+        Auxstate.r_jy = r_j(1);
+
+        Auxstate.v_jx = v_j(0);
+        Auxstate.v_jy = v_j(1);
+
+        Auxstate.pos_error_x = pos_error(0);
+        Auxstate.pos_error_y = pos_error(1);
+        Auxstate.pos_error_z = pos_error(2);
+
+        Auxstate.angle_error_x =  angle_error(0);
+        Auxstate.angle_error_y =  angle_error(1);
+        Auxstate.angle_error_z =  angle_error(2);
+       
+        Eigen::Vector3d Euler = quaternion_to_euler2(AttitudeQuaternionv);
+        Auxstate.Euler_roll =   Euler(0)*57.3;
+        Auxstate.Euler_pitch =  Euler(1)*57.3;
+        Auxstate.Euler_yaw  =   Euler(2)*57.3;
+
+        Auxstate.u_lx  = u_l(0);
+        Auxstate.u_ly  = u_l(1);
+        Auxstate.u_lz  = u_l(2);
+
+        pubAuxiliaryState.publish(Auxstate);
 }
 
 void payload_controller_GNC::printf_result()

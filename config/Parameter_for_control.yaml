@@ -153,14 +153,14 @@ uav0_Pos_GNC:
   motor_intercept: 0.188
 
 uav1_Pos_GNC:
-  mass : 0.94
+  mass : 1.54
   cablelength : 0.91
   TetherOffset_x: -0.99
   TetherOffset_y: 0
   TetherOffset_z: 0
   PayloadSharingPortion: 0.5
-  motor_slope: 0.149
-  motor_intercept: 0.074
+  motor_slope: 0.0633
+  motor_intercept: 0.1337
 
 uav2_Pos_GNC:
   mass : 1.45
@@ -184,6 +184,7 @@ uav3_Pos_GNC:
 
 Pos_GNC:
   Type: 0 # 0 for baseline controller 1 for robust controller
+  PubAuxiliaryState : true
   num_drone : 2
   kv_xy : 0.4
   Kv_z  : 0.4
