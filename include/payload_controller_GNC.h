@@ -139,6 +139,9 @@ class payload_controller_GNC
             ParamSrv.request.fp_max_x = fp_max(0);
             ParamSrv.request.fp_max_y = fp_max(1);
             ParamSrv.request.fp_max_z = fp_max(2);
+            acc_x = 0;
+            acc_y = 0;
+            acc_z = 0;
             clientSendParameter = main_handle.serviceClient<px4_command::ControlParameter>("/" + uav_pref + "/px4_command/parameters"); 
             if (isPubAuxiliaryState)  {
                 pubAuxiliaryState   = main_handle.advertise<px4_command::AuxiliaryState > ("/" + uav_pref + "/px4_command/auxiliarystate", 1000);
@@ -211,6 +214,9 @@ class payload_controller_GNC
         Eigen::Vector3f u_d;
         Eigen::Vector3f IntegralPose;
         Eigen::Vector3f IntegralAttitude;
+        float acc_x;
+        float acc_y;
+        float acc_z;
 };
 
 px4_command::ControlOutput payload_controller_GNC::payload_controller(
@@ -258,6 +264,10 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
     v_j(0) = L_j_dot(0);
     v_j(1) = L_j_dot(1);
 
+    acc_x = _DroneState.acceleration[0];
+    acc_y = _DroneState.acceleration[1];
+    acc_z = _DroneState.acceleration[2];
+
     float sq_r = r_j(0)*r_j(0) + r_j(1)*r_j(1);
 
     if (Cable_Length_sq - sq_r>0.01)
@@ -271,7 +281,7 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
 
     /*Step 3 calculate payload position and attitude error*/
     pos_error = Xp-Xpd;
-    float scale_p = sqrt(1+ pos_error.transpose() * pos_error);
+    float scale_p = sqrt(3 + pos_error.transpose() * pos_error);
     pos_error = pos_error/scale_p;
 
     angle_error = 0.5* Veemap(R_IPd.transpose()*R_IP- R_IP.transpose() * R_IPd);
@@ -364,6 +374,10 @@ void payload_controller_GNC::pubauxiliarystate()
         Auxstate.u_lx  = u_l(0);
         Auxstate.u_ly  = u_l(1);
         Auxstate.u_lz  = u_l(2);
+
+        Auxstate.acc_x = acc_x;
+        Auxstate.acc_y = acc_y;
+        Auxstate.acc_z = acc_z;
 
         pubAuxiliaryState.publish(Auxstate);
 }

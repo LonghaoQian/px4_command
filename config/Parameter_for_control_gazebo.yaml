@@ -188,12 +188,12 @@ Pos_GNC:
   PubAuxiliaryState : true
   num_drone : 2
   kv_xy : 0.4
-  Kv_z  : 0.4
+  Kv_z  : 0.6
   kvi_xy : 0.1
   kvi_z  : 0.1
   kR_xy : 0.25
   kR_z  : 0.25
-  kL    : 0.25
+  kL    : 0.35
   Kphi_xy : 5
   Kphi_z  : 5 
   fp_max_x : 2

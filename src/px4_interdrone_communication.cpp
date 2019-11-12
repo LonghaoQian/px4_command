@@ -117,7 +117,7 @@ int main(int argc,
     Delta_rt<< 0.0,
               0.0,
               0.0,
-    ROS_INFO("Start the interdrone communication...");
+    ROS_INFO("Start the interdrone communication and disturbance estimation...");
     float last_time = px4_command_utils::get_time_in_sec(begin_time);
     float dt = 0;
     while(ros::ok())
@@ -137,6 +137,8 @@ int main(int argc,
 
         Delta_T +=  lambda_T * (Quad_MASS * dot_vqj - f_L_j - Delta_j);
         }
+
+        
 
         pubAddonForce.publish(_AddonForce);
         rate.sleep();

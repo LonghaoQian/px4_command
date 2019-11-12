@@ -179,6 +179,10 @@ add_executable(set_uav1_mode src/Utilities/set_uav1_mode.cpp)
 add_dependencies(set_uav1_mode px4_command_gencpp)
 target_link_libraries(set_uav1_mode ${catkin_LIBRARIES})
 
+add_executable(set_uav2_mode src/Utilities/set_uav2_mode.cpp)
+add_dependencies(set_uav2_mode px4_command_gencpp)
+target_link_libraries(set_uav2_mode ${catkin_LIBRARIES})
+
 add_executable(eigen_test src/Utilities/eigen_test.cpp)
 add_dependencies(eigen_test px4_command_gencpp)
 target_link_libraries(eigen_test ${catkin_LIBRARIES})
