@@ -192,7 +192,7 @@ Pos_GNC:
   kvi_z  : 0.1
   kR_xy : 0.25
   kR_z  : 0.25
-  kL    : 0.35
+  kL    : 0.1
   Kphi_xy : 5
   Kphi_z  : 5 
   fp_max_x : 2
