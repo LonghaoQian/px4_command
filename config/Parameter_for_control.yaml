@@ -184,25 +184,37 @@ uav3_Pos_GNC:
 
 Pos_GNC:
   Type: 0 # 0 for baseline controller 1 for robust controller
+  MaxInclination: 40.0
+  CableLengthTolerance: 1.2
   PubAuxiliaryState : true
   num_drone : 2
   kv_xy : 0.4
   Kv_z  : 0.6
-  kvi_xy : 0.1
-  kvi_z  : 0.1
-  kR_xy : 0.25
+  kvi_xy : 0.01
+  kvi_z  : 0.05
+  kR_xy : 0.4
   kR_z  : 0.25
-  kL    : 0.1
-  Kphi_xy : 5
-  Kphi_z  : 5 
-  fp_max_x : 2
-  fp_max_y : 2
-  fp_max_z : 3
-  lambda_j : 1
+  kRi_xy : 0.0
+  kRi_z  : 0.0
+  kL    : 0.15
+  Kphi_xy : 3.5
+  Kphi_z  : 5
+  fp_max_x : 5
+  fp_max_y : 5
+  fp_max_z : 5
+  lambda_j : 0.5
   lambda_T : 1
   lambda_R : 1
   kF_xy : 0.4
-  kF_z : 0.5
+  kF_z :  0.5
+  pos_int_max_x: 10
+  pos_int_max_y: 10
+  pos_int_max_z: 10
+  ang_int_max_x : 1
+  ang_int_max_y : 1
+  ang_int_max_z : 1
+  pos_int_start_error: 0.3
+  angle_int_start_error: 0.5
 
   
 

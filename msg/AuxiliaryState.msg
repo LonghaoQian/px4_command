@@ -4,6 +4,15 @@ float32  IntegralPose_x    ## [N]
 float32  IntegralPose_y    ## [N]
 float32  IntegralPose_z    ## [N] 
 
+float32  IntegralAngle_x    ## [N]
+float32  IntegralAngle_y    ## [N]
+float32  IntegralAngle_z    ## [N] 
+
+float32  q_0     ##
+float32  q_1     ##
+float32  q_2     ##
+float32  q_3     ##
+
 float32  r_jx    ## [m]
 float32  r_jy    ## [m]
 

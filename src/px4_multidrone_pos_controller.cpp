@@ -95,23 +95,15 @@ void Command_cb(const px4_command::ControlCommand::ConstPtr& msg)
 {
     Command_Now = *msg;
     // 无人机一旦接受到Land指令，则会屏蔽其他指令
-    if(Command_Last.Mode == command_to_mavros_multidrone::Land)
-    {
+    if(Command_Last.Mode == command_to_mavros_multidrone::Land) {
         Command_Now.Mode = command_to_mavros_multidrone::Land;
     }
-
-
-
     // Check for geo fence: If drone is out of the geo fence, it will land now.
     if(check_failsafe() == 1)
     {
         Command_Now.Mode = command_to_mavros_multidrone::Land;
     }
 }
-
-//void PayloadPoseTargetSub(const px4_command::PayloadPoseCommand& msg) {
- //   PayloadPoseTarget = *msg;
-//}
 
 void drone_state_cb(const px4_command::DroneState::ConstPtr& msg)
 {
@@ -415,21 +407,28 @@ int main(int argc, char **argv)
         case command_to_mavros_multidrone::Payload_Stabilization: 
             Command_to_gs = Command_Now;
 
-            _ControlOutput = pos_controller_GNC.payload_controller(_DroneState, Command_to_gs.Reference_State,dt);
+            _ControlOutput = pos_controller_GNC.payload_controller(_DroneState, Command_to_gs.Reference_State, dt);
             
-            throttle_sp[0] = _ControlOutput.Throttle[0];
-            throttle_sp[1] = _ControlOutput.Throttle[1];
-            throttle_sp[2] = _ControlOutput.Throttle[2];
+            // do a safty check, if not passed, switch to payload_land mode
 
-            _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, 0);
-
-            if (Use_accel > 0.5) {
-                _command_to_mavros.send_accel_setpoint(throttle_sp,0);
+            if(pos_controller_GNC.emergency_switch())
+            { // true means not in normal flight
+            Command_Now.Mode = command_to_mavros_multidrone::Payload_Land;
             } else {
+              // false means ok
+                throttle_sp[0] = _ControlOutput.Throttle[0];
+                throttle_sp[1] = _ControlOutput.Throttle[1];
+                throttle_sp[2] = _ControlOutput.Throttle[2];
+
+                _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, 0);
+
+                if (Use_accel > 0.5) {
+                    _command_to_mavros.send_accel_setpoint(throttle_sp,0);
+                } else {
                 _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
+                }
             }
             break;
-
 
         case command_to_mavros_multidrone::Payload_Land :{
             Command_to_gs.Mode = Command_Now.Mode;

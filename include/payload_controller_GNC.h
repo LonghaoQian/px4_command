@@ -14,6 +14,7 @@
 #include <px4_command/ControlOutput.h>
 #include <px4_command/ControlParameter.h>
 #include <px4_command/AuxiliaryState.h>
+#include <px4_command/Emergency.h>
 using std::string;
 using std::iostream;
 class payload_controller_GNC
@@ -34,6 +35,7 @@ class payload_controller_GNC
             main_handle.param<float>(uav_pref + "_Pos_GNC/PayloadSharingPortion", PayloadSharingPortion, 0.5);
             main_handle.param<float>("Payload/mass", Payload_Mass, 1.0);
 
+            main_handle.param<bool>("Pos_GNC/PubAuxiliaryState", isPubAuxiliaryState, true);
             kv<< 1.0,0.0,0.0,
                    0.0,1.0,0.0,
                    0.0,0.0,1.0;
@@ -46,7 +48,12 @@ class payload_controller_GNC
             kvi << 1.0,0.0,0.0,
                    0.0,1.0,0.0,
                    0.0,0.0,1.0;
-            
+            kRi << 1.0,0.0,0.0,
+                   0.0,1.0,0.0,
+                   0.0,0.0,1.0;
+            Identity << 1.0,0.0,0.0,
+                        0.0,1.0,0.0,
+                        0.0,0.0,1.0;
             main_handle.param<float>("Pos_GNC/kv_xy", kv(0,0), 0.2);
             main_handle.param<float>("Pos_GNC/kv_xy", kv(1,1), 0.2);
             main_handle.param<float>("Pos_GNC/Kv_z",  kv(2,2), 0.4);
@@ -56,7 +63,7 @@ class payload_controller_GNC
             main_handle.param<float>("Pos_GNC/kR_z"  , kR(2,2), 0.4);
 
             main_handle.param<float>("Pos_GNC/kvi_xy" , kvi(0,0), 0.02);
-            main_handle.param<float>("Pos_GNC/kv1_xy" , kvi(1,1), 0.02);
+            main_handle.param<float>("Pos_GNC/kvi_xy" , kvi(1,1), 0.02);
             main_handle.param<float>("Pos_GNC/kvi_z"  , kvi(2,2), 0.04);
 
             main_handle.param<float>("Pos_GNC/kL"     ,  kL, 0.5);
@@ -64,16 +71,27 @@ class payload_controller_GNC
             main_handle.param<float>("Pos_GNC/Kphi_xy",  Kphi(1,1), 1);
             main_handle.param<float>("Pos_GNC/Kphi_z" ,  Kphi(2,2), 1);
 
-            main_handle.param<float>("Limitne/pxy_error_max", pos_error_max[0], 0.6);
-            main_handle.param<float>("Limitne/pxy_error_max", pos_error_max[1], 0.6);
-            main_handle.param<float>("Limit/pz_error_max" ,   pos_error_max[2], 1.0);
+            main_handle.param<float>("Pos_GNC/kRi_xy",  kRi(0,0), 0.02);
+            main_handle.param<float>("Pos_GNC/kRi_xy",  kRi(1,1), 0.02);
+            main_handle.param<float>("Pos_GNC/kRi_z" ,  kRi(2,2), 0.02);
 
-            main_handle.param<float>("Limit/pxy_int_max"  ,  int_max[0], 1);
-            main_handle.param<float>("Limit/pxy_int_max"  ,  int_max[1], 1);
-            main_handle.param<float>("Limit/pz_int_max"   ,  int_max[2], 1);
+
+            main_handle.param<float>("Limit/pxy_error_max", pos_error_max[0], 0.6);
+            main_handle.param<float>("Limit/pxy_error_max", pos_error_max[1], 0.6);
+            main_handle.param<float>("Limit/pz_error_max" , pos_error_max[2], 1.0);
+
+            main_handle.param<float>("Pos_GNC/pos_int_max_x"  ,  pos_int_max(0), 1);
+            main_handle.param<float>("Pos_GNC/pos_int_max_y"  ,  pos_int_max(1), 1);
+            main_handle.param<float>("Pos_GNC/pos_int_max_z"  ,  pos_int_max(2), 1);
+
+            main_handle.param<float>("Pos_GNC/ang_int_max_x"  ,  ang_int_max(0), 1);
+            main_handle.param<float>("Pos_GNC/ang_int_max_y"  ,  ang_int_max(1), 1);
+            main_handle.param<float>("Pos_GNC/ang_int_max_z"  ,  ang_int_max(2), 1);
+            
             main_handle.param<float>("Limit/tilt_max", tilt_max, 20.0);
-            main_handle.param<float>("Limit/int_start_error"  , int_start_error, 0.3);
-
+            main_handle.param<float>("Pos_GNC/pos_int_start_error"  , pos_int_start_error, 0.3);
+            main_handle.param<float>("Pos_GNC/angle_int_start_error", angle_int_start_error, 0.5);
+ 
             main_handle.param<float>("Pos_GNC/fp_max_x", fp_max(0),1);
             main_handle.param<float>("Pos_GNC/fp_max_y", fp_max(1),1);
             main_handle.param<float>("Pos_GNC/fp_max_z", fp_max(2),1);
@@ -83,15 +101,30 @@ class payload_controller_GNC
             main_handle.param<double>(uav_pref + "_Pos_GNC/motor_slope", motor_slope,0.3);
             main_handle.param<double>(uav_pref + "_Pos_GNC/motor_intercept", motor_intercept, 0);
 
-            main_handle.param<bool>("Pos_GNC/PubAuxiliaryState", isPubAuxiliaryState , false);
+            main_handle.param<float>("Pos_GNC/MaxInclination", MaximumInclination , 40.0);
+            main_handle.param<float>("Pos_GNC/CableLengthTolerance", Cable_Tolerance, 1.2);
+
+
 
             u_l = Eigen::Vector3f(0.0,0.0,0.0);
             u_d = Eigen::Vector3f(0.0,0.0,0.0);
             r_j = Eigen::Vector2f(0.0,0.0);
             v_j = Eigen::Vector2f(0.0,0.0);
+            lambda_j<< 1.0,0.0,0.0,
+                       0.0,1.0,0.0,
+                       0.0,0.0,1.0;
+            main_handle.param<float>("Pos_GNC/lambda_j", lambda_j(0,0), 1);
+            main_handle.param<float>("Pos_GNC/lambda_j", lambda_j(1,1), 1);
+            main_handle.param<float>("Pos_GNC/lambda_j", lambda_j(2,2), 1);
 
             TetherOffsetCross = Hatmap(TetherOffset);
-
+            Quad_Drone << 1.0,
+                          0.0,
+                          0.0,
+                          0.0;
+            R_Ij << 1.0,0.0,0.0,
+                   0.0,1.0,0.0,
+                   0.0,0.0,1.0;
             R_IP << 1.0,0.0,0.0,
                    0.0,1.0,0.0,
                    0.0,0.0,1.0;
@@ -101,6 +134,24 @@ class payload_controller_GNC
             B_j << 1.0,0.0,
                    0.0,1.0,
                    0.0,0.0;
+            Delta_j<<0.0,
+                     0.0,
+                     0.0;
+            Delta_j_p<<0.0,
+                     0.0,
+                     0.0;
+            dot_vqj<<0.0,
+                     0.0,
+                     0.0;
+            accel_body<<0.0,
+                     0.0,
+                     0.0;
+            f_L_j <<0.0,
+                     0.0,
+                     0.0;
+            g_I<<0.0,
+                 0.0,
+                -9.81;
             Cable_Length_sq = Cable_Length * Cable_Length;
             TotalLiftedMass = Payload_Mass* PayloadSharingPortion + Quad_MASS;
 
@@ -132,10 +183,10 @@ class payload_controller_GNC
             ParamSrv.request.Kphi_z      = Kphi(2,2);
             ParamSrv.request.pxy_error_max = pos_error_max[0];
             ParamSrv.request.pz_error_max  = pos_error_max[2];
-            ParamSrv.request.pxy_int_max = int_max[0];
-            ParamSrv.request.pz_int_max  = int_max[2];
+            ParamSrv.request.pxy_int_max = pos_int_max(0);
+            ParamSrv.request.pz_int_max  = pos_int_max(2);
             ParamSrv.request.tilt_max    = tilt_max;
-            ParamSrv.request.int_start_error = int_start_error;
+            ParamSrv.request.int_start_error = pos_int_start_error;
             ParamSrv.request.fp_max_x = fp_max(0);
             ParamSrv.request.fp_max_y = fp_max(1);
             ParamSrv.request.fp_max_z = fp_max(2);
@@ -143,6 +194,7 @@ class payload_controller_GNC
             acc_y = 0;
             acc_z = 0;
             clientSendParameter = main_handle.serviceClient<px4_command::ControlParameter>("/" + uav_pref + "/px4_command/parameters"); 
+            emergencyKill       = main_handle.serviceClient<px4_command::Emergency>("/" + uav_pref + "/px4_command/emergencyKill"); 
             if (isPubAuxiliaryState)  {
                 pubAuxiliaryState   = main_handle.advertise<px4_command::AuxiliaryState > ("/" + uav_pref + "/px4_command/auxiliarystate", 1000);
             }
@@ -151,6 +203,7 @@ class payload_controller_GNC
         void pubauxiliarystate();
         void printf_param();
         void printf_result();
+        bool emergency_switch();
         // [Input: Current state, Reference state, sub_mode, dt; Output: AttitudeReference;]
         px4_command::ControlOutput payload_controller(const px4_command::DroneState&      _DroneState, 
                                                       const px4_command::TrajectoryPoint& _Reference_State, 
@@ -160,6 +213,7 @@ class payload_controller_GNC
         px4_command::ControlOutput _ControlOutput;
     private:
         ros::ServiceClient   clientSendParameter;
+        ros::ServiceClient   emergencyKill;
         px4_command::ControlParameter ParamSrv;
         ros::Publisher       pubAuxiliaryState;
         /*configuration parameters*/
@@ -172,6 +226,8 @@ class payload_controller_GNC
         float TotalLiftedMass;
         float Cable_Length;
         float Cable_Length_sq;
+        float Cable_Tolerance;
+        float MaximumInclination;
         string uav_pref;
         Eigen::Vector3f TetherOffset;
         Eigen::Matrix3f TetherOffsetCross;
@@ -182,14 +238,27 @@ class payload_controller_GNC
         Eigen::Matrix3f kR;
         Eigen::Matrix3f Kphi;
         Eigen::Matrix3f kvi;
+        Eigen::Matrix3f kRi;
         float kL;
+        Eigen::Vector3f g_I;
+        Eigen::Matrix3f lambda_j;
         // payload attitude and quadrotor relative state
+        Eigen::Vector4f Quad_Drone;
+        Eigen::Vector3f Delta_j;
+        Eigen::Vector3f Delta_j_p;
+        Eigen::Matrix3f R_Ij;
         Eigen::Matrix3f R_IP;
         Eigen::Vector3f L_j_dot;//rotation speed of the cable tip
         Eigen::Vector3f L_j; // the cable vector
         Eigen::Vector2f r_j, v_j;
         Eigen::Matrix<float, 3,2> B_j;
-
+        Eigen::Vector3f dot_vqj;
+        Eigen::Vector3f accel_body;
+        Eigen::Matrix2f BB_temp;
+        Eigen::Matrix2f BB_inverse;
+        Eigen::Matrix3f BB_j;
+        Eigen::Vector3f f_L_j;
+        Eigen::Matrix3f Identity;
         /*
         temp variables
         */
@@ -205,10 +274,12 @@ class payload_controller_GNC
         // error constraint parameters:
         Eigen::Vector3f pos_error_max;
         Eigen::Vector3f angular_error_max;
-        Eigen::Vector3f int_max;
+        Eigen::Vector3f pos_int_max;
+        Eigen::Vector3f ang_int_max;
         Eigen::Vector3f fp_max;
         float tilt_max;
-        float int_start_error;
+        float pos_int_start_error;
+        float angle_int_start_error;
         // normalized control input
         Eigen::Vector3f u_l;
         Eigen::Vector3f u_d;
@@ -241,7 +312,18 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
 
     R_IP = QuaterionToRotationMatrix(AttitudeQuaternionv);
 
+    Quad_Drone(0) = _DroneState.attitude_q.w;
+    Quad_Drone(1) = _DroneState.attitude_q.x;
+    Quad_Drone(2) = _DroneState.attitude_q.y;
+    Quad_Drone(3) = _DroneState.attitude_q.z;
+    R_Ij =  QuaterionToRotationMatrix(Quad_Drone);
 
+
+    for( int i = 0; i < 3 ; i ++) {
+        accel_body(i) = _DroneState.acceleration[i];
+    }
+
+    dot_vqj = R_Ij * (accel_body)+ g_I;
     /*Step 2 calculate L_j and L_j_dot based on payload information feedback
     
     Xj = Xp + R_IPt_j + L_j -> L_j = Xj-Xp-R_IBt_j
@@ -279,9 +361,18 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
         B_j(2,1) = -0.1;
     }
 
+    BB_temp = B_j.transpose()*B_j; 
+    float BB_determinent = BB_temp(0,0)*BB_temp(1,1) - BB_temp(0,1)*BB_temp(1,0);
+    BB_inverse(0,0) = BB_temp(1,1);
+    BB_inverse(1,1) = BB_temp(0,0);
+    BB_inverse(0,1) = - BB_temp(0,1);
+    BB_inverse(1,0) = - BB_temp(1,0);
+    BB_inverse = BB_inverse/BB_determinent;
+    BB_j = B_j * BB_inverse * B_j.transpose();
+
     /*Step 3 calculate payload position and attitude error*/
-    pos_error = Xp-Xpd;
-    float scale_p = sqrt(3 + pos_error.transpose() * pos_error);
+    pos_error = Xp - Xpd;
+    float scale_p = sqrt(1 + pos_error.transpose() * pos_error);
     pos_error = pos_error/scale_p;
 
     angle_error = 0.5* Veemap(R_IPd.transpose()*R_IP- R_IP.transpose() * R_IPd);
@@ -290,40 +381,67 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
          angle_error(0) = 0;
     }
     /* put a hard constraint on the angle_error */
-    angle_error = constrain_vector(angle_error, 0.7);
+    // angle_error = constrain_vector(angle_error, 0.7);
     
     /*Step 4 calculate control law form the GNC 2019 paper*/
     for (int i=0; i<3; i++) {
-        if(abs(pos_error[i]) < int_start_error) {
+
+        if(abs(IntegralAttitude(i)) < angle_int_start_error ) {
+            IntegralAttitude(i) += angle_error(i) *dt;
+            if(abs(IntegralAttitude(i) > ang_int_max[i]))
+            {
+                cout << "Angle Integral Saturation! " << " [0-1-2] "<< i <<endl;
+                cout << "[integral]: "<< IntegralAttitude(i)<<" [int_max]: "<<ang_int_max[i]<<" [] "<<endl;
+            }
+
+            IntegralAttitude(i) = constrain_function(IntegralAttitude(i), ang_int_max[i]);
+
+        }else {
+            IntegralAttitude(i) = 0;
+        }
+
+        if(abs(pos_error[i]) < pos_int_start_error) {
            
             IntegralPose(i) += pos_error(i) * dt;
 
-            if(abs(IntegralPose(i) > int_max[i]))
+            if(abs(IntegralPose(i) > pos_int_max[i]))
             {
-                cout << "Integral saturation! " << " [0-1-2] "<< i <<endl;
-                cout << "[integral]: "<< IntegralPose(i)<<" [int_max]: "<<int_max[i]<<" [m/s] "<<endl;
+                cout << "Pose Integral saturation! " << " [0-1-2] "<< i <<endl;
+                cout << "[integral]: "<< IntegralPose(i)<<" [int_max]: "<< pos_int_max[i] <<" [m] "<<endl;
             }
-
-            IntegralPose(i) = constrain_function(IntegralPose(i), int_max[i]);
+            IntegralPose(i) = constrain_function(IntegralPose(i), pos_int_max[i]);
         }else {
             IntegralPose(i) = 0;
         }
         // If not in OFFBOARD mode, set all intergral to zero.
         if(_DroneState.mode != "OFFBOARD") {
             IntegralPose(i) = 0;
+            IntegralAttitude(i) = 0;
         }
     }
+
+    if(_DroneState.mode != "OFFBOARD") {
+        Delta_j<< 0.0,
+                  0.0,
+                  0.0; 
+    } else {
+        Delta_j +=  lambda_j * dt * BB_j * (Quad_MASS * (dot_vqj - g_I) - f_L_j - Delta_j);
+    }
+    // constraint the pose
+    Delta_j_p = (Identity - L_j*L_j.transpose()/Cable_Length_sq)*Delta_j;
+    Delta_j_p =  constrain_vector(Delta_j_p, 10.0);
+
     Eigen::Vector3f U = Vp + kv*(pos_error + kvi * IntegralPose) 
-                      - R_IP * TetherOffsetCross*(Omega_p + kR * angle_error) 
+                      - R_IP * TetherOffsetCross*(Omega_p + kR * angle_error + kRi * IntegralAttitude) 
                       + B_j*(v_j + kL*r_j);
-    // u_l = - Kphi * (Vj+kv*(pos_error + kvi * IntegralPose)-  kR * R_IP * TetherOffsetCross * angle_error + kL*B_j*r_j);
-    u_l = - Kphi * U;
+    //u_l = - Kphi * (Vj+kv*(pos_error + kvi * IntegralPose)- R_IP * TetherOffsetCross *(kR * angle_error + kRi * IntegralAttitude) + kL*B_j*r_j);
+    u_l = - Kphi * U - Delta_j_p/(TotalLiftedMass);
+
     // desired acceleration
     accel_sp[0] = u_l[0] - u_d[0];
     accel_sp[1] = u_l[1] - u_d[1];
     accel_sp[2] = u_l[2] - u_d[2] + 9.8;
-    
-    // desired thrust  = desired accel
+    f_L_j = TotalLiftedMass * accel_sp.cast <float> ();
     // 归一化推力 ： 根据电机模型，反解出归一化推力
     Eigen::Vector3d thrust_sp;
     Eigen::Vector3d throttle_sp;
@@ -348,9 +466,20 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
 
 void payload_controller_GNC::pubauxiliarystate() 
 {
+        // record time
+        Auxstate.header.stamp = ros::Time::now();
         Auxstate.IntegralPose_x = IntegralPose(0);
         Auxstate.IntegralPose_y = IntegralPose(1);
         Auxstate.IntegralPose_z = IntegralPose(2);
+
+        Auxstate.IntegralAngle_x = IntegralAttitude(0);
+        Auxstate.IntegralAngle_y = IntegralAttitude(1);
+        Auxstate.IntegralAngle_z = IntegralAttitude(2);
+
+        Auxstate.q_0 = Quad_Drone(0);
+        Auxstate.q_1 = Quad_Drone(1);
+        Auxstate.q_2 = Quad_Drone(2);
+        Auxstate.q_3 = Quad_Drone(3);
 
         Auxstate.r_jx = r_j(0);
         Auxstate.r_jy = r_j(1);
@@ -380,6 +509,29 @@ void payload_controller_GNC::pubauxiliarystate()
         Auxstate.acc_z = acc_z;
 
         pubAuxiliaryState.publish(Auxstate);
+}
+
+bool payload_controller_GNC::emergency_switch()
+{
+    bool flag = false;
+    /* 1. check whether the total length of the string is within a safe range */
+    if (L_j.norm()>Cable_Length*Cable_Tolerance)
+    {
+        flag = true;
+    }
+    /* 2. check if the r_j is too large */
+
+    if (r_j.norm()>Cable_Length*sin(MaximumInclination/57.3))
+    {
+        flag = true;
+    }
+
+    if (!flag) {
+        // send emergency service to ground station
+
+    }
+
+    return flag;   
 }
 
 void payload_controller_GNC::printf_result()
@@ -418,6 +570,11 @@ void payload_controller_GNC::printf_result()
     cout << "Euler_roll : "  << Euler(0)*57.3 << " [DEG] ";
     cout << "pitch : " << Euler(1)*57.3 << " [DEG] ";
     cout << "yaw : "   << Euler(2)*57.3 << " [DEG] ";
+    cout << endl;
+
+    cout << "Delta_jp x: " << Delta_j_p (0)<< " [N] ";
+    cout << "Delta_jp y: " << Delta_j_p (1)<< " [N] ";
+    cout << "Delta_jp z: " << Delta_j_p (2)<< " [N] ";
     cout << endl;
 }
 

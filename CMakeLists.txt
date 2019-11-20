@@ -51,6 +51,7 @@ add_message_files(
 add_service_files(
   FILES
   ControlParameter.srv
+  Emergency.srv
 )
 
 ## Generate added messages and services with any dependencies listed here
