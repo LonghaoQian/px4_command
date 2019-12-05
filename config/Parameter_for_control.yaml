@@ -38,7 +38,7 @@ Quad:
   mass: 1.6
 ## payload mass
 Payload:
-  mass: 0.75
+  mass: 0.95
 ## cable length
 Cable:
   length: 0.9
