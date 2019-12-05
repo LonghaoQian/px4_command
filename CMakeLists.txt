@@ -138,6 +138,11 @@ add_executable(px4_multidrone_pos_estimator_pure_vision src/px4_multidrone_pos_e
 add_dependencies(px4_multidrone_pos_estimator_pure_vision px4_command_gencpp)
 target_link_libraries(px4_multidrone_pos_estimator_pure_vision ${catkin_LIBRARIES})
 
+##px4_interdrone_communication.cpp
+add_executable(px4_interdrone_communication src/px4_interdrone_communication.cpp)
+add_dependencies(px4_interdrone_communication px4_command_gencpp)
+target_link_libraries(px4_interdrone_communication ${catkin_LIBRARIES})
+
 ###### Test File ##########
 
 ###### Utilities File ##########

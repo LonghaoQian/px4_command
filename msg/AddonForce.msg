@@ -17,3 +17,5 @@ float32  R_1z        ## [N]
 float32  R_2x        ## [N]
 float32  R_2y        ## [N]
 float32  R_2z        ## [N]
+
+bool emergency        ##

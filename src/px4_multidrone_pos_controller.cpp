@@ -489,22 +489,22 @@ int main(int argc, char **argv)
             break;
         }
 
-        if(Flag_printf == 1)
-        {
-            //cout <<">>>>>>>>>>>>>>>>>>>>>> px4_pos_controller <<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-            // 打印无人机状态
+        if( Flag_printf == 1) {
             px4_command_utils::prinft_drone_state(_DroneState);
-            // 打印上层控制指令
             px4_command_utils::printf_command_control(Command_to_gs);
-            // 打印位置控制器中间计算量
-            pos_controller_GNC.printf_result();
-            // 打印位置控制器输出结果
+            // print out cooperative payload control result
+            if (Command_Now.Mode == command_to_mavros_multidrone::Payload_Stabilization ) {
+                pos_controller_GNC.printf_result();
+            } else {
+                cout<<" >>>>>>>> NOT IN PAYLOAD STABILIAZATION MODE! <<<<<<<<<<"<<endl;
+            }
+            // print the control output to FCU
             px4_command_utils::prinft_attitude_reference(_AttitudeReference);
         }else if(((int)(cur_time*10) % 50) == 0)
         {
             ROS_INFO("Controller running normally. Time stamp: %f [s]",cur_time);
         }
-
+        // send controller information for logging
         _Topic_for_log.header.stamp = ros::Time::now();
         _Topic_for_log.Drone_State = _DroneState;
         _Topic_for_log.Control_Command = Command_to_gs;

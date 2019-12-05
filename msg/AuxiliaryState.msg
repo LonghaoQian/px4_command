@@ -38,3 +38,6 @@ float32  u_lz     ##
 float32  acc_x  ##
 float32  acc_y  ##
 float32  acc_z  ##
+
+float32  rd_jx  ## 
+float32  rd_jy  ##

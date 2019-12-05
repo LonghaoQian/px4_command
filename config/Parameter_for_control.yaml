@@ -183,28 +183,29 @@ uav3_Pos_GNC:
   motor_intercept: 0.1
 
 Pos_GNC:
-  Type: 0 # 0 for baseline controller 1 for robust controller
-  MaxInclination: 40.0
+  Type: 0 # 0 for TCST method, 1 for JGCD method
+  MaxInclination: 50.0 # maximum inclination for 
   CableLengthTolerance: 1.2
+  UseAddonForce: true
   PubAuxiliaryState : true
   num_drone : 2
   kv_xy : 0.4
   Kv_z  : 0.6
-  kvi_xy : 0.01
-  kvi_z  : 0.05
+  kvi_xy : 0.00
+  kvi_z  : 0.00
   kR_xy : 0.4
   kR_z  : 0.25
   kRi_xy : 0.0
   kRi_z  : 0.0
   kL    : 0.15
-  Kphi_xy : 3.5
+  Kphi_xy : 4
   Kphi_z  : 5
   fp_max_x : 5
   fp_max_y : 5
   fp_max_z : 5
   lambda_j : 0.5
-  lambda_T : 1
-  lambda_R : 1
+  lambda_T : 0.15
+  lambda_R : 0.2
   kF_xy : 0.4
   kF_z :  0.5
   pos_int_max_x: 10
