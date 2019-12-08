@@ -38,7 +38,7 @@ Quad:
   mass: 1.5
 ## payload mass
 Payload:
-  mass: 0.72
+  mass: 0.95
 ## cable length
 Cable:
   length: 0.91
@@ -198,13 +198,13 @@ Pos_GNC:
   kR_z  : 0.25
   kRi_xy : 0.0
   kRi_z  : 0.0
-  kL    : 0.15
-  Kphi_xy : 3.35
-  Kphi_z  : 5
+  kL    : 0.14
+  Kphi_xy : 3.2
+  Kphi_z  : 4.5
   fp_max_x : 5
   fp_max_y : 5
   fp_max_z : 5
-  lambda_j : 0.45
+  lambda_j : 0.5
   lambda_T : 0.10
   lambda_R : 0.09
   kF_xy : 0.4

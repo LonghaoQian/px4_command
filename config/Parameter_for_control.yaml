@@ -197,9 +197,9 @@ Pos_GNC:
   kR_z  : 0.25
   kRi_xy : 0.0
   kRi_z  : 0.0
-  kL    : 0.15
-  Kphi_xy : 3.3
-  Kphi_z  : 5
+  kL    : 0.14
+  Kphi_xy : 3.2
+  Kphi_z  : 4.5
   fp_max_x : 5
   fp_max_y : 5
   fp_max_z : 5
