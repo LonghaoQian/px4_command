@@ -199,14 +199,14 @@ Pos_GNC:
   kRi_xy : 0.0
   kRi_z  : 0.0
   kL    : 0.15
-  Kphi_xy : 4
+  Kphi_xy : 3.35
   Kphi_z  : 5
   fp_max_x : 5
   fp_max_y : 5
   fp_max_z : 5
   lambda_j : 0.5
-  lambda_T : 0.15
-  lambda_R : 0.2
+  lambda_T : 0.11
+  lambda_R : 0.10
   kF_xy : 0.4
   kF_z :  0.5
   pos_int_max_x: 10
