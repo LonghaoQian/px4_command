@@ -422,7 +422,8 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
     if (num_drone<3) // if only two drones are involved, we have to remove one axis in control
     {
          angle_error(0) = 0;
-    }    
+    }
+     
     /*Step 4 calculate control law form the GNC 2019 paper*/
     for (int i=0; i<3; i++) {
         if(abs(IntegralAttitude(i)) < angle_int_start_error ) {
@@ -647,7 +648,11 @@ void payload_controller_GNC::printf_result()
         cout << "pitch : " << Euler_Target(1)*57.3 << " [DEG] ";
         cout << "yaw : "   << Euler_Target(2)*57.3 << " [DEG] ";
         cout << endl;
-
+        // display rotation matrix:
+        cout << "R_IP: " <<endl;
+        cout << R_IP<<endl;
+        cout << "R_IPd: " <<endl;
+        cout << R_IPd<<endl;
         // verify that the payload attitude
         Eigen::Vector3d Euler = quaternion_to_euler2(AttitudeQuaternionv);
         cout << "Current Euler, roll : "  << Euler(0)*57.3 << " [DEG] ";

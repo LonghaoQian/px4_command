@@ -1,4 +1,4 @@
-## parameter for px4_pos_controller.cpp
+## parameter for px4_multidrone_pos_controller.cpp
 ## 起飞高度
 Takeoff_height : 0.3
 Disarm_height : 0.3
@@ -42,6 +42,11 @@ Payload:
 ## cable length
 Cable:
   length: 0.91
+
+## single or multi-UAV mode
+CooperativeMode:
+  isMulti: false
+  droneID: 2              # single UAV payload mode is activated in drone 2
 
 ##geo fence for fsc
 geo_fence:
@@ -128,18 +133,26 @@ Circle_Trajectory:
   time_total: 50.0
   direction: 1.0
 
-# 位置环参数 for tie
+# parameter for single UAV payload using method in TIE paper
 Pos_tie:
-  Kp_xy : 0.5
-  Kp_z : 0.5
-  Kv_xy : 2.0
-  Kv_z : 2.0
+  issingleUAVused: true   # is single UAV payload used in control
+  isVisionused: true
+  isIntegrationOn: true
+  isPubAuxiliaryState: true
+  payload_mass: 0.5
+  quadrotor_mass : 1.45
+  cablelength : 1
+  motor_slope: 0.082
+  motor_intercept: 0.26
+  Kp_xy : 0.3
+  Kp_z :  0.6
+  Kv_xy : 1.7
+  Kv_z :  2
   T_tie_xy : 1.0
   T_tie_z : 1.0
-  Integration: 1.0
-  Kpv_xy: 1.0
-  Kpv_z: 1.0
-  KL : 1.0
+  Kpv_xy: 0.5
+  Kpv_z: 0.5
+  KL : 0.2
 
 # parameter for payload cooperative control 
 uav0_Pos_GNC:
@@ -147,7 +160,7 @@ uav0_Pos_GNC:
   cablelength : 0.91
   TetherOffset_x: 0.99
   TetherOffset_y: 0
-  TetherOffset_z: 0.1
+  TetherOffset_z: 0
   PayloadSharingPortion : 0.5
   motor_slope: 0.082
   motor_intercept: 0.26
@@ -158,7 +171,7 @@ uav1_Pos_GNC:
   cablelength : 0.91
   TetherOffset_x: -0.99
   TetherOffset_y: 0
-  TetherOffset_z: 0.1
+  TetherOffset_z: 0
   PayloadSharingPortion: 0.5
   motor_slope: 0.082
   motor_intercept: 0.26
@@ -191,22 +204,24 @@ Pos_GNC:
   PubAuxiliaryState : true
   num_drone : 2
   kv_xy : 0.4
-  Kv_z  : 0.6
+  Kv_z  : 0.7
   kvi_xy : 0.00
   kvi_z  : 0.00
   kR_xy : 0.4
-  kR_z  : 0.25
+  kR_z  : 0.2
   kRi_xy : 0.0
   kRi_z  : 0.0
   kL    : 0.14
-  Kphi_xy : 3.2
+  Kphi_xy : 3
   Kphi_z  : 4.5
   fp_max_x : 5
   fp_max_y : 5
   fp_max_z : 5
   lambda_j : 0.5
-  lambda_T : 0.10
-  lambda_R : 0.09
+  lambda_Txy : 0.1
+  lambda_Tz  : 0.3
+  lambda_Rxy : 0.09
+  lambda_Rz  : 0.09
   kF_xy : 0.4
   kF_z :  0.5
   pos_int_max_x: 10

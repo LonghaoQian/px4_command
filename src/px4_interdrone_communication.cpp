@@ -233,12 +233,12 @@ int main(int argc,
            0.0, 0.0, 0.1;
     // loading all parameters into the estimator:
     nh.param<int>   ("Pos_GNC/num_drone",num_of_drones,1);
-    nh.param<float> ("Pos_GNC/lambda_T", lambda_T(0,0),0.2);
-    nh.param<float> ("Pos_GNC/lambda_T", lambda_T(1,1),0.2);
-    nh.param<float> ("Pos_GNC/lambda_T", lambda_T(2,2),0.2);
-    nh.param<float> ("Pos_GNC/lambda_R", lambda_R(0,0),0.2);
-    nh.param<float> ("Pos_GNC/lambda_R", lambda_R(1,1),0.2);
-    nh.param<float> ("Pos_GNC/lambda_R", lambda_R(2,2),0.2);
+    nh.param<float> ("Pos_GNC/lambda_Txy", lambda_T(0,0),0.2);
+    nh.param<float> ("Pos_GNC/lambda_Txy", lambda_T(1,1),0.2);
+    nh.param<float> ("Pos_GNC/lambda_Tz", lambda_T(2,2),0.2);
+    nh.param<float> ("Pos_GNC/lambda_Rxy", lambda_R(0,0),0.2);
+    nh.param<float> ("Pos_GNC/lambda_Rxy", lambda_R(1,1),0.2);
+    nh.param<float> ("Pos_GNC/lambda_Rz", lambda_R(2,2),0.2);
     nh.param<float> ("Payload/mass", payload_mass, 1.0);
     Eigen::Vector3f temp_t_j;
     M_q = 0.0;// total mass of all quadrotorsa_j_sq

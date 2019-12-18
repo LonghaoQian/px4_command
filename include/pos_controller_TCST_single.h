@@ -1,6 +1,17 @@
 #ifndef POS_CONTROLLER_TIE_H
 #define POS_CONTROLLER_TIE_H
 
+/*
+
+Author: Longhao Qian
+Date : 2019 12 16
+
+Robust control from TCST paper for single UAV payload
+
+Visual feedback from April Tag
+
+*/
+
 #include <Eigen/Eigen>
 #include <math.h>
 #include <command_to_mavros.h>
@@ -16,7 +27,6 @@ using namespace std;
 
 class pos_controller_TCST_single
 {
-     //public表明该数据成员、成员函数是对全部用户开放的。全部用户都能够直接进行调用，在程序的不论什么其他地方訪问。
     public:
 
         //构造函数

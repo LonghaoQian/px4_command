@@ -46,21 +46,28 @@ struct PubTopic
     char str[100];
 };
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>UAV command and state <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-px4_command::ControlCommand Command_Now;                      //无人机当前执行命令
-px4_command::ControlCommand Command_Last;                     //无人机上一条执行命令
+px4_command::ControlCommand Command_Now;                      
+px4_command::ControlCommand Command_Last;                    
 px4_command::ControlCommand Command_to_gs;
-px4_command::DroneState _DroneState;                         //无人机状态量
+px4_command::DroneState _DroneState;                         // drone state from estimator
 Eigen::Vector3d throttle_sp;
 px4_command::ControlOutput _ControlOutput;
-px4_command::AttitudeReference _AttitudeReference;           //位置控制器输出，即姿态环参考量
+px4_command::AttitudeReference _AttitudeReference;           // attitude target sent to FCU
 float cur_time;
 px4_command::Topic_for_log _Topic_for_log;
 
-float Takeoff_height;                                       //起飞高度
-float Disarm_height;                                        //自动上锁高度
-float Use_accel;                                            // 1 for use the accel command
-int Flag_printf;
+/*--TO DO --- Auto Land*/
 
+float Takeoff_height;                                       // 
+float Disarm_height;                                        //
+
+float Use_accel;                                            // 1 for use the accel command
+
+int Flag_printf;
+bool isMulti;                                               // cooperative mode true for multi-drone, false for single drone
+bool isCorrectDrone;                                        // this is used in single-drone mode for determine whether the correct drone is used.
+int CurrentdroneID;
+int TargetdroneID;
 //>>--------------------------  geographic fence --------------------------------<<
 Eigen::Vector2f geo_fence_x;
 Eigen::Vector2f geo_fence_y;
@@ -89,15 +96,48 @@ void printf_param()
     cout << "geo_fence_x : "<< geo_fence_x[0] << " [m]  to  "<<geo_fence_x[1] << " [m]"<< endl;
     cout << "geo_fence_y : "<< geo_fence_y[0] << " [m]  to  "<<geo_fence_y[1] << " [m]"<< endl;
     cout << "geo_fence_z : "<< geo_fence_z[0] << " [m]  to  "<<geo_fence_z[1] << " [m]"<< endl;
+    cout <<">>>>>>>>>>>>>>>>>>>> Cooperative Control Mode <<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    if (isMulti) {
+        cout <<  "This drone is in multi-drone mode! "<< endl;
+    } else {
+        cout <<  "This drone is in single-drone mode! "<< endl;
+        if (!isCorrectDrone) {
+            // send a warning if the target drone ID is not current drone ID
+            cout <<"WARNING!! The designated drone ID is : "<< TargetdroneID <<". However, the current ID is : "<< CurrentdroneID <<endl;
+            cout << "The payload controller can not be activated!" <<endl;
+        } else {
+            cout << "This is the correct drone for single-drone payload experiment! " <<endl;
+        }       
+    }
+    cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" <<endl;
 }
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> call back functions <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void Command_cb(const px4_command::ControlCommand::ConstPtr& msg)
 {
     Command_Now = *msg;
-    // 无人机一旦接受到Land指令，则会屏蔽其他指令
+
+    // if "land"  is received, the drone does not respond to anthor command
     if(Command_Last.Mode == command_to_mavros_multidrone::Land) {
         Command_Now.Mode = command_to_mavros_multidrone::Land;
+    } else {
+        if (isMulti) {
+            // if the drone is in multi-drone mode, the drone does not respond to Payload_Stabilization_SingleUAV
+            // the drone will keep executing previous command
+            if (Command_Now.Mode == command_to_mavros_multidrone::Payload_Stabilization_SingleUAV) {
+                Command_Now = Command_Last;
+            }
+        } else {
+            // if the drone is in single-drone mode, the drone does not respond to Payload_Stabilization
+            // the drone will keep executing previous command
+            if (Command_Now.Mode == command_to_mavros_multidrone::Payload_Stabilization) {
+                Command_Now = Command_Last;
+            }
+            if (!isCorrectDrone) { // the command will be also overwritten if the drone ID does not match the designated ID
+                Command_Now = Command_Last;
+            }
+        }      
     }
+
     // Check for geo fence: If drone is out of the geo fence, it will land now.
     if(check_failsafe() == 1)
     {
@@ -132,6 +172,7 @@ int main(int argc, char **argv)
         strcat (px4_commmand_drone_state.str,argv[1]);
         strcat (px4_command_topic_for_log.str,argv[1]);
         strcpy (ID,argv[1]);
+        CurrentdroneID = *argv[1] - '0';
         ROS_INFO("UAV ID specified as: uav%s", argv[1]);
     } else {
         // if ID is not specified, then set the drone to UAV0
@@ -139,6 +180,7 @@ int main(int argc, char **argv)
         strcat (px4_commmand_drone_state.str,"0");
         strcat (px4_command_topic_for_log.str,"0");
         strcpy (ID,"0");
+        CurrentdroneID = 0;
         ROS_WARN("NO UAV ID specified, set ID to 0.");
     }
     strcat (px4_commmand_control_command.str,"/px4_command/control_command");
@@ -172,24 +214,28 @@ int main(int argc, char **argv)
     nh.param<float>("geo_fence/y_max", geo_fence_y[1], 0.9);
     nh.param<float>("geo_fence/z_min", geo_fence_z[0], 0.2);
     nh.param<float>("geo_fence/z_max", geo_fence_z[1], 2);
+    nh.param<bool>("CooperativeMode/isMulti",isMulti,false);
+    nh.param<int>("CooperativeMode/droneID",TargetdroneID,0);
+
+    if (TargetdroneID == CurrentdroneID) {
+        isCorrectDrone = true;
+    } else {
+        isCorrectDrone = false;
+    }
 
     // 位置控制一般选取为50Hz，主要取决于位置状态的更新频率
     ros::Rate rate(50.0);
 
     // 用于与mavros通讯的类，通过mavros发送控制指令至飞控【本程序->mavros->飞控】
-    /*TODO change this to multidrone case*/
     command_to_mavros_multidrone _command_to_mavros(ID);
-
-    // cpid is used for single UAV position control
+    // cpid is used for basic single UAV position control
     pos_controller_cascade_PID pos_controller_cascade_pid;
     ROS_INFO("cascade pid is used for single UAV control. ");
     pos_controller_cascade_pid.printf_param();
     // methods of payload stabilization with single UAVs
-    pos_controller_TIE      pos_controller_tie;
+    pos_controller_TIE      pos_controller_tie(ID,nh);
     // methods of payload stabilization with multiple UAVs
-    /*TODO*/
     payload_controller_GNC  pos_controller_GNC(ID,nh);
-    //payload_controller_TCST pos_controller_GNC(ID,nh);
     // pick control law will be specified in parameter files
     int SingleUAVPayloadController;
     int CooperativePayload;
@@ -403,7 +449,30 @@ int main(int argc, char **argv)
 
 
             break;
+        case command_to_mavros_multidrone::Payload_Stabilization_SingleUAV:
+            // stabilize payload with single UAV
+            Command_to_gs = Command_Now;
+            _ControlOutput = pos_controller_tie.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+            
+            if( pos_controller_tie.emergency_switch())
+            { // true means not in normal flight
+            Command_Now.Mode = command_to_mavros_multidrone::Payload_Land;
+            } else {
+              // false means ok
+                throttle_sp[0] = _ControlOutput.Throttle[0];
+                throttle_sp[1] = _ControlOutput.Throttle[1];
+                throttle_sp[2] = _ControlOutput.Throttle[2];
 
+                _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, 0);
+
+                if (Use_accel > 0.5) {
+                    _command_to_mavros.send_accel_setpoint(throttle_sp,0);
+                } else {
+                    _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
+                }
+            }
+
+            break;
         case command_to_mavros_multidrone::Payload_Stabilization: 
             Command_to_gs = Command_Now;
 
@@ -495,6 +564,8 @@ int main(int argc, char **argv)
             // print out cooperative payload control result
             if (Command_Now.Mode == command_to_mavros_multidrone::Payload_Stabilization ) {
                 pos_controller_GNC.printf_result();
+            } else if (Command_Now.Mode == command_to_mavros_multidrone::Payload_Stabilization_SingleUAV) {
+                pos_controller_tie.printf_result();
             } else {
                 cout<<" >>>>>>>> NOT IN PAYLOAD STABILIAZATION MODE! <<<<<<<<<<"<<endl;
             }

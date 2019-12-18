@@ -157,7 +157,7 @@ class command_to_mavros_multidrone
         set_mode_client = command_nh.serviceClient<mavros_msgs::SetMode>(mavros_set_mode);
     }
 
-    // 相应的命令分别为 待机,起飞，移动(惯性系ENU)，移动(机体系)，悬停，降落，上锁，紧急降落
+    // 相应的命令分别为 待机,起飞，移动(惯性系ENU)，悬停，降落，上锁，紧急降落
     enum Command_Type
     {
         Idle,
@@ -167,7 +167,7 @@ class command_to_mavros_multidrone
         Hold,
         Land,
         Disarm,
-        PPN_land,
+        Payload_Stabilization_SingleUAV,
         Trajectory_Tracking,
         Payload_Stabilization,
         Payload_Land,

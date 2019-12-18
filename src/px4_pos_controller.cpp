@@ -169,7 +169,7 @@ int main(int argc, char **argv)
     pos_controller_UDE pos_controller_ude;
     pos_controller_passivity pos_controller_ps;
     pos_controller_NE pos_controller_ne;
-    pos_controller_TIE pos_controller_tie;
+    pos_controller_TIE pos_controller_tie("2", nh);
     // 选择控制律
     int switch_ude;
     cout << "Please choose the controller: 0 for cascade_PID, 1 for PID, 2 for UDE, 3 for passivity, 4 for NE, 5 for tie: "<<endl;
@@ -606,77 +606,6 @@ int main(int argc, char **argv)
                 cout<<"Disarm successfully!"<<endl;
             }
 
-            break;
-
-        // 【PPN_land】 暂空。可进行自定义
-        case command_to_mavros::PPN_land:
-
-            if (Command_Last.Mode != command_to_mavros::PPN_land)
-            {
-                pos_des_prev[0] = _DroneState.position[0];
-                pos_des_prev[1] = _DroneState.position[1];
-                pos_des_prev[2] = _DroneState.position[2];
-            }
-
-            Command_to_gs.Mode = Command_Now.Mode;
-            Command_to_gs.Command_ID = Command_Now.Command_ID;
-
-            Command_to_gs.Reference_State.Sub_mode  = command_to_mavros::XYZ_POS;
-
-            vel_command[0] = ppn_kx * ( Command_Now.Reference_State.position_ref[0] - _DroneState.position[0]);
-            vel_command[1] = ppn_ky * ( Command_Now.Reference_State.position_ref[1] - _DroneState.position[1]);
-            vel_command[2] = ppn_kz * ( Command_Now.Reference_State.position_ref[2] - _DroneState.position[2]);
-
-            for (int i=0; i<3; i++)
-            {
-                Command_to_gs.Reference_State.position_ref[i] = pos_des_prev[i] + vel_command[i]*dt;
-            }
-
-            Command_to_gs.Reference_State.velocity_ref[0] = 0;
-            Command_to_gs.Reference_State.velocity_ref[1] = 0;
-            Command_to_gs.Reference_State.velocity_ref[2] = 0;
-            Command_to_gs.Reference_State.acceleration_ref[0] = 0;
-            Command_to_gs.Reference_State.acceleration_ref[1] = 0;
-            Command_to_gs.Reference_State.acceleration_ref[2] = 0;
-            Command_to_gs.Reference_State.yaw_ref = 0; //rad
-
-            for (int i=0; i<3; i++)
-            {
-                pos_des_prev[i] = Command_to_gs.Reference_State.position_ref[i];
-            }
-        
-            if(switch_ude == 0)
-            {
-                _ControlOutput = pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
-            }else if(switch_ude == 1)
-            {
-                _ControlOutput = pos_controller_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
-            }else if(switch_ude == 2)
-            {
-                _ControlOutput = pos_controller_ude.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
-            }else if(switch_ude == 3)
-            {
-                _ControlOutput = pos_controller_ps.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
-            }else if(switch_ude == 4)
-            {
-                _ControlOutput = pos_controller_ne.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
-            }
-            
-            throttle_sp[0] = _ControlOutput.Throttle[0];
-            throttle_sp[1] = _ControlOutput.Throttle[1];
-            throttle_sp[2] = _ControlOutput.Throttle[2];
-
-            _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
-
-            if(Use_accel > 0.5)
-            {
-                _command_to_mavros.send_accel_setpoint(throttle_sp,Command_to_gs.Reference_State.yaw_ref);
-            }else
-            {
-                _command_to_mavros.send_attitude_setpoint(_AttitudeReference);            
-            }
-
-            
             break;
         
         // Trajectory_Tracking 轨迹追踪控制，与上述追踪点或者追踪速度不同，此时期望输入为一段轨迹

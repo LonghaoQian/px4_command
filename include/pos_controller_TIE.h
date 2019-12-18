@@ -1,215 +1,342 @@
 #ifndef POS_CONTROLLER_TIE_H
 #define POS_CONTROLLER_TIE_H
 
+/*
+
+Author: Longhao Qian
+Date : 2019 12 16
+
+Robust control from TIE paper
+
+Visual feedback from April Tag
+
+*/
+
 #include <Eigen/Eigen>
 #include <math.h>
 #include <command_to_mavros.h>
 #include <px4_command_utils.h>
 #include <math_utils.h>
-
+#include <iostream>
+#include <string>
 #include <px4_command/DroneState.h>
 #include <px4_command/TrajectoryPoint.h>
 #include <px4_command/AttitudeReference.h>
 #include <px4_command/ControlOutput.h>
-
-using namespace std;
-
+#include <nav_msgs/Odometry.h>
+using std::string;
+using std::iostream;
 class pos_controller_TIE
 {
-     //public表明该数据成员、成员函数是对全部用户开放的。全部用户都能够直接进行调用，在程序的不论什么其他地方訪问。
     public:
-
-        //构造函数
-        pos_controller_TIE(void):
-            pos_tie_nh("~")
+        pos_controller_TIE(char drone_ID[20], ros::NodeHandle& main_handle)
         {
-            pos_tie_nh.param<float>("Quad/mass", Quad_MASS, 1.0);
-            pos_tie_nh.param<float>("Payload/mass", Payload_Mass, 1.0);
-            pos_tie_nh.param<float>("Cable/length", Cable_Length, 1.0);
-            pos_tie_nh.param<float>("Pos_tie/T_tie_xy", T_tie[0], 1.0);
-            pos_tie_nh.param<float>("Pos_tie/T_tie_xy", T_tie[1], 1.0);
-            pos_tie_nh.param<float>("Pos_tie/T_tie_z",  T_tie[2], 1.0);
+            // use drone ID to get the correct name for parameters
+            uav_pref = "uav";
+            uav_pref = uav_pref + drone_ID[0];
+            main_handle.param<float>("Pos_tie/quadrotor_mass", Quad_MASS, 1.0);
+            main_handle.param<float>("Pos_tie/payload_mass", Payload_Mass, 0.5);
+            main_handle.param<float>("Pos_tie/cablelength", Cable_Length, 1.0);
+            main_handle.param<double>("Pos_tie/motor_slope", motor_slope,0.3);
+            main_handle.param<double>("Pos_tie/motor_intercept", motor_intercept, 0);
 
-            pos_tie_nh.param<float>("Pos_tie/Integration", integration, 1.0);
+            main_handle.param<bool>("Pos_tie/isVisionused", isVisionused, false);
 
-            pos_tie_nh.param<float>("Pos_tie/Kp_xy", Kp[0], 1.0);
-            pos_tie_nh.param<float>("Pos_tie/Kp_xy", Kp[1], 1.0);
-            pos_tie_nh.param<float>("Pos_tie/Kp_z" , Kp[2], 2.0);
-            pos_tie_nh.param<float>("Pos_tie/Kv_xy", Kv[0], 0.5);
-            pos_tie_nh.param<float>("Pos_tie/Kv_xy", Kv[1], 0.5);
-            pos_tie_nh.param<float>("Pos_tie/Kv_z",  Kv[2], 0.5);
-            pos_tie_nh.param<float>("Pos_tie/Kpv_xy", Kpv[0], 0.0);
-            pos_tie_nh.param<float>("Pos_tie/Kpv_xy", Kpv[1], 0.0);
-            pos_tie_nh.param<float>("Pos_tie/Kpv_z",  Kpv[2], 0.0);
-            pos_tie_nh.param<float>("Pos_tie/KL", KL, 0.0);
+            T_tie.setZero();
+            Lambda.setZero();
+            main_handle.param<float>("Pos_tie/T_tie_xy", T_tie(0,0), 1.0);
+            main_handle.param<float>("Pos_tie/T_tie_xy", T_tie(1,1), 1.0);
+            main_handle.param<float>("Pos_tie/T_tie_z",  T_tie(2,2), 1.0);
 
-            pos_tie_nh.param<float>("Limitne/pxy_error_max", pos_error_max[0], 0.6);
-            pos_tie_nh.param<float>("Limitne/pxy_error_max", pos_error_max[1], 0.6);
-            pos_tie_nh.param<float>("Limit/pz_error_max" ,   pos_error_max[2], 1.0);
-            pos_tie_nh.param<float>("Limit/vxy_error_max",   vel_error_max[0], 0.3);
-            pos_tie_nh.param<float>("Limit/vxy_error_max",  vel_error_max[1], 0.3);
-            pos_tie_nh.param<float>("Limit/vz_error_max" ,  vel_error_max[2], 1.0);
-            pos_tie_nh.param<float>("Limit/pxy_int_max"  ,  int_max[0], 0.5);
-            pos_tie_nh.param<float>("Limit/pxy_int_max"  ,  int_max[1], 0.5);
-            pos_tie_nh.param<float>("Limit/pz_int_max"   ,  int_max[2], 0.5);
-            pos_tie_nh.param<float>("Limit/tilt_max", tilt_max, 20.0);
-            pos_tie_nh.param<float>("Limit/int_start_error"  , int_start_error, 0.3);
+            Lambda(0,0) = 1/T_tie(0,0);
+            Lambda(1,1) = 1/T_tie(1,1);
+            Lambda(2,2) = 1/T_tie(2,2);
 
-            u_l      = Eigen::Vector3f(0.0,0.0,0.0);
-            u_d      = Eigen::Vector3f(0.0,0.0,0.0);
-            u_p      = Eigen::Vector3f(0.0,0.0,0.0);
-            r        = Eigen::Vector2f(0.0,0.0);
-            v_p      = Eigen::Vector2f(0.0,0.0);
-            integral = Eigen::Vector3f(0.0,0.0,0.0);
+            main_handle.param<bool>("Pos_tie/isPubAuxiliaryState", isPublishAuxiliarySate, false);
+
+            main_handle.param<bool>("Pos_tie/isIntegrationOn", isIntegrationOn, false);
+
+            Kp.setZero();
+            Kv.setZero();
+            Kpv.setZero();
+
+            main_handle.param<float>("Pos_tie/Kp_xy", Kp(0,0), 1.0);
+            main_handle.param<float>("Pos_tie/Kp_xy", Kp(1,1), 1.0);
+            main_handle.param<float>("Pos_tie/Kp_z" , Kp(2,2), 2.0);
+
+            main_handle.param<float>("Pos_tie/Kv_xy", Kv(0,0), 0.5);
+            main_handle.param<float>("Pos_tie/Kv_xy", Kv(1,1), 0.5);
+            main_handle.param<float>("Pos_tie/Kv_z",  Kv(2,2), 0.5);
+
+            main_handle.param<float>("Pos_tie/Kpv_xy", Kpv(0,0), 0.0);
+            main_handle.param<float>("Pos_tie/Kpv_xy", Kpv(1,1), 0.0);
+            main_handle.param<float>("Pos_tie/Kpv_z",  Kpv(2,2), 0.0);
+
+            main_handle.param<float>("Pos_tie/KL", KL, 0.0);
+
+            main_handle.param<float>("Limitne/pxy_error_max", pos_error_max[0], 0.6);
+            main_handle.param<float>("Limitne/pxy_error_max", pos_error_max[1], 0.6);
+            main_handle.param<float>("Limit/pz_error_max" ,   pos_error_max[2], 1.0);
+            main_handle.param<float>("Limit/vxy_error_max",   vel_error_max[0], 0.3);
+            main_handle.param<float>("Limit/vxy_error_max",   vel_error_max[1], 0.3);
+            main_handle.param<float>("Limit/vz_error_max" ,   vel_error_max[2], 1.0);
+
+            Eigen::Vector3f  int_max_temp;
+
+            main_handle.param<float>("Limit/pxy_int_max"  ,  int_max_temp(0), 0.5);
+            main_handle.param<float>("Limit/pxy_int_max"  ,  int_max_temp(1), 0.5);
+            main_handle.param<float>("Limit/pz_int_max"   ,  int_max_temp(2), 0.5);
+
+            int_max = int_max_temp.norm();
+
+            main_handle.param<float>("Limit/tilt_max"     ,   tilt_max, 20.0);
+            main_handle.param<float>("Limit/int_start_error"  , int_start_error, 0.3);
+            // reset all the states
+            u_l.setZero();
+            u_d.setZero();
+            u_p.setZero();
+            u_s.setZero();
+            r.setZero();
+            v_p.setZero();
+            UAV_attitude.setZero();
+            integral.setZero();
+            accel_sp.setZero();
+            pos_error.setZero();
+            vel_error.setZero();
+            thrust_sp.setZero();
+            throttle_sp.setZero();
+            Identity.setIdentity();
+            R_Ij.setIdentity();
+            omega_j.setZero();
+            fL.setZero();
+            L.setZero();
             B<<1.0,0.0,
                0.0,1.0,
                0.0,0.0;
+            payload_position_vision.setZero();
+            payload_velocity_vision.setZero();
+            payload_position_mocap.setZero();
+            payload_velocity_mocap.setZero();
             Cable_Length_sq = Cable_Length*Cable_Length;
+            TotalLiftingMass = Quad_MASS + Payload_Mass;
+            visualflag             = false;
+            isvisualfeedbacknormal = false;
+            isvisualqualitygood    = false;
+            isintegrationoverlimit = false;
+            signallosscounter = 0;
+            isEmergency = false;
+            // initialize subscriber:
+            subVisualMeasurement =  main_handle.subscribe("/" + uav_pref +"/px4_command/visualmeasurement",
+                                                            100, 
+                                                            &pos_controller_TIE::GetPayloadVisualMeasurement,
+                                                            this);
+            if (isPublishAuxiliarySate)  {
+               // pubAuxiliaryState   = main_handle.advertise<px4_command::AuxiliaryState > ("/" + uav_pref + "/px4_command/auxiliarystate", 1000);
+            }
         }
-        float integration;
-        //Quadrotor and Payload Parameter
+        void printf_param();
+        void printf_result();
+        bool emergency_switch();
+        px4_command::ControlOutput pos_controller(const px4_command::DroneState& _DroneState,
+                                                  const px4_command::TrajectoryPoint& _Reference_State,
+                                                  float dt);
+        px4_command::ControlOutput _ControlOutput;                                          
+    private:
+        // ------------ private functions-----------------//    
+        void GetPayloadVisualMeasurement(const nav_msgs::Odometry::ConstPtr& msg);
+        //------------- private variables ---------------//
+        ros::Publisher pubAuxiliaryState;
+        ros::Subscriber subVisualMeasurement;
+        bool isPublishAuxiliarySate;
+        bool isIntegrationOn;
+        bool isEmergency;
+        //quadrotor and payload parameter
+        string mode;
+        string uav_pref;
         float Quad_MASS;
         float Payload_Mass;
         float Cable_Length;
         float Cable_Length_sq;
-        //Controller parameter for the control law
-        Eigen::Vector3f Kp;
-        Eigen::Vector3f Kv;
-        Eigen::Vector3f T_tie;
-        Eigen::Vector3f Kpv;
+        float TotalLiftingMass;
+        double motor_slope;
+        double motor_intercept;
+        // payload states
+        Eigen::Vector3f L;// cable vector
+        Eigen::Vector3f L_dot;// cable velocity
+        Eigen::Vector3f Lb;// cable vector in quadrotor body fixed frame
+        Eigen::Vector3f Lb_dot; // cable velocity in quadrotor body fixed frame
+        Eigen::Vector2f r;
+        Eigen::Vector2f v_p;
+        Eigen::Matrix<float, 3,2> B;
+        Eigen::Matrix3f R_Ij;
+        // visual measurement 
+        nav_msgs::Odometry payloadvisualfeedback;
+        bool visualflag;
+        bool isvisualfeedbacknormal;
+        bool isvisualqualitygood;
+        bool isintegrationoverlimit;
+        int  signallosscounter;
+        //controller parameters
+        bool isVisionused;
+        Eigen::Matrix3f Kp;
+        Eigen::Matrix3f Kv;
+        Eigen::Matrix3f T_tie;
+        Eigen::Matrix3f Lambda;
+        Eigen::Matrix3f Kpv;
+        Eigen::Matrix3f Identity;
         float KL;
 
-        //Limitation
+        //control output limit
+        Eigen::Vector3f reference_position;
+        Eigen::Vector3f UAV_position;
+        Eigen::Vector3f UAV_velocity;
+        Eigen::Vector4f UAV_attitude;
+        Eigen::Vector3f omega_j;
+        Eigen::Vector3f payload_position_vision;
+        Eigen::Vector3f payload_velocity_vision;
+        Eigen::Vector3f payload_position_mocap;
+        Eigen::Vector3f payload_velocity_mocap;
+        Eigen::Vector3f pos_error;
+        Eigen::Vector3f vel_error;
         Eigen::Vector3f pos_error_max;
         Eigen::Vector3f vel_error_max;
-        Eigen::Vector3f int_max;
+        float int_max;
         float tilt_max;
         float int_start_error;
 
-        //积分项
-        Eigen::Vector3f u_l,u_d,u_p; //u_l for nominal contorol(PD), u_d for ude control(disturbance estimator)
-        Eigen::Vector2f v_p, r;
-        Eigen::Matrix<float, 3,2> B;
+        //control states
+        Eigen::Vector3f u_l,u_d,u_p,u_s; //u_l for nominal contorol(PD), u_d for ude control(disturbance estimator)
         Eigen::Vector3f integral;
-
-        px4_command::ControlOutput _ControlOutput;
-
-
-        //Printf the TIE parameter
-        void printf_param();
-
-        void printf_result();
-
-        // Position control main function 
-        // [Input: Current state, Reference state, sub_mode, dt; Output: AttitudeReference;]
-        px4_command::ControlOutput pos_controller(const px4_command::DroneState& _DroneState, const px4_command::TrajectoryPoint& _Reference_State, float dt);
-
-    private:
-        ros::NodeHandle pos_tie_nh;
-
+        Eigen::Vector3d accel_sp;
+        Eigen::Vector3d thrust_sp;
+        Eigen::Vector3d throttle_sp;
+        Eigen::Vector3f fL;
 };
 
 px4_command::ControlOutput pos_controller_TIE::pos_controller(
     const px4_command::DroneState& _DroneState, 
     const px4_command::TrajectoryPoint& _Reference_State, float dt)
 {
-    Eigen::Vector3d accel_sp;
-    
-    // 计算误差项
-    Eigen::Vector3f pos_error;
-    Eigen::Vector3f vel_error;
-    
-    px4_command_utils::cal_pos_error(_DroneState, _Reference_State, pos_error);
-    px4_command_utils::cal_vel_error(_DroneState, _Reference_State, vel_error);
-
-    // 误差项限幅
+    mode = _DroneState.mode;
+    // get quadrotor position and velocity
     for (int i=0; i<3; i++)
     {
-        pos_error[i] = constrain_function(pos_error[i], pos_error_max[i]);
-        vel_error[i] = constrain_function(vel_error[i], vel_error_max[i]);
+        reference_position(i) = _Reference_State.position_ref[i];
+        UAV_position(i) = _DroneState.position[i];
+        UAV_velocity(i) = _DroneState.velocity[i];
+        payload_position_mocap(i) = _DroneState.payload_pos[i];
+        payload_velocity_mocap(i) = _DroneState.payload_vel[i];
+        omega_j(i) = _DroneState.attitude_rate[i]; // verify the attitude is in the body fixed frame
+    }
+    // determine whether the vision feedback is ok
+    if (visualflag) {
+        visualflag = false;//
+        signallosscounter = 0; // reset the signal counter
+        isvisualfeedbacknormal = true; // set visual feedback flag to true
+    } else {
+        // waiting feedback for next time step:
+        if (signallosscounter > 4) {
+            isvisualfeedbacknormal = false;
+        } else {
+            signallosscounter++; // advance the signal loss counter
+        }
+    }
+    // if normal determine the visual quality:
+    if (isvisualfeedbacknormal) {
+        if (payloadvisualfeedback.pose.covariance[1]<0.5) {
+            isvisualqualitygood = true;
+        } else {
+            isvisualqualitygood = false;
+        }
     }
 
-// control law form the tie paper
-    float payload_relative_vel[3];
-    float payload_relative_pos[3];
+    // get the quadrotor rotation matrix
+    UAV_attitude(0) = _DroneState.attitude_q.w;
+    UAV_attitude(1) = _DroneState.attitude_q.x;
+    UAV_attitude(2) = _DroneState.attitude_q.y;
+    UAV_attitude(3) = _DroneState.attitude_q.z;
+    R_Ij =  QuaterionToRotationMatrix(UAV_attitude);
+    if (isvisualqualitygood && isvisualfeedbacknormal) {
+        // visual feedback is only used when visual measurement is good and visual stream is normal
+            payload_position_vision(0) = payloadvisualfeedback.pose.pose.position.x;
+            payload_position_vision(1) = payloadvisualfeedback.pose.pose.position.y;
+            payload_position_vision(2) = payloadvisualfeedback.pose.pose.position.z;
 
-    for(int i=0;i<3;i++)
-    {
-        payload_relative_vel[i] = _DroneState.payload_vel[i] -  _DroneState.velocity[i];// get payload relative velocity
-        payload_relative_pos[i] = _DroneState.payload_pos[i] -  _DroneState.position[i];// get payload relative velocity
-    }
+            payload_velocity_vision(0) = payloadvisualfeedback.twist.twist.linear.x;
+            payload_velocity_vision(1) = payloadvisualfeedback.twist.twist.linear.y;
+            payload_velocity_vision(2) = payloadvisualfeedback.twist.twist.linear.z;
 
-    for (int i = 0;i<2;i++)
-    {
-        r(i) = payload_relative_pos[i];
-        v_p(i) = payload_relative_vel[i];
+            Lb = payload_position_vision;
+            Lb_dot = payload_velocity_vision;
+
+            // convert to inertial frame
+            L = R_Ij * Lb;
+            L_dot = R_Ij *  Lb_dot + R_Ij * Hatmap(omega_j) *  Lb;
+
+            // 
+
+            payload_position_vision = UAV_position + L;
+            payload_velocity_vision = UAV_velocity + L_dot;
+
+    } else {
+        // if not, switch back to mocap signal
+        L = - UAV_position + payload_position_mocap;
+        L_dot = - UAV_velocity + payload_velocity_mocap;
     }
+    r(0) = L(0);
+    r(1) = L(1);
+    v_p(0) = L_dot(0);
+    v_p(1) = L_dot(1);
+    // calculate quadrotor position and velocity error:
+
+    pos_error = reference_position - UAV_position;
+    vel_error = - UAV_velocity; // position stabilization
     
     float sq_r = r(0)*r(0) + r(1)*r(1);
-
-    if (Cable_Length_sq - sq_r>0.01)
-    {
+    // update b matrix:
+    if (Cable_Length_sq - sq_r>0.01) {
         B(2,0) =  r(0)/sqrt((Cable_Length_sq - sq_r));
         B(2,1) =  r(1)/sqrt((Cable_Length_sq - sq_r));
-    }else{
+    }else {
         B(2,0) = 0.1;
         B(2,1) = 0.1;
     }
 
     u_p = B*(v_p + KL*r);
-    for(int i = 0;i<3;i++)
-    {
-        u_p[i] = Kpv[i] * u_p[i];
-    }
 
+    u_p = Kpv * u_p;
+    u_s = Kp * pos_error + Kv * vel_error;
+    u_s = constrain_vector(u_s, 5);// constraint the error
 
-    for (int i = 0; i < 3; i++)
-    {
-
-        u_l[i] = Kp[i] * pos_error[i] + Kv[i] * vel_error[i] + u_p[i];
-        // additional feedback based on payload relative position:
-        u_d[i] = 1.0* integration / T_tie[i] * (Payload_Mass*(1+Kpv[i])* payload_relative_vel[i] + Quad_MASS*_DroneState.velocity[i]  + integral[i])/(Payload_Mass+Quad_MASS);
-    }
-
-    // 更新积分项
-    for (int i=0; i<3; i++)
-    {
-        if(abs(pos_error[i]) < int_start_error)
-        {
-            //integral[i] += pos_error[i] * dt;
-            integral[i] += ( -Kp[i]*pos_error[i] - Kv[i] * vel_error[i]) * dt;
-
-            if(abs(integral[i]) > int_max[i])
-            {
-                cout << "Integral saturation! " << " [0-1-2] "<< i <<endl;
-                cout << "[integral]: "<< integral[i]<<" [int_max]: "<<int_max[i]<<" [m/s] "<<endl;
+    // calculate the integral term:
+    if((_DroneState.mode == "OFFBOARD") && isIntegrationOn) {
+        if(u_s.norm() < int_start_error) {
+            // integral[i] += ( -Kp[i]*pos_error[i] - Kv[i] * vel_error[i]) * dt 
+            // check whether if the integral is out of bound
+            if(integral.norm() > int_max)  {
+                // if the norm is over limit, stop the integration 
+                isintegrationoverlimit = true;
+            } else {
+                isintegrationoverlimit = false;
+                integral += - u_s * dt;
             }
-
-            integral[i] = constrain_function(integral[i], int_max[i]);
-        }else
-        {
-            integral[i] = 0;
         }
-
-        // If not in OFFBOARD mode, set all intergral to zero.
-        if(_DroneState.mode != "OFFBOARD")
-        {
-            integral[i] = 0;
-        }
-        u_d[i] = constrain_function(u_d[i], int_max[i]);
+    } else {
+        integral.setZero();
     }
-    // 期望加速度
+    // calcualte total control force
+    u_l = u_s + u_p;
+
+    u_d = Lambda * (Payload_Mass*(Identity + Kpv)* B * v_p + Quad_MASS*UAV_velocity  + integral)/(TotalLiftingMass);
+
     accel_sp[0] = u_l[0] - u_d[0];
     accel_sp[1] = u_l[1] - u_d[1];
-    accel_sp[2] = u_l[2] - u_d[2] + 9.8;
-    
-    // 期望推力 = 期望加速度 × 质量
-    // 归一化推力 ： 根据电机模型，反解出归一化推力
-    Eigen::Vector3d thrust_sp;
-    Eigen::Vector3d throttle_sp;
-    thrust_sp =  px4_command_utils::accelToThrust(accel_sp, Payload_Mass+Quad_MASS, tilt_max);
-    throttle_sp = px4_command_utils::thrustToThrottle(thrust_sp);
-
+    accel_sp[2] = u_l[2] - u_d[2] + 9.81; // + 9.81 for counteracting gravity
+    fL = TotalLiftingMass * accel_sp.cast <float> ();
+    // thrust = TotalLiftingMass * accel_sp
+    thrust_sp   = px4_command_utils::accelToThrust(accel_sp, TotalLiftingMass, tilt_max);
+    throttle_sp = px4_command_utils::thrustToThrottleLinear(thrust_sp, motor_slope, motor_intercept);
+    // publish auxiliary state
     for (int i=0; i<3; i++)
     {
         _ControlOutput.u_l[i] = u_l[i];
@@ -222,9 +349,32 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
 
 }
 
+void pos_controller_TIE::GetPayloadVisualMeasurement(const nav_msgs::Odometry::ConstPtr& msg)
+{
+        payloadvisualfeedback = *msg; // update visual measurement
+        visualflag = true;// signal a new measurement feed has been revcieved.
+}
+
+bool pos_controller_TIE::emergency_switch()
+{
+    /* 1. check whether the total length of the string is within a safe range */
+    if (L.norm()>Cable_Length*1.2)
+    {
+        isEmergency = true;
+    }
+    /* 2. check if the r_j is too large */
+
+    if (r.norm()>Cable_Length*sin(50/57.3))
+    {
+        isEmergency = true;
+    }
+
+    return isEmergency;
+}
+
 void pos_controller_TIE::printf_result()
 {
-    cout <<">>>>>>>>>>>>>>>>>>>>>>  tie Position Controller  <<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    cout <<">>>>>>>>>>>>>>>>>>>>>>  Single UAV Payload Position Controller (TIE) <<<<<<<<<<<<<<<<<<<<<<" <<endl;
 
     //固定的浮点显示
     cout.setf(ios::fixed);
@@ -236,47 +386,95 @@ void pos_controller_TIE::printf_result()
     cout.setf(ios::showpos);
 
     cout<<setprecision(2);
-
+    cout << "The autopilot mode is : " << mode << endl;
+    cout << "Pos Error [X Y Z] : " << pos_error(0) << " [m] " << pos_error(1) << " [m] " << pos_error(2) << " [m] " << endl;
+    cout << "Vel Error [X Y Z] : " << vel_error(0) << " [m/s] " << vel_error(1) << " [m/s] " << vel_error(2) << " [m/s] " << endl;
     cout << "u_l [X Y Z] : " << u_l[0] << " [N] "<< u_l[1]<<" [N] "<<u_l[2]<<" [N] "<<endl;
-    cout << "int [X Y Z] : " << integral[0] << " [N] "<< integral[1]<<" [N] "<<integral[2]<<" [N] "<<endl;
     cout << "u_d [X Y Z] : " << u_d[0] << " [N] "<< u_d[1]<<" [N] "<<u_d[2]<<" [N] "<<endl;
+    if (isintegrationoverlimit) {
+        cout << "Integration over limit !" << endl;
+    }
+    cout << "int [X Y Z] : " << integral[0] << " [N] "<< integral[1]<<" [N] "<<integral[2]<<" [N] "<<endl;
+    cout << "r [X Y] : " << r(0) << " [m] " << r(1) << "[m] " <<endl;
+    cout << "v_p [X Y] : " << v_p(0) << " [m/s] " << v_p(1) <<  " [m/s] " << endl;
+    cout << "fL [X Y Z] : " << fL(0) << " [N] " << fL(1) << " [N] " << fL(2) << " [N] " <<endl;
+    cout << "B matrix is : " << endl;
+    cout << B << endl;
+    cout << "signal loss counter is : " << signallosscounter << endl;
+    if (isvisualfeedbacknormal) {
+        cout << "---Visual feedback normal.---" <<endl;
+    } else {
+        cout << "---Visual feedback lost, switch to mocap signal !!!---" <<endl;
+    }
+    if (isvisualqualitygood) {
+        cout << "---Good visual measurment quality.---" <<endl;
+    } else {
+        cout << "---Bad visual measurment quality, switch to mocap signal !!!---" <<endl;
+    }
+
+    cout<< "payload vel [X Y Z] from mocap is : " << payload_velocity_mocap(0) << " [m/s] " 
+                                                  << payload_velocity_mocap(1) << " [m/s] "
+                                                  << payload_velocity_mocap(2) << " [m/s] " << endl;
+    cout<< "payload vel [X Y Z] from vision is :" << payload_velocity_vision(0) << " [m/s] " 
+                                                  << payload_velocity_vision(1) << " [m/s] "
+                                                  << payload_velocity_vision(2) << " [m/s] " << endl;
+    cout<< "vel measurement error : "  << payload_velocity_mocap(0) - payload_velocity_vision(0) << " [m/s] " 
+                                       << payload_velocity_mocap(1) - payload_velocity_vision(2) << " [m/s] "
+                                       << payload_velocity_mocap(1) - payload_velocity_vision(2) << " [m/s] " <<endl;
+    cout<< "payload pos [X Y Z] from mocap is : " << payload_position_mocap(0) << " [m] "
+                                                  << payload_position_mocap(1) << " [m] "
+                                                  << payload_position_mocap(2) << " [m] " <<endl;
+    cout<< "payload pos [X Y Z] from vision is : " << payload_position_vision(0) << " [m] "
+                                                   << payload_position_vision(1) << " [m] "
+                                                   << payload_position_vision(2) << " [m] " <<endl;
+    cout<< "pos measurement error : "  << payload_position_mocap(0) - payload_position_vision(0) << " [m] " 
+                                       << payload_position_mocap(1) - payload_position_vision(1) << " [m] "
+                                       << payload_position_mocap(2) - payload_position_vision(2) << " [m] " <<endl;
+    cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" <<endl;                                                  
 }
 
 // 【打印参数函数】
 void pos_controller_TIE::printf_param()
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Payload control method in TIE paper (Parameter)  <<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    cout << uav_pref << " is used for single payload stabilization" << endl;
+    cout <<"Vehicle Paramter: " <<endl;
+    cout <<"Quad_MASS : "   << Quad_MASS << " [kg] "<<endl;
+    cout <<"Payload_MASS : "<< Payload_Mass << " [kg] "<< endl;
+    cout <<"Cable_Length : "<< Cable_Length << " [m] "<< endl;
+    cout << "motor_slope: " << motor_slope << " motor_intercept: " << motor_intercept << endl;
 
-    cout <<"Quad_MASS : "<< Quad_MASS << endl;
-    cout <<"Payload_MASS : "<< Payload_Mass << endl;
-    cout <<"Cable_Length : "<< Cable_Length << endl;
+    cout <<"Kp_x : "<< Kp(0,0) << endl;
+    cout <<"Kp_y : "<< Kp(1,1) << endl;
+    cout <<"Kp_z : "<< Kp(2,2) << endl;
 
-    cout <<"Kp_x : "<< Kp[0] << endl;
-    cout <<"Kp_y : "<< Kp[1] << endl;
-    cout <<"Kp_z : "<< Kp[2] << endl;
+    cout <<"T_tie_x : "<< T_tie(0,0) << endl;
+    cout <<"T_tie_y : "<< T_tie(1,1) << endl;
+    cout <<"T_tie_z : "<< T_tie(2,2) << endl;
 
-    cout <<"T_tie_x : "<< T_tie[0] << endl;
-    cout <<"T_tie_y : "<< T_tie[1] << endl;
-    cout <<"T_tie_z : "<< T_tie[2] << endl;
+    cout <<"Kv_x : "<< Kv(0,0) << endl;
+    cout <<"Kv_y : "<< Kv(1,1) << endl;
+    cout <<"Kv_z : "<< Kv(2,2) << endl;
 
-    cout <<"Kv_x : "<< Kv[0] << endl;
-    cout <<"Kv_y : "<< Kv[1] << endl;
-    cout <<"Kv_z : "<< Kv[2] << endl;
+    cout <<"Kpv_x"<< Kpv(0,0)<<endl;
+    cout <<"Kpv_y"<< Kpv(1,1)<<endl;
+    cout <<"Kpv_z"<< Kpv(2,2)<<endl;
 
-    cout <<"Kpv_x"<< Kpv[0]<<endl;
-    cout <<"Kpv_y"<< Kpv[1]<<endl;
-    cout <<"Kpv_z"<< Kpv[2]<<endl;
-
-    cout <<"Limit:  " <<endl;
-    cout <<"pxy_error_max : "<< pos_error_max[0] << endl;
-    cout <<"pz_error_max :  "<< pos_error_max[2] << endl;
+    cout <<"Control output limit:  " <<endl;
     cout <<"vxy_error_max : "<< vel_error_max[0] << endl;
     cout <<"vz_error_max :  "<< vel_error_max[2] << endl;
-    cout <<"pxy_int_max : "<< int_max[0] << endl;
-    cout <<"pz_int_max : "<< int_max[2] << endl;
+    cout <<"int_max : "<< int_max << endl;
     cout <<"tilt_max : "<< tilt_max << endl;
     cout <<"int_start_error : "<< int_start_error << endl;
+    cout << "Lambda : " <<endl;
+    cout << Lambda << endl;
 
+    if (isPublishAuxiliarySate) {
+        cout << "Auxiliary state is going to be published! " <<endl;
+    } else {
+        cout << "No Auxiliary state published! " <<endl;
+    }
+    cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" <<endl;
 }
 
 #endif
