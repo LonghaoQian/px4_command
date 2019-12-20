@@ -24,6 +24,7 @@ Visual feedback from April Tag
 #include <px4_command/AttitudeReference.h>
 #include <px4_command/ControlOutput.h>
 #include <nav_msgs/Odometry.h>
+#include <px4_command/AuxiliaryState_singleUAV.h>
 using std::string;
 using std::iostream;
 class pos_controller_TIE
@@ -108,11 +109,16 @@ class pos_controller_TIE
             Identity.setIdentity();
             R_Ij.setIdentity();
             omega_j.setZero();
+            dot_vq.setZero();
+            accel_body.setZero();
             fL.setZero();
             L.setZero();
             B<<1.0,0.0,
                0.0,1.0,
                0.0,0.0;
+            g_I<<0.0,
+                 0.0,
+                -9.81;
             payload_position_vision.setZero();
             payload_velocity_vision.setZero();
             payload_position_mocap.setZero();
@@ -131,7 +137,7 @@ class pos_controller_TIE
                                                             &pos_controller_TIE::GetPayloadVisualMeasurement,
                                                             this);
             if (isPublishAuxiliarySate)  {
-               // pubAuxiliaryState   = main_handle.advertise<px4_command::AuxiliaryState > ("/" + uav_pref + "/px4_command/auxiliarystate", 1000);
+               pubAuxiliaryState   = main_handle.advertise<px4_command::AuxiliaryState_singleUAV> ("/" + uav_pref + "/px4_command/auxiliarystate_singleUAV", 1000);
             }
         }
         void printf_param();
@@ -144,6 +150,7 @@ class pos_controller_TIE
     private:
         // ------------ private functions-----------------//    
         void GetPayloadVisualMeasurement(const nav_msgs::Odometry::ConstPtr& msg);
+        void SendAuxiliaryState();
         //------------- private variables ---------------//
         ros::Publisher pubAuxiliaryState;
         ros::Subscriber subVisualMeasurement;
@@ -160,6 +167,7 @@ class pos_controller_TIE
         float TotalLiftingMass;
         double motor_slope;
         double motor_intercept;
+        Eigen::Vector3f g_I;
         // payload states
         Eigen::Vector3f L;// cable vector
         Eigen::Vector3f L_dot;// cable velocity
@@ -169,6 +177,8 @@ class pos_controller_TIE
         Eigen::Vector2f v_p;
         Eigen::Matrix<float, 3,2> B;
         Eigen::Matrix3f R_Ij;
+        Eigen::Vector3f dot_vq;
+        Eigen::Vector3f accel_body;
         // visual measurement 
         nav_msgs::Odometry payloadvisualfeedback;
         bool visualflag;
@@ -256,6 +266,15 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
     UAV_attitude(2) = _DroneState.attitude_q.y;
     UAV_attitude(3) = _DroneState.attitude_q.z;
     R_Ij =  QuaterionToRotationMatrix(UAV_attitude);
+
+    // get the acceleration reading from IMU
+    for( int i = 0; i < 3 ; i ++) {
+        accel_body(i) = _DroneState.acceleration[i];
+    }
+    dot_vq = R_Ij * (accel_body) + g_I;// calculate true acc in inertial frame dot_vqj in TCST paper
+
+    Lb.setZero();
+    Lb_dot.setZero();
     if (isvisualqualitygood && isvisualfeedbacknormal) {
         // visual feedback is only used when visual measurement is good and visual stream is normal
             payload_position_vision(0) = payloadvisualfeedback.pose.pose.position.x;
@@ -302,8 +321,8 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
         B(2,1) = 0.1;
     }
 
-    u_p = B*(v_p + KL*r);
-
+    //u_p = B*(v_p + KL*r);
+    u_p.setZero();
     u_p = Kpv * u_p;
     u_s = Kp * pos_error + Kv * vel_error;
     u_s = constrain_vector(u_s, 5);// constraint the error
@@ -327,7 +346,7 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
     // calcualte total control force
     u_l = u_s + u_p;
 
-    u_d = Lambda * (Payload_Mass*(Identity + Kpv)* B * v_p + Quad_MASS*UAV_velocity  + integral)/(TotalLiftingMass);
+    u_d = Lambda * (Payload_Mass*(Identity + Kpv)* B * (v_p + KL*r) + Quad_MASS*UAV_velocity  + integral)/(TotalLiftingMass);
 
     accel_sp[0] = u_l[0] - u_d[0];
     accel_sp[1] = u_l[1] - u_d[1];
@@ -337,6 +356,9 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
     thrust_sp   = px4_command_utils::accelToThrust(accel_sp, TotalLiftingMass, tilt_max);
     throttle_sp = px4_command_utils::thrustToThrottleLinear(thrust_sp, motor_slope, motor_intercept);
     // publish auxiliary state
+    if (isPublishAuxiliarySate) {
+        SendAuxiliaryState();
+    }
     for (int i=0; i<3; i++)
     {
         _ControlOutput.u_l[i] = u_l[i];
@@ -370,6 +392,71 @@ bool pos_controller_TIE::emergency_switch()
     }
 
     return isEmergency;
+}
+
+void pos_controller_TIE::SendAuxiliaryState() 
+{
+    px4_command::AuxiliaryState_singleUAV msg;
+    msg.header.stamp = ros::Time::now();
+    msg.Integral_x  = integral(0);
+    msg.Integral_y  = integral(1);
+    msg.Integral_z  = integral(2);
+
+    msg.q_0 = UAV_attitude(0);
+    msg.q_1 = UAV_attitude(1);
+    msg.q_2 = UAV_attitude(2);
+    msg.q_3 = UAV_attitude(3);
+
+    msg.r_x = r(0);
+    msg.r_y = r(1);
+
+    msg.v_x = v_p(0);
+    msg.v_y = v_p(1);
+
+    msg.pos_error_x = pos_error(0);
+    msg.pos_error_y = pos_error(1);
+    msg.pos_error_z = pos_error(2);
+
+    msg.vel_error_x = vel_error(0);
+    msg.vel_error_y = vel_error(1);
+    msg.vel_error_z = vel_error(2);
+
+    msg.Lv_x = payload_position_vision(0);
+    msg.Lv_y = payload_position_vision(1);
+    msg.Lv_z = payload_position_vision(2);
+
+    msg.Lm_x = payload_position_mocap(0);
+    msg.Lm_y = payload_position_mocap(1);
+    msg.Lm_z = payload_position_mocap(2);
+
+    msg.Vpv_x = payload_velocity_vision(0);
+    msg.Vpv_y = payload_velocity_vision(1);
+    msg.Vpv_z = payload_velocity_vision(2);
+
+    msg.Vpm_x = payload_velocity_mocap(0);
+    msg.Vpm_y = payload_velocity_mocap(1);
+    msg.Vpm_z = payload_velocity_mocap(2);
+
+    msg.Lb_x  = Lb(0);
+    msg.Lb_y  = Lb(1);
+    msg.Lb_z  = Lb(2);
+
+    msg.Lb_dot_x = Lb_dot(0);
+    msg.Lb_dot_y = Lb_dot(1);
+    msg.Lb_dot_z = Lb_dot(2);
+
+    msg.fL_x = fL(0);
+    msg.fL_y = fL(1);
+    msg.fL_z = fL(2);
+
+    msg.acc_x  = dot_vq(0);
+    msg.acc_y  = dot_vq(1);
+    msg.acc_z  = dot_vq(2);
+
+    msg.isvisualfeedbacknormal = isvisualfeedbacknormal;
+    msg.isvisualqualitygood    = isvisualqualitygood ; 
+    msg.signallosscounter      = signallosscounter ;
+    pubAuxiliaryState.publish(msg);
 }
 
 void pos_controller_TIE::printf_result()

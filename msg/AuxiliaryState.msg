@@ -35,6 +35,10 @@ float32  u_lx     ##
 float32  u_ly     ##
 float32  u_lz     ##
 
+float32  fLj_x  ## [N]
+float32  fLj_y  ## [N]
+float32  fLj_z  ## [N]
+
 float32  acc_x  ##
 float32  acc_y  ##
 float32  acc_z  ##

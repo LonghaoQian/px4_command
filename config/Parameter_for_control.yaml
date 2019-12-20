@@ -43,6 +43,11 @@ Payload:
 Cable:
   length: 0.9
 
+## single or multi-UAV mode
+CooperativeMode:
+  isMulti: false
+  droneID: 2              # single UAV payload mode is activated in drone 2
+
 ##geo fence for fsc
 geo_fence:
   x_min: -1.6
@@ -128,18 +133,26 @@ Circle_Trajectory:
   time_total: 50.0
   direction: 1.0
 
-# 位置环参数 for tie
+# parameter for single UAV payload using method in TIE paper
 Pos_tie:
-  Kp_xy : 0.5
-  Kp_z : 0.5
-  Kv_xy : 2.0
-  Kv_z : 2.0
+  issingleUAVused: true   # is single UAV payload used in control
+  isVisionused: true
+  isIntegrationOn: true
+  isPubAuxiliaryState: true
+  payload_mass: 0.5
+  quadrotor_mass : 1.45
+  cablelength : 1
+  motor_slope: 0.082
+  motor_intercept: 0.26
+  Kp_xy : 0.3
+  Kp_z :  0.6
+  Kv_xy : 1.7
+  Kv_z :  2
   T_tie_xy : 1.0
   T_tie_z : 1.0
-  Integration: 1.0
-  Kpv_xy: 1.0
-  Kpv_z: 1.0
-  KL : 1.0
+  Kpv_xy: 0.6
+  Kpv_z: 0.6
+  KL : 0.3
 
 # parameter for payload cooperative control 
 uav0_Pos_GNC:

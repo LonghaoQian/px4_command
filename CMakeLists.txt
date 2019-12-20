@@ -35,6 +35,7 @@ add_message_files(
   DIRECTORY msg
   FILES
   AuxiliaryState.msg
+  AuxiliaryState_singleUAV.msg
   ControlCommand.msg
   TrajectoryPoint.msg
   Trajectory.msg

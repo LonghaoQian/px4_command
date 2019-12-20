@@ -144,7 +144,7 @@ Pos_tie:
   cablelength : 1
   motor_slope: 0.082
   motor_intercept: 0.26
-  Kp_xy : 0.3
+  Kp_xy : 0.4
   Kp_z :  0.6
   Kv_xy : 1.7
   Kv_z :  2
