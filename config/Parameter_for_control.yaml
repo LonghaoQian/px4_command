@@ -142,8 +142,8 @@ Pos_tie:
   payload_mass: 0.45
   quadrotor_mass : 1.57
   cablelength : 1
-  motor_slope: 0.082
-  motor_intercept: 0.26
+  motor_slope: 0.0943
+  motor_intercept: 0.1407
   Kp_xy : 0.3
   Kp_z :  0.6
   Kv_xy : 1.7
