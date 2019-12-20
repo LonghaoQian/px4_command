@@ -144,15 +144,15 @@ Pos_tie:
   cablelength : 1
   motor_slope: 0.0943
   motor_intercept: 0.1407
-  Kp_xy : 0.3
+  Kp_xy : 0.4
   Kp_z :  0.6
   Kv_xy : 1.7
   Kv_z :  2
   T_tie_xy : 1.0
   T_tie_z : 1.0
-  Kpv_xy: 0.6
-  Kpv_z: 0.6
-  KL : 0.3
+  Kpv_xy: 0.3
+  Kpv_z: 0.3
+  KL : 0.15
 
 # parameter for payload cooperative control 
 uav0_Pos_GNC:
