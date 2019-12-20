@@ -139,8 +139,8 @@ Pos_tie:
   isVisionused: true
   isIntegrationOn: true
   isPubAuxiliaryState: true
-  payload_mass: 0.5
-  quadrotor_mass : 1.45
+  payload_mass: 0.45
+  quadrotor_mass : 1.57
   cablelength : 1
   motor_slope: 0.082
   motor_intercept: 0.26
