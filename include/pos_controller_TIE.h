@@ -185,9 +185,10 @@ class pos_controller_TIE
         bool isvisualfeedbacknormal;
         bool isvisualqualitygood;
         bool isintegrationoverlimit;
+        bool isVisionused;
         int  signallosscounter;
         //controller parameters
-        bool isVisionused;
+
         Eigen::Matrix3f Kp;
         Eigen::Matrix3f Kv;
         Eigen::Matrix3f T_tie;
@@ -275,7 +276,7 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
 
     Lb.setZero();
     Lb_dot.setZero();
-    if (isvisualqualitygood && isvisualfeedbacknormal) {
+    if (isVisionused && isvisualqualitygood && isvisualfeedbacknormal) {
         // visual feedback is only used when visual measurement is good and visual stream is normal
             payload_position_vision(0) = payloadvisualfeedback.pose.pose.position.x;
             payload_position_vision(1) = payloadvisualfeedback.pose.pose.position.y;
@@ -543,9 +544,11 @@ void pos_controller_TIE::printf_param()
     cout <<"Kv_y : "<< Kv(1,1) << endl;
     cout <<"Kv_z : "<< Kv(2,2) << endl;
 
-    cout <<"Kpv_x"<< Kpv(0,0)<<endl;
-    cout <<"Kpv_y"<< Kpv(1,1)<<endl;
-    cout <<"Kpv_z"<< Kpv(2,2)<<endl;
+    cout <<"Kpv_x : "<< Kpv(0,0)<<endl;
+    cout <<"Kpv_y : "<< Kpv(1,1)<<endl;
+    cout <<"Kpv_z : "<< Kpv(2,2)<<endl;
+ 
+    cout << "KL : " << KL << endl;
 
     cout <<"Control output limit:  " <<endl;
     cout <<"vxy_error_max : "<< vel_error_max[0] << endl;
@@ -555,6 +558,13 @@ void pos_controller_TIE::printf_param()
     cout <<"int_start_error : "<< int_start_error << endl;
     cout << "Lambda : " <<endl;
     cout << Lambda << endl;
+
+    if (isVisionused) {
+        cout << " Vision feedbaqck is used! Verify the feedback first ! " <<endl;
+    } else {
+        cout << " Vision feedback is not used!! " <<endl;
+    }
+
 
     if (isPublishAuxiliarySate) {
         cout << "Auxiliary state is going to be published! " <<endl;

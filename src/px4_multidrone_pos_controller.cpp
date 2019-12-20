@@ -241,33 +241,37 @@ int main(int argc, char **argv)
     int CooperativePayload;
     nh.param<int>("SinglePayloadController", SingleUAVPayloadController, 0);
     nh.param<int>("CooperativePayload", CooperativePayload, 0);
-    switch (SingleUAVPayloadController) {
-        case 0: {
-            pos_controller_tie.printf_param();
-            break;
+ 
+    if(isMulti) {
+        switch (CooperativePayload) {
+            case 0: {
+                pos_controller_GNC.printf_param();
+                break;
+            }
+            case 1: {
+                /*TODO: pos_controller_jgcd.printf_param();*/
+                break;
+            }
+            case 2: {
+                //pos_controller_gnc2019.printf_param();
+                break;
+            }
+            default: {
+                pos_controller_GNC.printf_param();
+                break;
+            }
         }
-        default: {
-            pos_controller_tie.printf_param();
-            break;
-        }
-    }
-    switch (CooperativePayload) {
-        case 0: {
-            pos_controller_GNC.printf_param();
-            break;
-        }
-        case 1: {
-            /*TODO: pos_controller_jgcd.printf_param();*/
-            break;
-        }
-        case 2: {
-            //pos_controller_gnc2019.printf_param();
-            break;
-        }
-        default: {
-            pos_controller_GNC.printf_param();
-            break;
-        }
+    } else {
+        switch (SingleUAVPayloadController) {
+            case 0: {
+                pos_controller_tie.printf_param();
+                break;
+            }
+            default: {
+                pos_controller_tie.printf_param();
+                break;
+            }
+        }      
     }
 
     /******-------------------print parameters ---------------------******/

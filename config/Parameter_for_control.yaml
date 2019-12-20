@@ -136,7 +136,7 @@ Circle_Trajectory:
 # parameter for single UAV payload using method in TIE paper
 Pos_tie:
   issingleUAVused: true   # is single UAV payload used in control
-  isVisionused: true
+  isVisionused: false
   isIntegrationOn: true
   isPubAuxiliaryState: true
   payload_mass: 0.45
