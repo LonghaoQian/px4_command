@@ -170,6 +170,9 @@ class payload_controller_GNC
             v_j.setZero();
             rd_j.setZero();
             f_p_j.setZero();
+            e_3<<0,
+                 0,
+                 1;
             // robust control related.
             Delta_pt.setZero();
             Delta_rt.setZero();
@@ -276,6 +279,7 @@ class payload_controller_GNC
         Eigen::Matrix3f kRi;
         float kL;
         Eigen::Vector3f g_I;
+        Eigen::Vector3f e_3;
         Eigen::Matrix3f lambda_j;
         Eigen::Matrix3f Ej;
         Eigen::Matrix3f D;
@@ -472,6 +476,7 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
     rd_j = Cable_Length *  f_p_j.segment<2>(0)/f_p_j.norm(); // calculate the desired cable tile angle
     Eigen::Vector3f U;
     if (isAddonForcedUsed) {
+        ///rd_j.setZero();
         PayloadDisturbance =  PayloadSharingPortion * ( Delta_pt + R_IP * Ej * Delta_rt);
         U = Vp + kv*(pos_error + kvi * IntegralPose) 
             - R_IP * TetherOffsetCross*(Omega_p + kR * angle_error + kRi * IntegralAttitude) 
@@ -488,7 +493,8 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
     accel_sp[0] = u_l[0] - u_d[0];
     accel_sp[1] = u_l[1] - u_d[1];
     accel_sp[2] = u_l[2] - u_d[2] + 9.81;
-    f_L_j = TotalLiftedMass * accel_sp.cast <float> ();
+    Eigen::Vector3f temp_F = TotalLiftedMass * accel_sp.cast <float> ();
+    f_L_j = temp_F.norm() * (R_Ij * e_3);
     // calculate the required thrust under tilt angle constraint
     thrust_sp =  px4_command_utils::accelToThrust(accel_sp, TotalLiftedMass, tilt_max);
     // calculate the required throttle command
@@ -515,13 +521,8 @@ void payload_controller_GNC::pubauxiliarystate()
 {
         // record time
         Auxstate.header.stamp = ros::Time::now();
-        Auxstate.IntegralPose_x = IntegralPose(0);
-        Auxstate.IntegralPose_y = IntegralPose(1);
-        Auxstate.IntegralPose_z = IntegralPose(2);
 
-        Auxstate.IntegralAngle_x = IntegralAttitude(0);
-        Auxstate.IntegralAngle_y = IntegralAttitude(1);
-        Auxstate.IntegralAngle_z = IntegralAttitude(2);
+        Auxstate.L_measured = L_j.norm();
 
         Auxstate.q_0 = Quad_Drone(0);
         Auxstate.q_1 = Quad_Drone(1);
@@ -547,9 +548,13 @@ void payload_controller_GNC::pubauxiliarystate()
         Auxstate.Euler_pitch =  Euler(1)*57.3;
         Auxstate.Euler_yaw  =   Euler(2)*57.3;
 
-        Auxstate.u_lx  = u_l(0);
-        Auxstate.u_ly  = u_l(1);
-        Auxstate.u_lz  = u_l(2);
+        Auxstate.fLj_x  = f_L_j(0);
+        Auxstate.fLj_y  = f_L_j(1);
+        Auxstate.fLj_z  = f_L_j(2);
+
+        Auxstate.Delta_jp_x = Delta_j_p(0);
+        Auxstate.Delta_jp_y = Delta_j_p(1);
+        Auxstate.Delta_jp_z = Delta_j_p(2);
 
         Auxstate.acc_x = acc_x;
         Auxstate.acc_y = acc_y;
@@ -639,6 +644,7 @@ void payload_controller_GNC::printf_result()
         cout << "IntegralPose [X Y Z] : " << IntegralPose(0) << " [N] " << IntegralPose(1) << " [N] " << IntegralPose(2) <<" [N] "<<endl;
         cout << "r_j [X Y] : " << r_j(0) << " [m] " << r_j(1) << " [m] " <<endl;
         cout << "v_j [X Y] : " << v_j(0) << " [m/s] "<< v_j(1) << " [m/s] " << endl;
+        cout << "length from mocap: " << L_j.norm() << " [m] " <<endl;
         cout << "Pos Error [X Y Z] : " << pos_error[0] << " [m] " <<  pos_error[1] << " [m] " <<  pos_error[2] << " [m] " << endl;
         cout << "Angle Error [X Y Z] : " << angle_error[0] << " [] "<< angle_error[1] << " [] " << angle_error[2] << " [] " <<endl;
         cout << ">>>>>> Payload Target Attitude and Attitude Verification <<<<<<<<<" <<endl;

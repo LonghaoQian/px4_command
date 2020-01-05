@@ -17,6 +17,7 @@
 #include <Eigen/Eigen>
 #include <math_utils.h>
 #include <mavros_msgs/State.h>
+#include <sensor_msgs/BatteryState.h>
 #include <Frame_tf_utils.h>
 #include <mavros_msgs/CommandBool.h>
 #include <mavros_msgs/SetMode.h>
@@ -54,6 +55,10 @@ bool UAVsubFlag;
 bool PaylaodsubFlag;
 bool MocapOK;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>   Callbacks   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+void GetUAVBattery(const sensor_msgs::BatteryState::ConstPtr &msg) {
+    _DroneState.battery_voltage   = msg->voltage;
+    _DroneState.battery_remaining = msg->percentage;
+}
 void GetUAVState(const px4_command::Mocap::ConstPtr& msg) {
     UAV_motion = *msg;
     for ( int i = 0; i < 3; i ++) {
@@ -109,6 +114,7 @@ int main(int argc,
     SubTopic mocap_UAV;
     SubTopic mavros_state;
     SubTopic mavros_imu_data;
+    SubTopic mavros_battery;
     PubTopic px4_command_drone_state;
     PubTopic mavros_vision_pose_pose;
     // add preflex: (mavros and px4_command use lower case uav, while mocap use upper case UAV)
@@ -117,11 +123,13 @@ int main(int argc,
     strcpy (mavros_imu_data.str,"/uav"); 
     strcpy (px4_command_drone_state.str,"/uav"); 
     strcpy (mavros_vision_pose_pose.str,"/uav"); 
+    strcpy (mavros_battery.str,"/uav");
     if ( argc > 1) {
     // if ID is specified as the second argument 
         strcat (mocap_UAV.str,argv[1]);
         strcat (mavros_state.str,argv[1]);
         strcat (mavros_imu_data.str,argv[1]);
+        strcat (mavros_battery.str,argv[1]);
         strcat (px4_command_drone_state.str,argv[1]);
         strcat (mavros_vision_pose_pose.str,argv[1]);
         ROS_INFO("UAV ID specified as: UAV%s", argv[1]);
@@ -132,6 +140,7 @@ int main(int argc,
         strcat (mavros_imu_data.str,"0");
         strcat (px4_command_drone_state.str,"0");
         strcat (mavros_vision_pose_pose.str,"0");
+        strcat (mavros_battery.str,"0");
         ROS_WARN("NO UAV ID specified, set ID to 0.");
     }
     
@@ -139,16 +148,19 @@ int main(int argc,
     strcat (mavros_imu_data.str,"/mavros/imu/data");
     strcat (px4_command_drone_state.str,"/px4_command/drone_state");
     strcat (mavros_vision_pose_pose.str,"/mavros/vision_pose/pose");
-
+    strcat (mavros_battery.str,"/mavros/battery");
 
     ROS_INFO("Subscribe uav Mocap from: %s", mocap_UAV.str);
     ROS_INFO("Subscribe payload from: /mocap/Payload");
     ROS_INFO("Subscribe mavros_msgs::State from: %s", mavros_state.str);
     ROS_INFO("Subscribe IMU from: %s", mavros_imu_data.str); 
+    ROS_INFO("Subscribe battery info from: %s", mavros_battery.str); 
     ROS_INFO("Publish DroneState to: %s", px4_command_drone_state.str);
     ROS_INFO("Publish PoseStamped to: %s", mavros_vision_pose_pose.str);
+    
     // subscriber
     ros::Subscriber UAV_motion_sub     = nh.subscribe<px4_command::Mocap>(mocap_UAV.str, 1000, GetUAVState);
+    ros::Subscriber MavrosBattery_sub  = nh.subscribe<sensor_msgs::BatteryState> (mavros_battery.str,1000,GetUAVBattery);
     ros::Subscriber Payload_motion_sub = nh.subscribe<px4_command::Mocap>("/mocap/Payload", 1000, GetPayloadState);
     ros::Subscriber MavrosState_sub    = nh.subscribe<mavros_msgs::State>(mavros_state.str, 100, GetMavrosState);
     ros::Subscriber Attitude_sub       = nh.subscribe<sensor_msgs::Imu>(mavros_imu_data.str, 100, GetAttitude);
