@@ -94,7 +94,9 @@ Eigen::Matrix3f lambda_T;
 Eigen::Matrix3f lambda_R;
 Eigen::Vector3f cablelength;
 Eigen::Vector3f cablelength_squared;
-
+//Eigen::Matrix<float 3,Dynamic> E_j;
+// cross feeding terms
+Eigen::Vector3f F1,F2,R1,R2, Zeta, Eta;
 void GetCommand(const px4_command::ControlCommand::ConstPtr& msg)
 {
     Command_Now = *msg;
@@ -256,6 +258,7 @@ int main(int argc,
         M_q += quadrotor_mass(i);
         A += quadrotor_mass(i) * Hatmap(temp_t_j);
         J_q += - quadrotor_mass(i) * Hatmap(temp_t_j) * Hatmap(temp_t_j);
+        // TO DO: calculate Ej
     }
 
     // form the communication channels
@@ -327,9 +330,12 @@ int main(int argc,
                     FR2.setZero();// auxiliary force in delta_R estimation
                     DT.setZero(); // total disturbance on quadrotors
                     DR.setZero(); // total disturbance moment on quadrotors
+                    R1.setZero();
+                    R2.setZero();
                     for (int i = 0; i < num_of_drones ; i ++) {
                         r_j = r_sq.col(i);
                         v_j = v_sq.col(i);
+                        //mu_j = 
                         t_j_cross = Hatmap(t_sq.col(i));
                         DT += Delta_sq.col(i);
                         DR += t_j_cross * R_PI *  Delta_sq.col(i);
@@ -343,6 +349,9 @@ int main(int argc,
                             B_j(2,0) = -0.1;
                             B_j(2,1) = -0.1;
                         }
+                        //temp = B_j * (v_j + mu_j);
+                        //R1 += a_j_sq(i) * temp;
+                        //R2 += a_j_sq(i) * E_j * R_PI * temp;
                         BT += quadrotor_mass(i) * B_j * v_j;
                         FR += t_j_cross * (quadrotor_mass(i)*(omega_p_cross * R_PI *B_j*v_j - omega_p_cross * t_j_cross *omega_p -  R_PI * g_I) - R_PI * f_L_sq.col(i));
                         FR2 += quadrotor_mass(i)* t_j_cross * R_PI * B_j * v_j;
@@ -359,6 +368,10 @@ int main(int argc,
                     Delta_rt = constrain_vector(Delta_rt, 5.0);
                     // check whether the estimation is out of bound
                     /* Step 3  TO calculate all remaining cross-feeding terms */ 
+                    //F1_dot = - lambda_1 * F1 + kr1*R1;
+                    //F2_dot = - lambda_2 * F2 + kr1*R2;
+                    //F1 += dt * F1_dot;
+                    //F2 += dt * F2_dot;
                 }
                 break;
             default:

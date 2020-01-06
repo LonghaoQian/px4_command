@@ -76,20 +76,19 @@ Eigen::Vector2f geo_fence_z;
 Eigen::Vector3d Takeoff_position = Eigen::Vector3d(0.0,0.0,0.0);
 Eigen::Vector3d pos_drone_mocap;                             //无人机当前位置 (vicon)
 
-/*---------------------utility functions -------------------------------*/
-int check_failsafe()
-{
-    if (_DroneState.position[0] < geo_fence_x[0] || _DroneState.position[0] > geo_fence_x[1] ||
-        _DroneState.position[1] < geo_fence_y[0] || _DroneState.position[1] > geo_fence_y[1] ||
-        _DroneState.position[2] < geo_fence_z[0] || _DroneState.position[2] > geo_fence_z[1]) {
-        return 1;
-        ROS_WARN("Out of the geo fence, the drone is landing");
+/*--------------------- utility functions -------------------------------*/
+bool CheckReferencePosition(const px4_command::ControlCommand& command_) {
+    // check whether the position command is inside the safe zone
+    if (command_.Reference_State.position_ref[0] < geo_fence_x[0] || command_.Reference_State.position_ref[0] > geo_fence_x[1] ||
+        command_.Reference_State.position_ref[1] < geo_fence_y[0] || command_.Reference_State.position_ref[1] > geo_fence_y[1] ||
+        command_.Reference_State.position_ref[2] < geo_fence_z[0] || command_.Reference_State.position_ref[2] > geo_fence_z[1]) {
+        return false;
+        ROS_WARN("Control command is out of the safe zone. ");
     } else {
-        return 0;
+        return true;
     }
 }
-void printf_param()
-{
+void printf_param() {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Parameter <<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
     cout << "Takeoff_height: "<< Takeoff_height<<" [m] "<<endl;
     cout << "Disarm_height : "<< Disarm_height <<" [m] "<<endl;
@@ -98,9 +97,9 @@ void printf_param()
     cout << "geo_fence_z : "<< geo_fence_z[0] << " [m]  to  "<<geo_fence_z[1] << " [m]"<< endl;
     cout <<">>>>>>>>>>>>>>>>>>>> Cooperative Control Mode <<<<<<<<<<<<<<<<<<<<<<<" <<endl;
     if (isMulti) {
-        cout <<  "This drone is in multi-drone mode! "<< endl;
+        cout <<  " This drone is in multi-drone mode! "<< endl;
     } else {
-        cout <<  "This drone is in single-drone mode! "<< endl;
+        cout <<  " This drone is in single-drone mode! "<< endl;
         if (!isCorrectDrone) {
             // send a warning if the target drone ID is not current drone ID
             cout <<"WARNING!! The designated drone ID is : "<< TargetdroneID <<". However, the current ID is : "<< CurrentdroneID <<endl;
@@ -112,8 +111,7 @@ void printf_param()
     cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" <<endl;
 }
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> call back functions <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-void Command_cb(const px4_command::ControlCommand::ConstPtr& msg)
-{
+void Command_cb(const px4_command::ControlCommand::ConstPtr& msg) {
     Command_Now = *msg;
 
     // if "land"  is received, the drone does not respond to anthor command
@@ -121,39 +119,47 @@ void Command_cb(const px4_command::ControlCommand::ConstPtr& msg)
         Command_Now.Mode = command_to_mavros_multidrone::Land;
     } else {
         if (isMulti) {
-            // if the drone is in multi-drone mode, the drone does not respond to Payload_Stabilization_SingleUAV
-            // the drone will keep executing previous command
+            /* if the drone is in multi-drone mode, the drone does not respond to Payload_Stabilization_SingleUAV
+             the drone will keep executing previous command */
             if (Command_Now.Mode == command_to_mavros_multidrone::Payload_Stabilization_SingleUAV) {
                 Command_Now = Command_Last;
             }
+            /*TO DO, add a fleet status check*/
         } else {
-            // if the drone is in single-drone mode, the drone does not respond to Payload_Stabilization
-            // the drone will keep executing previous command
-            if (Command_Now.Mode == command_to_mavros_multidrone::Payload_Stabilization) {
-                Command_Now = Command_Last;
-            }
-            if (!isCorrectDrone) { // the command will be also overwritten if the drone ID does not match the designated ID
-                Command_Now = Command_Last;
+            // if the drone is in single-drone mode, the drone should not respond to Payload_Stabilization command
+            // the drone will keep executing previous move enu command
+            if(isCorrectDrone) {
+                // if is the correct drone, check the command type
+                if (Command_Now.Mode == command_to_mavros_multidrone::Payload_Stabilization) {
+                    Command_Now = Command_Last;
+                }
+            } else {
+                /* if this is not the correct drone, the drone should not respond neither 
+                Payload_Stabilization nor Payload_Stabilization_SingleUAV, therefore:
+                */
+                if (Command_Now.Mode == command_to_mavros_multidrone::Payload_Stabilization) {
+                    Command_Now = Command_Last;
+                } else if (Command_Now.Mode == command_to_mavros_multidrone::Payload_Stabilization_SingleUAV ) {
+                    Command_Now = Command_Last;
+                }
+                // this way, the drone will only respond to Move ENU command
             }
         }      
     }
 
     // Check for geo fence: If drone is out of the geo fence, it will land now.
-    if(check_failsafe() == 1)
-    {
-        Command_Now.Mode = command_to_mavros_multidrone::Land;
+    if(CheckReferencePosition(Command_Now)) {
+        // if the reference command is out of the safe range, 
+        Command_Now = Command_Last;
     }
 }
 
-void drone_state_cb(const px4_command::DroneState::ConstPtr& msg)
-{
+void drone_state_cb(const px4_command::DroneState::ConstPtr& msg) {
     _DroneState = *msg;
-
     _DroneState.time_from_start = cur_time;
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     ros::init(argc, argv, "px4_multidrone_pos_controller");
     ros::NodeHandle nh("~");
 
@@ -192,30 +198,25 @@ int main(int argc, char **argv)
     ROS_INFO("Publish Topic_for_log to: %s", px4_command_topic_for_log.str);
 
     // 本话题来自根据需求自定义的上层模块，比如track_land.cpp 比如move.cpp
-    ros::Subscriber Command_sub = nh.subscribe<px4_command::ControlCommand>(px4_commmand_control_command.str, 100, Command_cb);
-
-    // subscribe payload pose target
-    //ros::Subscriber Payload_Command_sub = nh.subscribe<px4_command::PayloadPoseCommand>("/payload/px4_command/control_command",100,PayloadPoseTargetSub);
-
+    ros::Subscriber Command_sub     = nh.subscribe<px4_command::ControlCommand>(px4_commmand_control_command.str, 100, Command_cb);
     // 本话题来自根据需求自定px4_pos_estimator.cpp
     ros::Subscriber drone_state_sub = nh.subscribe<px4_command::DroneState>(px4_commmand_drone_state.str, 100, drone_state_cb);
-
     // 发布log消息至ground_station.cpp
-    ros::Publisher log_pub = nh.advertise<px4_command::Topic_for_log>(px4_command_topic_for_log.str, 100);
+    ros::Publisher log_pub          = nh.advertise<px4_command::Topic_for_log>(px4_command_topic_for_log.str, 100);
 
     // 参数读取
     nh.param<float>("Takeoff_height", Takeoff_height, 0.3);
     nh.param<float>("Disarm_height", Disarm_height, 0.15);
     nh.param<float>("Use_accel", Use_accel, 0.0);
-    nh.param<int>("Flag_printf", Flag_printf, 0.0);
+    nh.param<int>  ("Flag_printf", Flag_printf, 0.0);
     nh.param<float>("geo_fence/x_min", geo_fence_x[0], -1.2);
     nh.param<float>("geo_fence/x_max", geo_fence_x[1], 1.2);
     nh.param<float>("geo_fence/y_min", geo_fence_y[0], -0.9);
     nh.param<float>("geo_fence/y_max", geo_fence_y[1], 0.9);
     nh.param<float>("geo_fence/z_min", geo_fence_z[0], 0.2);
     nh.param<float>("geo_fence/z_max", geo_fence_z[1], 2);
-    nh.param<bool>("CooperativeMode/isMulti",isMulti,false);
-    nh.param<int>("CooperativeMode/droneID",TargetdroneID,0);
+    nh.param<bool> ("CooperativeMode/isMulti",isMulti,false);
+    nh.param<int>  ("CooperativeMode/droneID",TargetdroneID,0);
 
     if (TargetdroneID == CurrentdroneID) {
         isCorrectDrone = true;

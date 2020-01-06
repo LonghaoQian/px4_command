@@ -307,7 +307,7 @@ class payload_controller_GNC
         Eigen::Vector3f R1;
         Eigen::Vector3f R2;
         Eigen::Vector2f rd;
-        Eigen::Vector3f f_pj;
+        Eigen::Vector3f f_pj, f_0j;// trim force and motion sync term
         px4_command::AddonForce _AddonForce;
         /*
         temp variables
@@ -487,6 +487,8 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
             - R_IP * TetherOffsetCross*(Omega_p + kR * angle_error + kRi * IntegralAttitude) 
             + B_j*(v_j + kL*r_j); // rd_j is not used if addon force is not used
     }
+    //f_0j = - Quad_MASS * (Zeta_dot + kL*B_j + B_j_dot * kL*(r_j - rd_j) - R_IP * t_j_cross * Eta_dot - R_IP*omega_p_cross * t_j_cross * Eta);
+    //f_aj = - a_j * m_p * Zeta 
     //u_l = - Kphi * (Vj+kv*(pos_error + kvi * IntegralPose)- R_IP * TetherOffsetCross *(kR * angle_error + kRi * IntegralAttitude) + kL*B_j*r_j);
     u_l = - Kphi * U - (Delta_j_p + PayloadDisturbance)/(TotalLiftedMass);
     // desired acceleration
