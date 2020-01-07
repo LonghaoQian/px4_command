@@ -63,6 +63,7 @@ Eigen::Matrix3f Delta_sq;
 // states 
 Eigen::Matrix<float,2,3> r_sq;
 Eigen::Matrix<float,2,3> v_sq;
+Eigen::Matrix<float,2,3> rd_sq;
 Eigen::Matrix3f f_L_sq;// 
 float cur_time;
 Eigen::Matrix3f R_IP;
@@ -94,7 +95,7 @@ Eigen::Matrix3f lambda_T;
 Eigen::Matrix3f lambda_R;
 Eigen::Vector3f cablelength;
 Eigen::Vector3f cablelength_squared;
-//Eigen::Matrix<float 3,Dynamic> E_j;
+Eigen::Matrix<float 3, Dynamic> E_j;
 // cross feeding terms
 Eigen::Vector3f F1,F2,R1,R2, Zeta, Eta;
 void GetCommand(const px4_command::ControlCommand::ConstPtr& msg)
@@ -120,6 +121,8 @@ void GetUAV0Status(const px4_command::FleetStatus::ConstPtr& msg){
     Delta_sq(0,0) = uav0_status.delta_jx;
     Delta_sq(1,0) = uav0_status.delta_jy;
     Delta_sq(2,0) = uav0_status.delta_jz;
+    rd_sq(0,0) = uav0_status.rd_jx;
+    rd_sq(1,0) = uav0_status.rd_jy;
 }
 void GetUAV1Status(const px4_command::FleetStatus::ConstPtr& msg){
     px4_command::FleetStatus uav1_status;
@@ -134,6 +137,8 @@ void GetUAV1Status(const px4_command::FleetStatus::ConstPtr& msg){
     Delta_sq(0,1) = uav1_status.delta_jx;
     Delta_sq(1,1) = uav1_status.delta_jy;
     Delta_sq(2,1) = uav1_status.delta_jz;
+    rd_sq(0,1) = uav1_status.rd_jx;
+    rd_sq(1,1) = uav1_status.rd_jy;
 }
 void GetUAV2Status(const px4_command::FleetStatus::ConstPtr& msg){
     px4_command::FleetStatus uav2_status;
@@ -148,6 +153,8 @@ void GetUAV2Status(const px4_command::FleetStatus::ConstPtr& msg){
     Delta_sq(0,2) = uav2_status.delta_jx;
     Delta_sq(1,2) = uav2_status.delta_jy;
     Delta_sq(2,2) = uav2_status.delta_jz;
+    rd_sq(0,2) = uav2_status.rd_jx;
+    rd_sq(1,2) = uav2_status.rd_jy;
 }
 
 void PrintEstimation(){
@@ -221,6 +228,7 @@ int main(int argc,
     ros::NodeHandle nh("~");
     ros::Rate rate(50.0);
     // initialize all parameters: 
+    double kL = 0;
     lambda_T.setZero();
     lambda_R.setZero();
     A.setZero();
@@ -241,9 +249,12 @@ int main(int argc,
     nh.param<float> ("Pos_GNC/lambda_Rxy", lambda_R(0,0),0.2);
     nh.param<float> ("Pos_GNC/lambda_Rxy", lambda_R(1,1),0.2);
     nh.param<float> ("Pos_GNC/lambda_Rz", lambda_R(2,2),0.2);
+    nh.param<float> ("Pos_GNC/ kL", kL, 0.1);
     nh.param<float> ("Payload/mass", payload_mass, 1.0);
     Eigen::Vector3f temp_t_j;
     M_q = 0.0;// total mass of all quadrotorsa_j_sq
+    E_j.resize(3,num_of_drones*3);
+    E_j.setZero();
     for (int i = 0; i < num_of_drones ; i ++) {
         temp_t_j.setZero();
         nh.param<float>("uav" + to_string(i) + "_Pos_GNC/TetherOffset_x", temp_t_j(0), 0.5);
@@ -259,8 +270,11 @@ int main(int argc,
         A += quadrotor_mass(i) * Hatmap(temp_t_j);
         J_q += - quadrotor_mass(i) * Hatmap(temp_t_j) * Hatmap(temp_t_j);
         // TO DO: calculate Ej
-    }
 
+    }
+    for (int i = 0, i< num_of_drones; i++ ) {
+        E_j.segment(0,i*3,3,3) = Hatmap(t_sq.col(i)) * D.inverse();
+    }
     // form the communication channels
     ros::Subscriber subUAV0status = nh.subscribe<px4_command::FleetStatus>("/uav0/px4_command/fleetstatus", 100, GetUAV0Status);
     ros::Subscriber subUAV1status = nh.subscribe<px4_command::FleetStatus>("/uav1/px4_command/fleetstatus", 100, GetUAV1Status);
@@ -277,6 +291,8 @@ int main(int argc,
     Eigen::Vector2f r_j;
     Eigen::Vector2f v_j;
     Eigen::Vector4f AttitudeQuaternionv;
+    Eigen::Vector2f mu_j;
+    Eigen::Vector2f temp;
     t_j_cross.setZero();
     DisplayParameters();// display parameters for checking...
     int check_flag;
@@ -335,7 +351,7 @@ int main(int argc,
                     for (int i = 0; i < num_of_drones ; i ++) {
                         r_j = r_sq.col(i);
                         v_j = v_sq.col(i);
-                        //mu_j = 
+                        mu_j = kL * (r_j - rd_j.col(i));
                         t_j_cross = Hatmap(t_sq.col(i));
                         DT += Delta_sq.col(i);
                         DR += t_j_cross * R_PI *  Delta_sq.col(i);
@@ -349,9 +365,9 @@ int main(int argc,
                             B_j(2,0) = -0.1;
                             B_j(2,1) = -0.1;
                         }
-                        //temp = B_j * (v_j + mu_j);
-                        //R1 += a_j_sq(i) * temp;
-                        //R2 += a_j_sq(i) * E_j * R_PI * temp;
+                        temp = B_j * (v_j + mu_j);
+                        R1 += a_j_sq(i) * temp;
+                        R2 += a_j_sq(i) * E_j.segment(0,i*3,3,3).transpose() * R_PI * temp;
                         BT += quadrotor_mass(i) * B_j * v_j;
                         FR += t_j_cross * (quadrotor_mass(i)*(omega_p_cross * R_PI *B_j*v_j - omega_p_cross * t_j_cross *omega_p -  R_PI * g_I) - R_PI * f_L_sq.col(i));
                         FR2 += quadrotor_mass(i)* t_j_cross * R_PI * B_j * v_j;

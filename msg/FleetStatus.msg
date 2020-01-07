@@ -11,4 +11,6 @@ float32  f_Ljz        ## [N]
 float32  delta_jx     ## [N]
 float32  delta_jy     ## [N]
 float32  delta_jz     ## [N] 
+float32  rd_jx        ## [m]
+float32  rd_jy        ## [m]
 bool emergency        ##
