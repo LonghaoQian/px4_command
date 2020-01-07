@@ -62,6 +62,7 @@ Eigen::Vector3f Delta_pt;
 Eigen::Matrix3f Delta_sq;
 // states 
 Eigen::Matrix<float,2,3> r_sq;
+Eigen::Matrix<float,2,3> rd_sq;
 Eigen::Matrix<float,2,3> v_sq;
 Eigen::Matrix3f f_L_sq;// 
 float cur_time;
@@ -94,7 +95,7 @@ Eigen::Matrix3f lambda_T;
 Eigen::Matrix3f lambda_R;
 Eigen::Vector3f cablelength;
 Eigen::Vector3f cablelength_squared;
-//Eigen::Matrix<float 3,Dynamic> E_j;
+Eigen::Matrix<float, 3, Eigen::Dynamic> E_j;
 // cross feeding terms
 Eigen::Vector3f F1,F2,R1,R2, Zeta, Eta;
 void GetCommand(const px4_command::ControlCommand::ConstPtr& msg)

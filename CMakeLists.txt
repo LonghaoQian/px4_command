@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(px4_command)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -69,7 +69,6 @@ catkin_package(
   CATKIN_DEPENDS  message_runtime
 )
 
-add_compile_options(-std=c++11)
 ###########
 ## Build ##
 ###########
@@ -83,18 +82,8 @@ include_directories(
 
 
 ###############################
-##      声明可执行cpp文件     ##
+##     executable list     ##
 ###############################
-
-add_library(OptiTrackFeedbackRigidBody src/lib/OptiTrackFeedBackRigidBody.cpp)
-add_library(KeyboardEvent src/lib/KeyboardEvent.cpp)
-
-###### Main File ##########
-
-##px4_pos_controller.cpp
-add_executable(px4_pos_controller src/px4_pos_controller.cpp)
-add_dependencies(px4_pos_controller px4_command_gencpp)
-target_link_libraries(px4_pos_controller ${catkin_LIBRARIES})
 
 ##px4_multidrone_pos_controller.cpp
 add_executable(px4_multidrone_pos_controller src/px4_multidrone_pos_controller.cpp)
@@ -102,38 +91,10 @@ add_dependencies(px4_multidrone_pos_controller px4_command_generate_messages_cpp
 add_dependencies(px4_multidrone_pos_controller px4_command_gencpp)
 target_link_libraries(px4_multidrone_pos_controller ${catkin_LIBRARIES})
 
-##px4_pos_estimator.cpp
-add_executable(px4_pos_estimator src/px4_pos_estimator.cpp)
-add_dependencies(px4_pos_estimator px4_command_gencpp)
-target_link_libraries(px4_pos_estimator ${catkin_LIBRARIES})
-target_link_libraries(px4_pos_estimator OptiTrackFeedbackRigidBody)
-
 ##px4_multidrone_pos_estimator.cpp
 add_executable(px4_multidrone_pos_estimator src/px4_multidrone_pos_estimator.cpp)
 add_dependencies(px4_multidrone_pos_estimator px4_command_gencpp)
 target_link_libraries(px4_multidrone_pos_estimator ${catkin_LIBRARIES})
-
-##px4_sender.cpp
-add_executable(px4_sender src/px4_sender.cpp)
-add_dependencies(px4_sender px4_command_gencpp)
-target_link_libraries(px4_sender ${catkin_LIBRARIES})
-
-##ground_station.cpp
-add_executable(ground_station src/ground_station.cpp)
-add_dependencies(ground_station px4_command_gencpp)
-target_link_libraries(ground_station ${catkin_LIBRARIES})
-target_link_libraries(ground_station OptiTrackFeedbackRigidBody)
-
-##optitrack_sender.cpp
-add_executable(optitrack_sender src/optitrack_sender.cpp)
-add_dependencies(optitrack_sender px4_command_gencpp)
-target_link_libraries(optitrack_sender ${catkin_LIBRARIES})
-target_link_libraries(optitrack_sender OptiTrackFeedbackRigidBody)
-
-##px4_pos_estimator_pure_vision.cpp
-add_executable(px4_pos_estimator_pure_vision src/px4_pos_estimator_pure_vision.cpp)
-add_dependencies(px4_pos_estimator_pure_vision px4_command_gencpp)
-target_link_libraries(px4_pos_estimator_pure_vision ${catkin_LIBRARIES})
 
 ##px4_multidrone_pos_estimator_pure_vision.cpp
 add_executable(px4_multidrone_pos_estimator_pure_vision src/px4_multidrone_pos_estimator_pure_vision.cpp)
@@ -145,39 +106,7 @@ add_executable(px4_interdrone_communication src/px4_interdrone_communication.cpp
 add_dependencies(px4_interdrone_communication px4_command_gencpp)
 target_link_libraries(px4_interdrone_communication ${catkin_LIBRARIES})
 
-###### Test File ##########
-
 ###### Utilities File ##########
-
-add_executable(setpoint_track src/Utilities/setpoint_track.cpp)
-add_dependencies(setpoint_track px4_command_gencpp)
-target_link_libraries(setpoint_track ${catkin_LIBRARIES})
-
-add_executable(filter_tester src/Utilities/filter_tester.cpp)
-add_dependencies(filter_tester px4_command_gencpp)
-target_link_libraries(filter_tester ${catkin_LIBRARIES})
-
-add_executable(TFmini src/Utilities/TFmini.cpp)
-add_dependencies(TFmini px4_command_gencpp)
-target_link_libraries(TFmini ${catkin_LIBRARIES})
-
-add_executable(fake_vicon src/Utilities/fake_vicon.cpp)
-add_dependencies(fake_vicon px4_command_gencpp)
-target_link_libraries(fake_vicon ${catkin_LIBRARIES})
-
-add_executable(move src/Utilities/move.cpp)
-add_dependencies(move px4_command_gencpp)
-target_link_libraries(move ${catkin_LIBRARIES})
-
-add_executable(OptiTrackTest src/Utilities/OptiTrackTest.cpp)
-add_dependencies(OptiTrackTest px4_command_gencpp)
-target_link_libraries(OptiTrackTest ${catkin_LIBRARIES})
-target_link_libraries(OptiTrackTest OptiTrackFeedbackRigidBody)
-target_link_libraries(OptiTrackTest KeyboardEvent)
-
-add_executable(set_mode src/Utilities/set_mode.cpp)
-add_dependencies(set_mode px4_command_gencpp)
-target_link_libraries(set_mode ${catkin_LIBRARIES})
 
 add_executable(set_uav0_mode src/Utilities/set_uav0_mode.cpp)
 add_dependencies(set_uav0_mode px4_command_gencpp)
@@ -191,38 +120,8 @@ add_executable(set_uav2_mode src/Utilities/set_uav2_mode.cpp)
 add_dependencies(set_uav2_mode px4_command_gencpp)
 target_link_libraries(set_uav2_mode ${catkin_LIBRARIES})
 
-add_executable(eigen_test src/Utilities/eigen_test.cpp)
-add_dependencies(eigen_test px4_command_gencpp)
-target_link_libraries(eigen_test ${catkin_LIBRARIES})
-
 ###### Application File ##########
-add_executable(square src/Application/square.cpp)
-add_dependencies(square px4_command_gencpp)
-target_link_libraries(square ${catkin_LIBRARIES})
 
-add_executable(autonomous_landing src/Application/autonomous_landing.cpp)
-add_dependencies(autonomous_landing px4_command_gencpp)
-target_link_libraries(autonomous_landing ${catkin_LIBRARIES})
-
-add_executable(target_tracking src/Application/target_tracking.cpp)
-add_dependencies(target_tracking px4_command_gencpp)
-target_link_libraries(target_tracking ${catkin_LIBRARIES})
-
-add_executable(collision_avoidance src/Application/collision_avoidance.cpp)
-add_dependencies(collision_avoidance px4_command_gencpp)
-target_link_libraries(collision_avoidance ${catkin_LIBRARIES})
-
-add_executable(collision_avoidance_streo src/Application/collision_avoidance_streo.cpp)
-add_dependencies(collision_avoidance_streo px4_command_gencpp)
-target_link_libraries(collision_avoidance_streo ${catkin_LIBRARIES})
-
-add_executable(payload_drop src/Application/payload_drop.cpp)
-add_dependencies(payload_drop px4_command_gencpp)
-target_link_libraries(payload_drop ${catkin_LIBRARIES})
-
-add_executable(formation_control_sitl src/Application/formation_control_sitl.cpp)
-add_dependencies(formation_control_sitl px4_command_gencpp)
-target_link_libraries(formation_control_sitl ${catkin_LIBRARIES})
 
 
 #############

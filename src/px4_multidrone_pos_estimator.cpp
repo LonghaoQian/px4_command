@@ -41,8 +41,6 @@
 #include <sensor_msgs/Range.h>
 #include <px4_command/DroneState.h>
 #include <px4_command/Mocap.h>
-#include <LowPassFilter.h>
-
 using namespace std;
 struct SubTopic
 {
