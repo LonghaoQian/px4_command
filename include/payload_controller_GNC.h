@@ -129,6 +129,25 @@ class payload_controller_GNC
             main_handle.param<float>("Pos_GNC/lambda_j", lambda_j(0,0), 1);
             main_handle.param<float>("Pos_GNC/lambda_j", lambda_j(1,1), 1);
             main_handle.param<float>("Pos_GNC/lambda_j", lambda_j(2,2), 1);
+            lambda_1.setZero();
+            lambda_2.setZero();
+            kr1.setZero();
+            kr2.setZero();
+            main_handle.param<float> ("Pos_GNC/lambda1_x", lambda_1(0,0), 0.1);
+            main_handle.param<float> ("Pos_GNC/lambda1_y", lambda_1(1,1), 0.1);
+            main_handle.param<float> ("Pos_GNC/lambda1_z", lambda_1(2,2), 0.1);
+
+            main_handle.param<float> ("Pos_GNC/lambda2_x", lambda_2(0,0), 0.2);
+            main_handle.param<float> ("Pos_GNC/lambda2_y", lambda_2(1,1), 0.2);
+            main_handle.param<float> ("Pos_GNC/lambda2_z", lambda_2(2,2), 0.2);
+
+            main_handle.param<float> ("Pos_GNC/kr1_x", kr1(0,0), 0.2);
+            main_handle.param<float> ("Pos_GNC/kr1_x", kr1(1,1), 0.2);
+            main_handle.param<float> ("Pos_GNC/kr1_x", kr1(2,2), 0.2);
+
+            main_handle.param<float> ("Pos_GNC/kr2_x", kr2(0,0), 0.2);
+            main_handle.param<float> ("Pos_GNC/kr2_x", kr2(1,1), 0.2);
+            main_handle.param<float> ("Pos_GNC/kr2_x", kr2(2,2), 0.2);
 
             // special parameters
             Identity << 1.0,0.0,0.0,
@@ -170,6 +189,16 @@ class payload_controller_GNC
             v_j.setZero();
             rd_j.setZero();
             f_p_j.setZero();
+            R1.setZero();
+            R2.setZero();
+            F1.setZero();
+            F2.setZero();
+            F1_dot.setZero();
+            F2_dot.setZero();
+            Zeta.setZero();
+            Eta.setZero();
+            Zeta_dot.setZero();
+            Eta_dot.setZero();
             e_3<<0,
                  0,
                  1;
@@ -245,6 +274,12 @@ class payload_controller_GNC
         void GetAddonForce(const px4_command::AddonForce::ConstPtr& msg);
         void SendFleetStatus();
         void pubauxiliarystate();
+        void SimpleIntegral(const px4_command::DroneState& _DroneState,
+                            bool isActivated,
+                            float dt);
+        void CalculateCrossFeedingTerms(bool isActivated, float dt);
+        void CalculateSyncForce(bool isActivated);
+        Eigen::Matrix3f CalculateAuxiliaryE (const Eigen::Matrix3f& R);
         //------------- private variables ---------------//
         ros::ServiceClient   clientSendParameter;
         ros::ServiceClient   emergencyKill;
@@ -283,6 +318,10 @@ class payload_controller_GNC
         Eigen::Matrix3f lambda_j;
         Eigen::Matrix3f Ej;
         Eigen::Matrix3f D;
+        Eigen::Matrix3f lambda_1;
+        Eigen::Matrix3f lambda_2;
+        Eigen::Matrix3f kr1;
+        Eigen::Matrix3f kr2;
         // payload attitude and quadrotor relative state
         Eigen::Vector4f Quad_Drone;
         Eigen::Vector3f Delta_j;
@@ -304,11 +343,14 @@ class payload_controller_GNC
         Eigen::Vector3f Delta_pt;
         Eigen::Vector3f Delta_rt;
         Eigen::Vector2f rd_j;
-        Eigen::Vector3f R1;
-        Eigen::Vector3f R2;
+
         Eigen::Vector2f rd;
         Eigen::Vector3f f_pj, f_0j;// trim force and motion sync term
+        // cross feeding terms
         px4_command::AddonForce _AddonForce;
+        Eigen::Vector3f R1;
+        Eigen::Vector3f R2;
+        Eigen::Vector3f F1, F2, F1_dot, F2_dot, Zeta, Eta, Zeta_dot, Eta_dot;
         /*
         temp variables
         */
@@ -429,40 +471,8 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
     }
      
     /*Step 4 calculate control law form the GNC 2019 paper*/
-    for (int i=0; i<3; i++) {
-        if(abs(IntegralAttitude(i)) < angle_int_start_error ) {
-            IntegralAttitude(i) += angle_error(i) *dt;
-            if(abs(IntegralAttitude(i) > ang_int_max[i]))
-            {
-                cout << "Angle Integral Saturation! " << " [0-1-2] "<< i <<endl;
-                cout << "[integral]: "<< IntegralAttitude(i)<<" [int_max]: "<<ang_int_max[i]<<" [] "<<endl;
-            }
-
-            IntegralAttitude(i) = constrain_function(IntegralAttitude(i), ang_int_max[i]);
-
-        }else {
-            IntegralAttitude(i) = 0;
-        }
-
-        if(abs(pos_error[i]) < pos_int_start_error) {
-           
-            IntegralPose(i) += pos_error(i) * dt;
-
-            if(abs(IntegralPose(i) > pos_int_max[i]))
-            {
-                cout << "Pose Integral saturation! " << " [0-1-2] "<< i <<endl;
-                cout << "[integral]: "<< IntegralPose(i)<<" [int_max]: "<< pos_int_max[i] <<" [m] "<<endl;
-            }
-            IntegralPose(i) = constrain_function(IntegralPose(i), pos_int_max[i]);
-        }else {
-            IntegralPose(i) = 0;
-        }
-        // If not in OFFBOARD mode, set all intergral to zero.
-        if(_DroneState.mode != "OFFBOARD") {
-            IntegralPose(i) = 0;
-            IntegralAttitude(i) = 0;
-        }
-    }
+    SimpleIntegral(_DroneState, false ,dt);
+    CalculateCrossFeedingTerms(true, dt);
     // calculate disturbance force on the quadrotor
     if(_DroneState.mode != "OFFBOARD") {
         Delta_j.setZero(); // estimation does not run in offboard mode
@@ -474,6 +484,9 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
     // calculate the total compensation force:
     f_p_j = - PayloadSharingPortion * (Payload_Mass*g_I + Delta_pt + R_IP * Ej * Delta_rt);
     rd_j = Cable_Length *  f_p_j.segment<2>(0)/f_p_j.norm(); // calculate the desired cable tile angle
+
+    // 
+
     Eigen::Vector3f U;
     if (isAddonForcedUsed) {
         ///rd_j.setZero();
@@ -519,8 +532,81 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
 
 }
 
-void payload_controller_GNC::pubauxiliarystate() 
-{
+void payload_controller_GNC::SimpleIntegral(const px4_command::DroneState& _DroneState,
+                                            bool isActived, 
+                                            float dt) {
+    if(isActived) {
+        for (int i=0; i<3; i++) {
+            if(abs(IntegralAttitude(i)) < angle_int_start_error ) {
+                IntegralAttitude(i) += angle_error(i) *dt;
+                if(abs(IntegralAttitude(i) > ang_int_max[i]))
+                {
+                    cout << "Angle Integral Saturation! " << " [0-1-2] "<< i <<endl;
+                    cout << "[integral]: "<< IntegralAttitude(i)<<" [int_max]: "<<ang_int_max[i]<<" [] "<<endl;
+                }
+
+                IntegralAttitude(i) = constrain_function(IntegralAttitude(i), ang_int_max[i]);
+
+            }else {
+                IntegralAttitude(i) = 0;
+            }
+
+            if(abs(pos_error[i]) < pos_int_start_error) {
+            
+                IntegralPose(i) += pos_error(i) * dt;
+
+                if(abs(IntegralPose(i) > pos_int_max[i]))
+                {
+                    cout << "Pose Integral saturation! " << " [0-1-2] "<< i <<endl;
+                    cout << "[integral]: "<< IntegralPose(i)<<" [int_max]: "<< pos_int_max[i] <<" [m] "<<endl;
+                }
+                IntegralPose(i) = constrain_function(IntegralPose(i), pos_int_max[i]);
+            }else {
+                IntegralPose(i) = 0;
+            }
+            // If not in OFFBOARD mode, set all intergral to zero.
+            if(_DroneState.mode != "OFFBOARD") {
+                IntegralPose(i) = 0;
+                IntegralAttitude(i) = 0;
+            }
+        }
+    }
+}
+
+void payload_controller_GNC::CalculateCrossFeedingTerms(bool isActivated, float dt) {
+    if(isActivated) {
+        R1(0) = _AddonForce.R_1x;
+        R1(1) = _AddonForce.R_1y;
+        R1(2) = _AddonForce.R_1z;
+        R2(0) = _AddonForce.R_2x;
+        R2(1) = _AddonForce.R_2y;
+        R2(2) = _AddonForce.R_2z;
+        F1_dot = - lambda_1 * F1 + kr1 * R1;
+        F2_dot = - lambda_2 * F2 + kr2 * R2;
+        F1 += dt*F1_dot;
+        F2 += dt*F2_dot;
+        Zeta = F1 + kv * pos_error;// make sure the sign is correct 
+        Eta =  F2 + kR * angle_error;
+        Zeta_dot = F1_dot + kv * Vp;
+        //Eigen::Matrix3f E = Identity*
+        //Eta_dot = F2_dot + kR * E * Omega_p;
+    }
+}
+
+Eigen::Matrix3f payload_controller_GNC::CalculateAuxiliaryE(const Eigen::Matrix3f& R) {
+
+    Eigen::Matrix3f E;
+    return E;
+
+}
+
+void payload_controller_GNC::CalculateSyncForce(bool isActivated) {
+    //if (isActivated) {
+    //   f0_j = -Quad_MASS * (Zeta_dot + kL* B_j * v_j + B_j_dot * mu_j - R_IP * TetherOffsetCross* Eta_dot - R_IP * omega);
+   // }
+}
+
+void payload_controller_GNC::pubauxiliarystate(){
         // record time
         Auxstate.header.stamp = ros::Time::now();
 
@@ -584,6 +670,10 @@ void payload_controller_GNC::SendFleetStatus()
     FleetStatus_.delta_jx = Delta_j_p(0);
     FleetStatus_.delta_jy = Delta_j_p(1);   
     FleetStatus_.delta_jz = Delta_j_p(2);   
+
+    FleetStatus_.rd_jx = rd_j(0);
+    FleetStatus_.rd_jy = rd_j(1);
+
     FleetStatus_.emergency = isEmergency;
     pubFleetStatus.publish(FleetStatus_);
 }

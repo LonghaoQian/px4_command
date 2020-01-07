@@ -148,7 +148,7 @@ void Command_cb(const px4_command::ControlCommand::ConstPtr& msg) {
     }
 
     // Check for geo fence: If drone is out of the geo fence, it will land now.
-    if(CheckReferencePosition(Command_Now)) {
+    if(!CheckReferencePosition(Command_Now)) {
         // if the reference command is out of the safe range, 
         Command_Now = Command_Last;
     }
