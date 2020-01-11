@@ -46,35 +46,35 @@ struct PubTopic
     char str[100];
 };
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>UAV command and state <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-px4_command::ControlCommand Command_Now;                      
-px4_command::ControlCommand Command_Last;                    
-px4_command::ControlCommand Command_to_gs;
-px4_command::DroneState _DroneState;                         // drone state from estimator
-Eigen::Vector3d throttle_sp;
-px4_command::ControlOutput _ControlOutput;
-px4_command::AttitudeReference _AttitudeReference;           // attitude target sent to FCU
-float cur_time;
-px4_command::Topic_for_log _Topic_for_log;
+static px4_command::ControlCommand Command_Now;                      
+static px4_command::ControlCommand Command_Last;                    
+static px4_command::ControlCommand Command_to_gs;
+static px4_command::DroneState _DroneState;                         // drone state from estimator
+static Eigen::Vector3d throttle_sp;
+static px4_command::ControlOutput _ControlOutput;
+static px4_command::AttitudeReference _AttitudeReference;           // attitude target sent to FCU
+static float cur_time;
+static px4_command::Topic_for_log _Topic_for_log;
 
 /*--TO DO --- Auto Land*/
 
-float Takeoff_height;                                       // 
-float Disarm_height;                                        //
+static float Takeoff_height;                                       // 
+static float Disarm_height;                                        //
 
-float Use_accel;                                            // 1 for use the accel command
+static float Use_accel;                                            // 1 for use the accel command
 
-int Flag_printf;
-bool isMulti;                                               // cooperative mode true for multi-drone, false for single drone
-bool isCorrectDrone;                                        // this is used in single-drone mode for determine whether the correct drone is used.
-int CurrentdroneID;
-int TargetdroneID;
+static int Flag_printf;
+static bool isMulti;                                               // cooperative mode true for multi-drone, false for single drone
+static bool isCorrectDrone;                                        // this is used in single-drone mode for determine whether the correct drone is used.
+static int CurrentdroneID;
+static int TargetdroneID;
 //>>--------------------------  geographic fence --------------------------------<<
-Eigen::Vector2f geo_fence_x;
-Eigen::Vector2f geo_fence_y;
-Eigen::Vector2f geo_fence_z;
+static Eigen::Vector2f geo_fence_x;
+static Eigen::Vector2f geo_fence_y;
+static Eigen::Vector2f geo_fence_z;
 
-Eigen::Vector3d Takeoff_position = Eigen::Vector3d(0.0,0.0,0.0);
-Eigen::Vector3d pos_drone_mocap;                             //无人机当前位置 (vicon)
+static Eigen::Vector3d Takeoff_position = Eigen::Vector3d(0.0,0.0,0.0);
+static Eigen::Vector3d pos_drone_mocap;                             //无人机当前位置 (vicon)
 
 /*--------------------- utility functions -------------------------------*/
 bool CheckReferencePosition(const px4_command::ControlCommand& command_) {

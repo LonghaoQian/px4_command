@@ -15,32 +15,9 @@
 ***************************************************************************************************************************/
 #include <ros/ros.h>
 #include <iostream>
-#include <vector>
 #include <Eigen/Eigen>
-
 #include <math_utils.h>
-#include <mavros_msgs/State.h>
-#include <Frame_tf_utils.h>
-#include <mavros_msgs/CommandBool.h>
-#include <mavros_msgs/SetMode.h>
-#include <mavros_msgs/State.h>
-#include <geometry_msgs/Vector3.h>
-#include <geometry_msgs/TwistStamped.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <nav_msgs/Odometry.h>
-#include <sensor_msgs/Imu.h>
-#include <std_msgs/Bool.h>
-#include <geometry_msgs/Pose.h>
-#include <geometry_msgs/Vector3Stamped.h>
-#include <geometry_msgs/Point.h>
-#include <std_msgs/UInt16.h>
-#include <std_msgs/Float64.h>
-#include <tf2_msgs/TFMessage.h>
-#include <geometry_msgs/TransformStamped.h>
-#include <sensor_msgs/Imu.h>
-
 #include <px4_command/DroneState.h>
-#include <px4_command/Mocap.h>
 #include <px4_command/AddonForce.h>
 #include <px4_command/FleetStatus.h>
 #include <px4_command/ControlCommand.h>
@@ -48,55 +25,56 @@
 #include <command_to_mavros_multidrone.h>
 using std::vector;
 using std::string;
+
 // messages:
-px4_command::AddonForce  _AddonForce;// addonforce to be published
-px4_command::DroneState  _DroneState;// dronestate from uav0
-px4_command::ControlCommand Command_Now;
+static px4_command::AddonForce  _AddonForce;// addonforce to be published
+static px4_command::DroneState  _DroneState;// dronestate from uav0
+static px4_command::ControlCommand Command_Now;
 //estimation:
-Eigen::Vector3f Delta_T_I;
-Eigen::Vector3f Delta_R_I;
-Eigen::Vector3f Delta_T;
-Eigen::Vector3f Delta_R;
-Eigen::Vector3f Delta_rt;
-Eigen::Vector3f Delta_pt;
-Eigen::Matrix3f Delta_sq;
+static Eigen::Vector3f Delta_T_I;
+static Eigen::Vector3f Delta_R_I;
+static Eigen::Vector3f Delta_T;
+static Eigen::Vector3f Delta_R;
+static Eigen::Vector3f Delta_rt;
+static Eigen::Vector3f Delta_pt;
+static Eigen::Matrix3f Delta_sq;
 // states 
-Eigen::Matrix<float,2,3> r_sq;
-Eigen::Matrix<float,2,3> rd_sq;
-Eigen::Matrix<float,2,3> v_sq;
-Eigen::Matrix3f f_L_sq;// 
-float cur_time;
-Eigen::Matrix3f R_IP;
-Eigen::Matrix3f R_PI;
-Eigen::Vector3f v_p;
-Eigen::Vector3f omega_p;
-Eigen::Matrix3f omega_p_cross;
+static Eigen::Matrix<float,2,3> r_sq;
+static Eigen::Matrix<float,2,3> rd_sq;
+static Eigen::Matrix<float,2,3> v_sq;
+static Eigen::Matrix3f f_L_sq;// 
+static float cur_time;
+static Eigen::Matrix3f R_IP;
+static Eigen::Matrix3f R_PI;
+static Eigen::Vector3f v_p;
+static Eigen::Vector3f omega_p;
+static Eigen::Matrix3f omega_p_cross;
 // auxiliary variables:
-Eigen::Vector3f FT;
-Eigen::Vector3f FR;
-Eigen::Vector3f FR2;
-Eigen::Vector3f BT;
-Eigen::Vector3f DT;
-Eigen::Vector3f DR;
-Eigen::Matrix<float,3,2> B_j;
+static Eigen::Vector3f FT;
+static Eigen::Vector3f FR;
+static Eigen::Vector3f FR2;
+static Eigen::Vector3f BT;
+static Eigen::Vector3f DT;
+static Eigen::Vector3f DR;
+static Eigen::Matrix<float,3,2> B_j;
 // parameters:
-int   num_of_drones;
-float payload_mass;
-float M_q;
-Eigen::Vector3f g_I;
-Eigen::Matrix3f t_sq;
-Eigen::Matrix3f A;
-Eigen::Matrix3f J_q;
-Eigen::Matrix3f J_p;
-Eigen::Matrix3f D;
-Eigen::Vector3f quadrotor_mass;
-Eigen::Vector3f a_j_sq;
-Eigen::Matrix3f lambda_T;
-Eigen::Matrix3f lambda_R;
-Eigen::Vector3f cablelength;
-Eigen::Vector3f cablelength_squared;
-Eigen::Matrix<float, 3, Eigen::Dynamic> E_j;
-Eigen::Vector3f R1,R2;
+static int   num_of_drones;
+static float payload_mass;
+static float M_q;
+static Eigen::Vector3f g_I;
+static Eigen::Matrix3f t_sq;
+static Eigen::Matrix3f A;
+static Eigen::Matrix3f J_q;
+static Eigen::Matrix3f J_p;
+static Eigen::Matrix3f D;
+static Eigen::Vector3f quadrotor_mass;
+static Eigen::Vector3f a_j_sq;
+static Eigen::Matrix3f lambda_T;
+static Eigen::Matrix3f lambda_R;
+static Eigen::Vector3f cablelength;
+static Eigen::Vector3f cablelength_squared;
+static Eigen::Vector3f R1,R2;
+static Eigen::Matrix<float,3, Eigen::Dynamic> E_j;
 void GetCommand(const px4_command::ControlCommand::ConstPtr& msg)
 {
     Command_Now = *msg;
@@ -181,6 +159,8 @@ void PrintEstimation(){
             cout << "Delta_pt [X Y Z] : " << Delta_pt(0) << " [N] "<< Delta_pt(1)<<" [N] "<<Delta_pt(2)<<" [N] "<<endl;
             cout << "Delta_R [X Y Z] : " << Delta_R(0) << " [N] "<< Delta_R(1)<<" [N] "<<Delta_R(2)<<" [N] "<<endl;
             cout << "Delta_rt [X Y Z] : " << Delta_rt(0) << " [N] "<< Delta_rt(1)<<" [N] "<<Delta_rt(2)<<" [N] "<<endl;
+            cout << "R1 [X Y Z] : " << R1(0) << " [N] " << R1(1) << " [N] " << R1(2) << " [N] " <<endl;
+            cout << "R2 [X Y Z] : " << R2(0) << " [N] " << R2(1) << " [N] " << R2(2) << " [N] " <<endl;
         } else {
             cout << ">>>>>>> NOT IN PAYLOAD STABILIZATION MODE, ESTIMATION PAUSED <<<<<<<" << endl;
         }
@@ -255,8 +235,11 @@ int main(int argc,
     nh.param<float> ("Pos_GNC/lambda_Rz", lambda_R(2,2),0.2);
     nh.param<float> ("Pos_GNC/kL", kL, 0.1);
     
+    // temp variables
     Eigen::Vector3f temp_t_j;
     M_q = 0.0;// total mass of all quadrotorsa_j_sq
+    float e_n = 1.0;
+    E_j.resize(3,num_of_drones*3);
     for (int i = 0; i < num_of_drones ; i ++) {
         temp_t_j.setZero();
         nh.param<float>("uav" + to_string(i) + "_Pos_GNC/TetherOffset_x", temp_t_j(0), 0.5);
@@ -271,10 +254,16 @@ int main(int argc,
         M_q += quadrotor_mass(i);
         A += quadrotor_mass(i) * Hatmap(temp_t_j);
         J_q += - quadrotor_mass(i) * Hatmap(temp_t_j) * Hatmap(temp_t_j);
+        e_n *= temp_t_j.norm();
     }
+    // for 2 drone case, E_j is special
 
     for (int i = 0;  i< num_of_drones; i++ ) {
-        E_j.block(0,i*3,3,3) = Hatmap(t_sq.col(i)) * D.inverse();
+        if (num_of_drones < 3) { 
+            E_j.block(0,i*3,3,3) = - Hatmap(t_sq.col(i)) / e_n;
+        } else {
+            E_j.block(0,i*3,3,3) = Hatmap(t_sq.col(i)) * D.inverse();
+        }
     }
 
     // form the communication channels

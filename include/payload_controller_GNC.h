@@ -40,6 +40,11 @@ class payload_controller_GNC
             main_handle.param<float>("Payload/mass", Payload_Mass, 1.0);
             main_handle.param<bool>("Pos_GNC/PubAuxiliaryState", isPubAuxiliaryState, true);
             main_handle.param<bool>("Pos_GNC/UseAddonForce", isAddonForcedUsed, false);
+            main_handle.param<bool>("Pos_GNC/UseCrossFeedingTerms", isCrossFeedingTermsUsed, false);
+            J_p.setZero();
+            J_p(0,0) = 0.01;
+            J_p(1,1) = 0.01;
+            J_p(2,2) = 0.1;
             TetherOffsetCross = Hatmap(TetherOffset);
             D.setZero();
             Eigen::Vector3f temp_offset;
@@ -126,13 +131,16 @@ class payload_controller_GNC
             main_handle.param<float>("Pos_GNC/CableLengthTolerance", Cable_Tolerance, 1.2);
 
             lambda_j.setZero();
+
             main_handle.param<float>("Pos_GNC/lambda_j", lambda_j(0,0), 1);
             main_handle.param<float>("Pos_GNC/lambda_j", lambda_j(1,1), 1);
             main_handle.param<float>("Pos_GNC/lambda_j", lambda_j(2,2), 1);
+
             lambda_1.setZero();
             lambda_2.setZero();
             kr1.setZero();
             kr2.setZero();
+
             main_handle.param<float> ("Pos_GNC/lambda1_x", lambda_1(0,0), 0.1);
             main_handle.param<float> ("Pos_GNC/lambda1_y", lambda_1(1,1), 0.1);
             main_handle.param<float> ("Pos_GNC/lambda1_z", lambda_1(2,2), 0.1);
@@ -149,10 +157,26 @@ class payload_controller_GNC
             main_handle.param<float> ("Pos_GNC/kr2_x", kr2(1,1), 0.2);
             main_handle.param<float> ("Pos_GNC/kr2_x", kr2(2,2), 0.2);
 
+            kp.setZero();
+            komega.setZero();
+            main_handle.param<float> ("Pos_GNC/kp_x", kp(0,0), 0.0);
+            main_handle.param<float> ("Pos_GNC/kp_y", kp(1,1), 0.0);
+            main_handle.param<float> ("Pos_GNC/kp_z", kp(2,2), 0.0);
+
+            main_handle.param<float> ("Pos_GNC/komega_x", komega(0,0), 0.0);
+            main_handle.param<float> ("Pos_GNC/komega_y", komega(1,1), 0.0);
+            main_handle.param<float> ("Pos_GNC/komega_z", komega(2,2), 0.0);
+
+
             // special parameters
             Identity << 1.0,0.0,0.0,
                         0.0,1.0,0.0,
                         0.0,0.0,1.0;
+            Identity_30  << 1.0,0.0,0.0,
+                        0.0,1.0,0.0,
+                        0.0,0.0,0.0;
+            Identity2D  << 1.0,0.0,
+                           0.0,1.0;       
             g_I<<0.0,
                  0.0,
                 -9.81;
@@ -173,6 +197,7 @@ class payload_controller_GNC
             B_j << 1.0,0.0,
                    0.0,1.0,
                    0.0,0.0;
+            B_j_dot.setZero();
             Delta_j.setZero();
             Delta_j_p.setZero();
             dot_vqj.setZero();
@@ -189,6 +214,8 @@ class payload_controller_GNC
             v_j.setZero();
             rd_j.setZero();
             f_p_j.setZero();
+            f_bj.setZero();
+            f_cj.setZero();
             R1.setZero();
             R2.setZero();
             F1.setZero();
@@ -199,6 +226,9 @@ class payload_controller_GNC
             Eta.setZero();
             Zeta_dot.setZero();
             Eta_dot.setZero();
+            s_P.setZero();
+            s_R.setZero();
+            U.setZero();
             e_3<<0,
                  0,
                  1;
@@ -277,7 +307,9 @@ class payload_controller_GNC
         void SimpleIntegral(const px4_command::DroneState& _DroneState,
                             bool isActivated,
                             float dt);
-        void CalculateCrossFeedingTerms(bool isActivated, float dt);
+        void CalculateCrossFeedingTerms(const px4_command::DroneState& DroneState,
+                                        bool isActivated, 
+                                        float dt);
         void CalculateSyncForce(bool isActivated);
         Eigen::Matrix3f CalculateAuxiliaryE (const Eigen::Matrix3f& R);
         //------------- private variables ---------------//
@@ -291,6 +323,7 @@ class payload_controller_GNC
         bool   isPubAuxiliaryState;
         bool   isAddonForcedUsed;
         bool   isEmergency;
+        bool   isCrossFeedingTermsUsed;
         int    num_drone;
         double motor_slope;
         double motor_intercept;
@@ -305,6 +338,7 @@ class payload_controller_GNC
         Eigen::Vector3f TetherOffset;
         Eigen::Matrix3f TetherOffsetCross;
         float  PayloadSharingPortion;
+        Eigen::Matrix3f J_p;
         px4_command:: AuxiliaryState Auxstate;
         //Controller parameter for the control law
         Eigen::Matrix3f kv;
@@ -312,6 +346,8 @@ class payload_controller_GNC
         Eigen::Matrix3f Kphi;
         Eigen::Matrix3f kvi;
         Eigen::Matrix3f kRi;
+        Eigen::Matrix3f kp;
+        Eigen::Matrix3f komega;
         float kL;
         Eigen::Vector3f g_I;
         Eigen::Vector3f e_3;
@@ -331,7 +367,7 @@ class payload_controller_GNC
         Eigen::Vector3f L_j_dot;//rotation speed of the cable tip
         Eigen::Vector3f L_j; // the cable vector
         Eigen::Vector2f r_j, v_j;
-        Eigen::Matrix<float, 3,2> B_j;
+        Eigen::Matrix<float, 3,2> B_j, B_j_dot;
         Eigen::Vector3f dot_vqj;
         Eigen::Vector3f accel_body;
         Eigen::Matrix2f BB_temp;
@@ -340,12 +376,13 @@ class payload_controller_GNC
         Eigen::Vector3f f_L_j;
         Eigen::Vector3f f_p_j;
         Eigen::Matrix3f Identity;
+        Eigen::Matrix3f Identity_30;
+        Eigen::Matrix2f Identity2D;
         Eigen::Vector3f Delta_pt;
         Eigen::Vector3f Delta_rt;
-        Eigen::Vector2f rd_j;
-
-        Eigen::Vector2f rd;
-        Eigen::Vector3f f_pj, f_0j;// trim force and motion sync term
+        Eigen::Matrix3f atti_dot;
+        Eigen::Vector2f rd_j, mu_j;
+        Eigen::Vector3f f_pj, f0_j, f_bj, f_cj;// trim force and motion sync term
         // cross feeding terms
         px4_command::AddonForce _AddonForce;
         Eigen::Vector3f R1;
@@ -365,6 +402,8 @@ class payload_controller_GNC
         Eigen::Vector3f angle_error;
         // error constraint parameters:
         Eigen::Vector3f pos_error_max;
+        Eigen::Vector3f s_P;
+        Eigen::Vector3f s_R;
         Eigen::Vector3f angular_error_max;
         Eigen::Vector3f pos_int_max;
         Eigen::Vector3f ang_int_max;
@@ -373,6 +412,7 @@ class payload_controller_GNC
         float pos_int_start_error;
         float angle_int_start_error;
         // normalized control input
+        Eigen::Vector3f U;
         Eigen::Vector3f u_l;
         Eigen::Vector3f u_d;
         Eigen::Vector3f IntegralPose;
@@ -417,7 +457,7 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
         accel_body(i) = _DroneState.acceleration[i];
     }
     dot_vqj = R_Ij * (accel_body)+ g_I;// calculate true acc in inertial frame dot_vqj in TCST paper
-    /*Step 2 calculate L_j and L_j_dot based on payload information feedback  */
+    /*------Step 2 calculate L_j and L_j_dot based on payload information feedback -------*/
     // put states into vector array for easy calculations
     for (int i = 0; i < 3; i ++) {
         Xpd(i) = _Reference_State.position_ref[i];
@@ -450,6 +490,9 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
         B_j(2,1) = -0.1;
     }
 
+    B_j_dot.row(2) = - v_j.transpose() * ((Cable_Length_sq - sq_r)*Identity2D 
+                     + r_j * r_j.transpose()) / pow(sqrt((Cable_Length_sq - sq_r)),3);
+
     BB_temp = B_j.transpose()*B_j; 
     float BB_determinent = BB_temp(0,0)*BB_temp(1,1) - BB_temp(0,1)*BB_temp(1,0);
     BB_inverse(0,0) = BB_temp(1,1);
@@ -459,21 +502,25 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
     BB_inverse = BB_inverse/BB_determinent;
     BB_j = B_j * BB_inverse * B_j.transpose();
 
-    /*Step 3 calculate payload position and attitude error*/
+    /*------Step 3 calculate payload position and attitude error--------*/
+    // a. position error:
     pos_error = Xp - Xpd;
     float scale_p = sqrt(1 + pos_error.transpose() * pos_error);
-    pos_error = pos_error/scale_p;
-
+    pos_error = pos_error/scale_p; 
+    s_P = Vp + kv * pos_error;
+    // b. angular error:
     angle_error = 0.5* Veemap(R_IPd.transpose()*R_IP- R_IP.transpose() * R_IPd);
+    atti_dot = CalculateAuxiliaryE(R_IP.transpose() * R_IPd);
     if (num_drone<3) // if only two drones are involved, we have to remove one axis in control
     {
          angle_error(0) = 0;
+         atti_dot *=  Identity_30;
     }
-     
-    /*Step 4 calculate control law form the GNC 2019 paper*/
+    s_R = Omega_p + kR  * angle_error;
+    /*------- Step 4 calculate control law form the GNC 2019 paper ---------*/
+    // simple integral is disable if robust controller is used
     SimpleIntegral(_DroneState, false ,dt);
-    CalculateCrossFeedingTerms(true, dt);
-    // calculate disturbance force on the quadrotor
+    // a. calculate disturbance force on the quadrotor
     if(_DroneState.mode != "OFFBOARD") {
         Delta_j.setZero(); // estimation does not run in offboard mode
     } else {
@@ -481,15 +528,32 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
     }
     Delta_j_p = (Identity - L_j*L_j.transpose()/Cable_Length_sq)*Delta_j; // get the effective disturbance
     Delta_j_p =  constrain_vector(Delta_j_p, 10.0);// constraint the disturbance estimation.
-    // calculate the total compensation force:
+    // b. calculate the payload compensation force:
     f_p_j = - PayloadSharingPortion * (Payload_Mass*g_I + Delta_pt + R_IP * Ej * Delta_rt);
-    rd_j = Cable_Length *  f_p_j.segment<2>(0)/f_p_j.norm(); // calculate the desired cable tile angle
-
-    // 
-
-    Eigen::Vector3f U;
+    // calculate corresponding desired cable tilt angle:
+    rd_j = Cable_Length *  f_p_j.segment<2>(0)/f_p_j.norm(); 
+    // c. calculate mu_j term in the paper
     if (isAddonForcedUsed) {
-        ///rd_j.setZero();
+        PayloadDisturbance =  PayloadSharingPortion * ( Delta_pt + R_IP * Ej * Delta_rt);
+        mu_j = kL* (r_j - rd_j); 
+    } else {
+        PayloadDisturbance.setZero();
+        mu_j = kL* r_j; 
+    }
+    // d.update the cross-feeding terms
+    CalculateCrossFeedingTerms(_DroneState, isCrossFeedingTermsUsed, dt);
+    CalculateSyncForce(isCrossFeedingTermsUsed); 
+    // e. calculate total control force:
+    if (isCrossFeedingTermsUsed) {
+        U = Vp + Zeta - R_IP * TetherOffsetCross*(Omega_p + Eta) + B_j*(v_j + mu_j);  
+        u_l = - Kphi * U + (f0_j + f_bj + f_cj - Delta_j_p - PayloadDisturbance)/TotalLiftedMass;
+    } else {
+        U = Vp + kv*(pos_error + kvi * IntegralPose) 
+            - R_IP * TetherOffsetCross*(Omega_p + kR * angle_error + kRi * IntegralAttitude) 
+            + B_j*(v_j + kL*(r_j - rd_j));
+        u_l = - Kphi * U - (Delta_j_p + PayloadDisturbance)/TotalLiftedMass;    
+    }
+/*    if (isAddonForcedUsed) {
         PayloadDisturbance =  PayloadSharingPortion * ( Delta_pt + R_IP * Ej * Delta_rt);
         U = Vp + kv*(pos_error + kvi * IntegralPose) 
             - R_IP * TetherOffsetCross*(Omega_p + kR * angle_error + kRi * IntegralAttitude) 
@@ -499,12 +563,10 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
         U = Vp + kv*(pos_error + kvi * IntegralPose) 
             - R_IP * TetherOffsetCross*(Omega_p + kR * angle_error + kRi * IntegralAttitude) 
             + B_j*(v_j + kL*r_j); // rd_j is not used if addon force is not used
-    }
-    //f_0j = - Quad_MASS * (Zeta_dot + kL*B_j + B_j_dot * kL*(r_j - rd_j) - R_IP * t_j_cross * Eta_dot - R_IP*omega_p_cross * t_j_cross * Eta);
-    //f_aj = - a_j * m_p * Zeta 
-    //u_l = - Kphi * (Vj+kv*(pos_error + kvi * IntegralPose)- R_IP * TetherOffsetCross *(kR * angle_error + kRi * IntegralAttitude) + kL*B_j*r_j);
-    u_l = - Kphi * U - (Delta_j_p + PayloadDisturbance)/(TotalLiftedMass);
-    // desired acceleration
+    }*/
+
+    // u_l = - Kphi * U - (Delta_j_p + PayloadDisturbance)/(TotalLiftedMass) ;
+    /*------- Step 5 pass the calculated control force to FCU ---------*/
     accel_sp[0] = u_l[0] - u_d[0];
     accel_sp[1] = u_l[1] - u_d[1];
     accel_sp[2] = u_l[2] - u_d[2] + 9.81;
@@ -573,8 +635,10 @@ void payload_controller_GNC::SimpleIntegral(const px4_command::DroneState& _Dron
     }
 }
 
-void payload_controller_GNC::CalculateCrossFeedingTerms(bool isActivated, float dt) {
-    if(isActivated) {
+void payload_controller_GNC::CalculateCrossFeedingTerms(const px4_command::DroneState& DroneState,
+                                                        bool isActivated, 
+                                                        float dt) {
+    if(isActivated) { // integral term does not run in offboard mode
         R1(0) = _AddonForce.R_1x;
         R1(1) = _AddonForce.R_1y;
         R1(2) = _AddonForce.R_1z;
@@ -583,27 +647,34 @@ void payload_controller_GNC::CalculateCrossFeedingTerms(bool isActivated, float 
         R2(2) = _AddonForce.R_2z;
         F1_dot = - lambda_1 * F1 + kr1 * R1;
         F2_dot = - lambda_2 * F2 + kr2 * R2;
-        F1 += dt*F1_dot;
-        F2 += dt*F2_dot;
+        if (DroneState.mode == "OFFBOARD") {
+            // integral term does not run in offboard mode
+            F1 += dt*F1_dot;
+            F2 += dt*F2_dot;
+        } else {
+            F1.setZero();
+            F2.setZero();
+        }
         Zeta = F1 + kv * pos_error;// make sure the sign is correct 
         Eta =  F2 + kR * angle_error;
         Zeta_dot = F1_dot + kv * Vp;
-        //Eigen::Matrix3f E = Identity*
-        //Eta_dot = F2_dot + kR * E * Omega_p;
+        Eta_dot = F2_dot + kR * atti_dot * Omega_p;
+        f_bj = - PayloadSharingPortion * Payload_Mass* Zeta_dot - PayloadSharingPortion *  kp * Payload_Mass * s_P;
+        f_cj = - PayloadSharingPortion * R_IP * Ej * (J_p * Eta_dot + komega * s_R);
     }
 }
 
 Eigen::Matrix3f payload_controller_GNC::CalculateAuxiliaryE(const Eigen::Matrix3f& R) {
 
-    Eigen::Matrix3f E;
-    return E;
+    return 0.5*(R.trace()*Identity - R);
 
 }
 
 void payload_controller_GNC::CalculateSyncForce(bool isActivated) {
-    //if (isActivated) {
-    //   f0_j = -Quad_MASS * (Zeta_dot + kL* B_j * v_j + B_j_dot * mu_j - R_IP * TetherOffsetCross* Eta_dot - R_IP * omega);
-   // }
+    if (isActivated) {
+       f0_j = -Quad_MASS * (Zeta_dot + kL* B_j * v_j + B_j_dot * mu_j - R_IP * TetherOffsetCross* Eta_dot 
+       - R_IP * Hatmap(Omega_p)* TetherOffsetCross * Eta);
+    }
 }
 
 void payload_controller_GNC::pubauxiliarystate(){
@@ -772,6 +843,16 @@ void payload_controller_GNC::printf_result()
         cout << "Delta_rt y: "<< Delta_rt(1) << " [N] ";
         cout << "Delta_rt z: "<< Delta_rt(2) << " [N] ";
         cout << endl;   
+        /* display cross feeding terms */
+        cout << ">>>>>>>> Cross Feeding Terms: <<<<<<<<<<<<" <<endl;
+        cout << "Zeta : " << Zeta(0) << " [N] " << Zeta(1) << " [N] " << Zeta(2) << " [N] " <<endl;
+        cout << "Zeta_dot : " << Zeta_dot(0) << " [N] " << Zeta_dot(1) << " [N] " << Zeta_dot(2) << " [N] " <<endl;
+        cout << "Eta : " << Eta(0) << " [N] " << Eta(1) << " [N] " << Eta(2) << " [N] " <<endl;
+        cout << "Eta-dot : " << Eta_dot(0) << " [N] " << Eta_dot(1) << " [N] " << Eta_dot(2) << " [N] " <<endl;
+        cout << "f0_j : " << f0_j(0) << " [N] " << f0_j(1) << " [N] " << f0_j(2) << " [N] " << endl;
+        cout << "fb_j : " << f_bj(0) << " [N] " << f_bj(1) << " [N] " << f_bj(2) << " [N] " << endl;
+        cout << "fc_j : " << f_cj(0) << " [N] " << f_cj(1) << " [N] " << f_cj(2) << " [N] " << endl;
+
         /* display the total compensation force for payload*/ 
         cout << "f_p_j [X Y Z]: " << f_p_j(0)<< " [N] " <<  f_p_j(1)<< " [N] " << f_p_j(2)<< " [N] " <<endl;
         /* display the desired cable inclination */

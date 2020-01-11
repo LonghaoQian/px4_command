@@ -201,12 +201,15 @@ Pos_GNC:
   Type: 0              # 0 for TCST method 
   MaxInclination: 50.0 # maximum safty angle
   CableLengthTolerance: 1.2
+  # debugging options
   UseAddonForce: true
+  UseCrossFeedingTerms: true
   PubAuxiliaryState : true
+  # controller parametrers: 
   num_drone : 2
-  kv_xy : 0.4
+  kv_xy : 0.25
   Kv_z  : 0.7
-  kR_xy : 0.4
+  kR_xy : 0.3
   kR_z  : 0.2
   kL    : 0.15
   Kphi_xy : 3
@@ -214,22 +217,31 @@ Pos_GNC:
   fp_max_x : 5
   fp_max_y : 5
   fp_max_z : 5
-  lambda_j : 0.3
-  lambda_Txy : 0.1
+  lambda_j : 0.35
+  lambda_Txy : 0.08
   lambda_Tz  : 0.3
   lambda_Rxy : 0.09
   lambda_Rz  : 0.09
   kF_xy : 0.4
   kF_z :  0.5
-  kr1_x : 0.1
-  kr1_y : 0.1
-  kr1_z : 0.1
+  kr1_x : 0.2
+  kr1_y : 0.2
+  kr1_z : 0.2
   kr2_x : 0.1
   kr2_y : 0.1
   kr2_z : 0.1
-  lambda1_x : 0.2
-  lambda1_y : 0.2
-  lambda1_z : 0.2
+
+  kp_x : 0.2
+  kp_y : 0.2
+  kp_z : 0.2
+
+  komega_x : 0.1
+  komega_y : 0.1
+  komega_z : 0.1
+
+  lambda1_x : 1
+  lambda1_y : 1
+  lambda1_z : 1
   lambda2_x : 0.5
   lambda2_y : 0.5
   lambda2_z : 0.5
