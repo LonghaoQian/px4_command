@@ -45,7 +45,7 @@ Cable:
 
 ## single or multi-UAV mode
 CooperativeMode:
-  isMulti: false
+  isMulti: true
   droneID: 2              # single UAV payload mode is activated in drone 2
 
 ##geo fence for fsc
