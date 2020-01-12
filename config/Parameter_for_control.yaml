@@ -35,7 +35,7 @@ pos_estimator:
 
 ## 飞机参数
 Quad:
-  mass: 1.6
+  mass: 1.541
 ## payload mass
 Payload:
   mass: 0.95
@@ -156,14 +156,14 @@ Pos_tie:
 
 # parameter for payload cooperative control 
 uav0_Pos_GNC:
-  mass : 1.67
+  mass : 1.541
   cablelength : 0.91
   TetherOffset_x: 0.99
   TetherOffset_y: 0
   TetherOffset_z: 0
   PayloadSharingPortion : 0.5
-  motor_slope: 0.079
-  motor_intercept: 0.188
+  motor_slope: 0.09603
+  motor_intercept: 0.13213
 
 uav1_Pos_GNC:
   mass : 1.541
@@ -176,14 +176,14 @@ uav1_Pos_GNC:
   motor_intercept: 0.13213
 
 uav2_Pos_GNC:
-  mass : 1.45
+  mass : 1.541
   cablelength : 0
   TetherOffset_x: 0
   TetherOffset_y: 0
   TetherOffset_z: 0
   PayloadSharingPortion: 0
-  motor_slope: 0.3
-  motor_intercept: 0.1
+  motor_slope: 0.09603
+  motor_intercept: 0.13213
 
 uav3_Pos_GNC:
   mass : 1.45
