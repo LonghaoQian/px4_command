@@ -249,7 +249,7 @@ class payload_controller_GNC
             subAddonForce       =  main_handle.subscribe<px4_command::AddonForce>("/uav0/px4_command/addonforce", 100, &payload_controller_GNC::GetAddonForce, this);
             //emergencyKill       = main_handle.serviceClient<px4_command::Emergency>("/" + uav_pref + "/px4_command/emergencyKill"); 
             // send the parameters to ground station:
-            ParamSrv.request.controllername = uav_pref + " Payload Pos_GNC";
+            ParamSrv.request.controllername = uav_pref + " with TCST complete";
             ParamSrv.request.dronemass   = Quad_MASS;
             ParamSrv.request.cablelength = Cable_Length;
             ParamSrv.request.a_j         = PayloadSharingPortion;
@@ -553,19 +553,6 @@ px4_command::ControlOutput payload_controller_GNC::payload_controller(
             + B_j*(v_j + kL*(r_j - rd_j));
         u_l = - Kphi * U - (Delta_j_p + PayloadDisturbance)/TotalLiftedMass;    
     }
-/*    if (isAddonForcedUsed) {
-        PayloadDisturbance =  PayloadSharingPortion * ( Delta_pt + R_IP * Ej * Delta_rt);
-        U = Vp + kv*(pos_error + kvi * IntegralPose) 
-            - R_IP * TetherOffsetCross*(Omega_p + kR * angle_error + kRi * IntegralAttitude) 
-            + B_j*(v_j + kL*(r_j - rd_j)); // rd_j is used when the total estimation is used
-    } else {
-        PayloadDisturbance.setZero();//if not used, set this compensation force to 0.
-        U = Vp + kv*(pos_error + kvi * IntegralPose) 
-            - R_IP * TetherOffsetCross*(Omega_p + kR * angle_error + kRi * IntegralAttitude) 
-            + B_j*(v_j + kL*r_j); // rd_j is not used if addon force is not used
-    }*/
-
-    // u_l = - Kphi * U - (Delta_j_p + PayloadDisturbance)/(TotalLiftedMass) ;
     /*------- Step 5 pass the calculated control force to FCU ---------*/
     accel_sp[0] = u_l[0] - u_d[0];
     accel_sp[1] = u_l[1] - u_d[1];

@@ -23,7 +23,6 @@
 #include <pos_controller_cascade_PID.h>
 #include <pos_controller_TIE.h>
 #include <payload_controller_GNC.h>
-#include <payload_controller_TCST.h>
 /*--------------------------utility classes-----------------------*/
 #include <px4_command_utils.h>
 #include <px4_command/ControlCommand.h>
