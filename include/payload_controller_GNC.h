@@ -248,42 +248,6 @@ class payload_controller_GNC
             pubFleetStatus      =  main_handle.advertise<px4_command::FleetStatus>("/" + uav_pref + "/px4_command/fleetstatus", 1000);
             subAddonForce       =  main_handle.subscribe<px4_command::AddonForce>("/uav0/px4_command/addonforce", 100, &payload_controller_GNC::GetAddonForce, this);
             //emergencyKill       = main_handle.serviceClient<px4_command::Emergency>("/" + uav_pref + "/px4_command/emergencyKill"); 
-            // send the parameters to ground station:
-            ParamSrv.request.controllername = uav_pref + " with TCST complete";
-            ParamSrv.request.dronemass   = Quad_MASS;
-            ParamSrv.request.cablelength = Cable_Length;
-            ParamSrv.request.a_j         = PayloadSharingPortion;
-            ParamSrv.request.payloadmass = Payload_Mass;
-            ParamSrv.request.num_drone   = num_drone;
-            ParamSrv.request.motor_slope = (float)motor_slope;
-            ParamSrv.request.motor_intercept = (float)motor_intercept;
-            ParamSrv.request.t_jx        = TetherOffset(0);
-            ParamSrv.request.t_jy        = TetherOffset(1);
-            ParamSrv.request.t_jz        = TetherOffset(2);
-            ParamSrv.request.kv_xy       = kv(0,0);
-            ParamSrv.request.Kv_z        = kv(2,2);
-            ParamSrv.request.kvi_xy      = kvi(0,0);
-            ParamSrv.request.kvi_z       = kvi(2,2);
-            ParamSrv.request.kR_xy       = kR(0,0);
-            ParamSrv.request.kR_z        = kR(2,2);
-            ParamSrv.request.kL          = kL;
-            ParamSrv.request.Kphi_xy     = Kphi(0,0);
-            ParamSrv.request.Kphi_z      = Kphi(2,2);
-            ParamSrv.request.pxy_error_max = pos_error_max[0];
-            ParamSrv.request.pz_error_max  = pos_error_max[2];
-            ParamSrv.request.pxy_int_max = pos_int_max(0);
-            ParamSrv.request.pz_int_max  = pos_int_max(2);
-            ParamSrv.request.tilt_max    = tilt_max;
-            ParamSrv.request.int_start_error = pos_int_start_error;
-            ParamSrv.request.fp_max_x = fp_max(0);
-            ParamSrv.request.fp_max_y = fp_max(1);
-            ParamSrv.request.fp_max_z = fp_max(2);
-            // call the ground station to recieve the parameters
-            if (clientSendParameter.call(ParamSrv)) {
-                ROS_INFO("Parameter sent to ground station");
-            } else {
-                ROS_WARN("Failed to connect ground station !!! ");
-            }            
             // initialize emergency flag
             isEmergency = false;
         }
@@ -311,6 +275,7 @@ class payload_controller_GNC
                                         bool isActivated, 
                                         float dt);
         void CalculateSyncForce(bool isActivated);
+        void send_parameter_to_ground_station();
         Eigen::Matrix3f CalculateAuxiliaryE (const Eigen::Matrix3f& R);
         //------------- private variables ---------------//
         ros::ServiceClient   clientSendParameter;
@@ -771,6 +736,73 @@ bool payload_controller_GNC::emergency_switch()
     return isEmergency;   
 }
 
+void payload_controller_GNC::send_parameter_to_ground_station()
+{
+    
+    ParamSrv.request.controllername      = uav_pref + " with TCST complete";
+    ParamSrv.request.dronemass           = Quad_MASS;
+    ParamSrv.request.cablelength = Cable_Length;
+    ParamSrv.request.a_j         = PayloadSharingPortion;
+    ParamSrv.request.payloadmass = Payload_Mass;
+    ParamSrv.request.num_drone   = num_drone;
+    ParamSrv.request.motor_slope = (float)motor_slope;
+    ParamSrv.request.motor_intercept = (float)motor_intercept;
+    ParamSrv.request.isPubAuxiliaryState     = isPubAuxiliaryState;
+    ParamSrv.request.isAddonForcedUsed       = isAddonForcedUsed;
+    ParamSrv.request.isCrossFeedingTermsUsed = isCrossFeedingTermsUsed;
+    ParamSrv.request.t_jx        = TetherOffset(0);
+    ParamSrv.request.t_jy        = TetherOffset(1);
+    ParamSrv.request.t_jz        = TetherOffset(2);
+    ParamSrv.request.kv_xy       = kv(0,0);
+    ParamSrv.request.kv_z        = kv(2,2);
+    ParamSrv.request.kr1_x       = kr1(0,0);
+    ParamSrv.request.kr1_y       = kr1(1,1);
+    ParamSrv.request.kr1_z       = kr1(2,2);
+    ParamSrv.request.kr2_x       = kr2(0,0);
+    ParamSrv.request.kr2_y       = kr2(1,1);
+    ParamSrv.request.kr2_z       = kr2(2,2);
+    ParamSrv.request.kp_x        = kp(0,0);
+    ParamSrv.request.kp_y        = kp(1,1);
+    ParamSrv.request.kp_z        = kp(2,2);
+    ParamSrv.request.komega_x    = komega(0,0);
+    ParamSrv.request.komega_y    = komega(1,1);
+    ParamSrv.request.komega_z    = komega(2,2);
+    ParamSrv.request.lambda1_x   = lambda_1(0,0);
+    ParamSrv.request.lambda1_y   = lambda_1(1,1);
+    ParamSrv.request.lambda1_z   = lambda_1(2,2);
+    ParamSrv.request.lambda2_x   = lambda_2(0,0);
+    ParamSrv.request.lambda2_y   = lambda_2(1,1);
+    ParamSrv.request.lambda2_z   = lambda_2(2,2);
+    ParamSrv.request.kR_xy           = kR(0,0);
+    ParamSrv.request.kR_z            = kR(2,2);
+    ParamSrv.request.kL              = kL;
+    ParamSrv.request.Kphi_xy         = Kphi(0,0);
+    ParamSrv.request.Kphi_z          = Kphi(2,2);
+    ParamSrv.request.pxy_error_max   = pos_error_max[0];
+    ParamSrv.request.pz_error_max    = pos_error_max[2];
+    ParamSrv.request.pxy_int_max     = pos_int_max(0);
+    ParamSrv.request.pz_int_max      = pos_int_max(2);
+    ParamSrv.request.tilt_max        = tilt_max;
+    ParamSrv.request.int_start_error = pos_int_start_error;
+    ParamSrv.request.fp_max_x        = fp_max(0);
+    ParamSrv.request.fp_max_y        = fp_max(1);
+    ParamSrv.request.fp_max_z        = fp_max(2);
+    // call the ground station to recieve the parameters and waiting for connection....
+    bool isresponserecieved = false;
+    ros::Time begin_time    = ros::Time::now();
+    float last_time         = px4_command_utils::get_time_in_sec(begin_time);
+    float cur_time          = last_time;
+    while (!isresponserecieved) {
+        // very 3 seconds, send a parameter service call to the ground station.
+        cur_time = px4_command_utils::get_time_in_sec(begin_time);
+        if(((int)(cur_time*10) % 30) == 0) {
+            ROS_INFO("Waiting for response from ground station..., time elapsed %f [s]",cur_time);  
+            isresponserecieved = clientSendParameter.call(ParamSrv);
+        }
+    }
+    ROS_INFO("Parameter sent to ground station");          
+}
+
 void payload_controller_GNC::printf_result()
 {
     cout <<">>>>>>>>  TCST 2019 Paylaod Pose Controller "<< uav_pref <<" <<<<<<<" <<endl;
@@ -892,16 +924,43 @@ void payload_controller_GNC::printf_param()
     cout <<"kphi_x : " << Kphi(0,0) <<endl;
     cout <<"kphi_y : " << Kphi(1,1) <<endl;
     cout <<"kphi_z : " << Kphi(2,2) <<endl;
-    // Display estimation parameter
+
+    if (isPubAuxiliaryState) {
+        cout << "AuxiliaryState has been published..." << endl;
+    } else {
+        cout << "AuxiliaryState NOT published!!" << endl;
+    }
+    if (isAddonForcedUsed) {
+        cout << "AddonForce is used ..." << endl;
+    } else {
+        cout << "Not using Addon Force !!!" << endl;
+    }
+
+    // Display estimation parameter:
     cout <<"UDE parameter:  " << endl;
     cout << "lambda_jx: " <<  lambda_j(0,0) << " lambda_jy: " << lambda_j(1,1) << " lambda_jz: "<< lambda_j(2,2) << endl;
+    // Dispay cross-feeding term parameter:
+    if (isCrossFeedingTermsUsed) {
+        cout <<"Cross-feeding term has been used. The parameters are :  " << endl;
+        cout << " lambda_1_x : " <<  lambda_1(0,0) << "  lambda_1_y : " << lambda_1(1,1) << " lambda_1_z : " << lambda_1(2,2) << endl; 
+        cout << " lambda_2_x : " <<  lambda_2(0,0) << "  lambda_2_y : " << lambda_2(1,1) << " lambda_2_z : " << lambda_2(2,2) << endl; 
+
+        cout << " kr1_x : " <<  kr1(0,0) << "  kr1_y : " << kr1(1,1) << " kr1_z : " << kr1(2,2) << endl; 
+        cout << " kr2_x : " <<  kr2(0,0) << "  kr2_y : " << kr2(1,1) << " kr2_z : " << kr2(2,2) << endl; 
+
+        cout << " kp_x : " <<  kp(0,0) << " kp_y : " << kp(1,1) << " kp_z : " << kp(2,2) << endl; 
+        cout << " komega_x : " <<  komega(0,0) << " komega_y : " << komega(1,1) << " komega_z : " << komega(2,2) << endl;        
+    } else {
+        cout << "Cross Feeding term is not used !!!" << endl;
+    }
     // Display control limitation:
     cout <<"Control Limit:  " <<endl;
     cout <<"pxy_error_max : "<< pos_error_max[0] << endl;
     cout <<"pz_error_max :  "<< pos_error_max[2] << endl;
     cout <<"maximum tilt angle: "<< tilt_max << " [DEG] " << endl;
     cout << "fpmax_x : " << fp_max(0) << " fpmax_y : " << fp_max(1) << " fpmax_z : " << fp_max(2) <<endl;
-
+    // send the parameters to ground station:
+    send_parameter_to_ground_station();
 }
 
 #endif
