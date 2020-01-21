@@ -364,15 +364,17 @@ int main(int argc,
                         FR2 += quadrotor_mass(i)* t_j_cross * R_PI * B_j * v_j;
                     }
                     // calculate estimation based on the TCST paper. 
-                    Delta_T_I +=  dt* ( Delta_T + FT + (M_q + payload_mass) * g_I);
+                    Delta_T_I +=  dt* ( Delta_T + FT + (M_q + payload_mass) * g_I + DT);
                     Delta_T = lambda_T * ( - Delta_T_I + (M_q + payload_mass) * v_p + R_IP * A.transpose() * omega_p +  BT);
-                    Delta_R_I += dt *(A* omega_p_cross * R_PI * v_p + omega_p_cross * J_p * omega_p - Delta_R +  FR );
+                    Delta_R_I += dt *(A* omega_p_cross * R_PI * v_p + omega_p_cross * J_p * omega_p - Delta_R +  FR - DR);
                     Delta_R = lambda_R * (Delta_R_I  + A * R_PI * v_p + (J_p + J_q ) * omega_p +  FR2 );
                     // calculate effective disturbance: 
-                    Delta_pt = Delta_T - DT;
-                    Delta_pt = constrain_vector(Delta_pt, 10.0);
-                    Delta_rt = Delta_R - DR;
-                    Delta_rt = constrain_vector(Delta_rt, 5.0);
+                    //Delta_pt = Delta_T - DT;
+                    //Delta_pt = constrain_vector(Delta_pt, 10.0);
+                    //Delta_rt = Delta_R - DR;
+                    //Delta_rt = constrain_vector(Delta_rt, 5.0);
+                    Delta_pt = constrain_vector(Delta_T, 10.0);
+                    Delta_rt = constrain_vector(Delta_R, 5.0);
                 }
                 break;
             default:
