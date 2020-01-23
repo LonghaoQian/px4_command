@@ -158,42 +158,32 @@ Pos_tie:
 uav0_Pos_GNC:
   mass : 1.541
   cablelength : 0.91
-  TetherOffset_x: 0.99
+  TetherOffset_x: 1.085
   TetherOffset_y: 0
   TetherOffset_z: 0
-  PayloadSharingPortion : 0.5
+  PayloadSharingPortion : 0.33333
   motor_slope: 0.09603
   motor_intercept: 0.13213
 
 uav1_Pos_GNC:
   mass : 1.541
   cablelength : 0.91
-  TetherOffset_x: -0.99
-  TetherOffset_y: 0
+  TetherOffset_x: -0.5425
+  TetherOffset_y: -0.9396
   TetherOffset_z: 0
-  PayloadSharingPortion: 0.5
+  PayloadSharingPortion: 0.33333
   motor_slope: 0.09603
   motor_intercept: 0.13213
 
 uav2_Pos_GNC:
   mass : 1.541
-  cablelength : 0
-  TetherOffset_x: 0
-  TetherOffset_y: 0
+  cablelength : 0.98
+  TetherOffset_x: -0.5425
+  TetherOffset_y: 0.9396
   TetherOffset_z: 0
-  PayloadSharingPortion: 0
+  PayloadSharingPortion: 0.33333
   motor_slope: 0.09603
   motor_intercept: 0.13213
-
-uav3_Pos_GNC:
-  mass : 1.45
-  cablelength : 0
-  TetherOffset_x: 0
-  TetherOffset_y: 0
-  TetherOffset_z: 0
-  PayloadSharingPortion: 0
-  motor_slope: 0.3
-  motor_intercept: 0.1
 
 Pos_GNC:
   ControllerInfo: -1
