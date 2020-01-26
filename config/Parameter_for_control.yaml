@@ -157,7 +157,7 @@ Pos_tie:
 # parameter for payload cooperative control 
 uav0_Pos_GNC:
   mass : 1.541
-  cablelength : 0.91
+  cablelength : 0.98
   TetherOffset_x: 1.085
   TetherOffset_y: 0
   TetherOffset_z: 0
@@ -167,7 +167,7 @@ uav0_Pos_GNC:
 
 uav1_Pos_GNC:
   mass : 1.541
-  cablelength : 0.91
+  cablelength : 0.98
   TetherOffset_x: -0.5425
   TetherOffset_y: -0.9396
   TetherOffset_z: 0
@@ -195,7 +195,7 @@ Pos_GNC:
   UseCrossFeedingTerms: true
   PubAuxiliaryState : true
   # controller parametrers: 
-  num_drone : 2
+  num_drone : 3
   kv_xy : 0.25
   Kv_z  : 0.7
   kR_xy : 0.3
