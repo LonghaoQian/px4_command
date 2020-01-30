@@ -205,8 +205,8 @@ Pos_GNC:
   fp_max_x : 5
   fp_max_y : 5
   fp_max_z : 5
-  lambda_j : 0.30
-  lambda_Txy : 0.08
+  lambda_j : 0.5
+  lambda_Txy : 0.1
   lambda_Tz  : 0.3
   lambda_Rxy : 0.09
   lambda_Rz  : 0.09

@@ -767,6 +767,19 @@ void payload_controller_GNC::send_parameter_to_ground_station()
     ParamSrv.request.komega_x    = komega(0,0);
     ParamSrv.request.komega_y    = komega(1,1);
     ParamSrv.request.komega_z    = komega(2,2);
+    ParamSrv.request.lambdaj_x   = lambda_j(0,0);
+    ParamSrv.request.lambdaj_y   = lambda_j(1,1);
+    ParamSrv.request.lambdaj_z   = lambda_j(2,2);
+    if (uav_pref.compare("uav0")==0) {
+        
+    ros::NodeHandle main_handle("~");
+    main_handle.param<float> ("Pos_GNC/lambda_Txy", ParamSrv.request.lambda_T_x, 0.0);
+    main_handle.param<float> ("Pos_GNC/lambda_Txy", ParamSrv.request.lambda_T_y, 0.0);
+    main_handle.param<float> ("Pos_GNC/lambda_Tz",  ParamSrv.request.lambda_T_z, 0.0);
+    main_handle.param<float> ("Pos_GNC/lambda_Rxy", ParamSrv.request.lambda_R_x, 0.0);
+    main_handle.param<float> ("Pos_GNC/lambda_Rxy", ParamSrv.request.lambda_R_y, 0.0);
+    main_handle.param<float> ("Pos_GNC/lambda_Rz",  ParamSrv.request.lambda_R_z, 0.0);}
+
     ParamSrv.request.lambda1_x   = lambda_1(0,0);
     ParamSrv.request.lambda1_y   = lambda_1(1,1);
     ParamSrv.request.lambda1_z   = lambda_1(2,2);
@@ -800,7 +813,7 @@ void payload_controller_GNC::send_parameter_to_ground_station()
             isresponserecieved = clientSendParameter.call(ParamSrv);
         }
     }
-    ROS_INFO("Parameter sent to ground station");          
+    ROS_INFO("Parameter sent to ground station !");          
 }
 
 void payload_controller_GNC::printf_result()

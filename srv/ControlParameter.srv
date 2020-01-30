@@ -31,6 +31,15 @@ float32 kp_z
 float32 komega_x
 float32 komega_y
 float32 komega_z
+float32 lambdaj_x
+float32 lambdaj_y
+float32 lambdaj_z
+float32 lambda_T_x
+float32 lambda_T_y
+float32 lambda_T_z
+float32 lambda_R_x
+float32 lambda_R_y
+float32 lambda_R_z
 float32 lambda1_x
 float32 lambda1_y
 float32 lambda1_z

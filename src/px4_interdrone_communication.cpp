@@ -175,7 +175,7 @@ void DisplayParameters() {
     cout <<"lambda_T: "<< lambda_T(0,0) << " " << lambda_T(1,1) << " " << lambda_T(2,2) << " " << endl;
     cout <<"lambda_R: "<< lambda_R(0,0) << " " << lambda_R(1,1) << " " << lambda_R(2,2) << " " << endl;
     cout <<"Payload Mass: " << payload_mass << " [kg]" <<endl;
-    cout << num_of_drones << " are used ! "<< endl;
+    cout << num_of_drones << " drones are used ! "<< endl;
     for (int i = 0; i< num_of_drones ; i ++) {
         cout << ">>>>>>> ---- <<<<<<<<" <<endl;
         cout <<"Quadrotor " << i << " mass: " << quadrotor_mass(i) << " [kg] "<<  endl;
