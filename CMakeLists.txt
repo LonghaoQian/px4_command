@@ -53,6 +53,8 @@ add_service_files(
   FILES
   ControlParameter.srv
   Emergency.srv
+  GeneralInfo.srv
+  SinglePayloadAction.srv
 )
 
 ## Generate added messages and services with any dependencies listed here

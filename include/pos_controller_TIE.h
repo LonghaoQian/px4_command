@@ -25,8 +25,11 @@ Visual feedback from April Tag
 #include <px4_command/ControlOutput.h>
 #include <nav_msgs/Odometry.h>
 #include <px4_command/AuxiliaryState_singleUAV.h>
+#include <px4_command/SinglePayloadAction.h>
 using std::string;
 using std::iostream;
+
+
 class pos_controller_TIE
 {
     public:
@@ -92,6 +95,43 @@ class pos_controller_TIE
 
             main_handle.param<float>("Limit/tilt_max"     ,   tilt_max, 20.0);
             main_handle.param<float>("Limit/int_start_error"  , int_start_error, 0.3);
+
+            // read the geo geo_fence
+            main_handle.param<float>("geo_fence/x_min", geo_fence_x[0], -1.2);
+            main_handle.param<float>("geo_fence/x_max", geo_fence_x[1], 1.2);
+            main_handle.param<float>("geo_fence/y_min", geo_fence_y[0], -0.9);
+            main_handle.param<float>("geo_fence/y_max", geo_fence_y[1], 0.9);
+            main_handle.param<float>("geo_fence/z_min", geo_fence_z[0], 0.2);
+            main_handle.param<float>("geo_fence/z_max", geo_fence_z[1], 2);
+            // read the trajectory information
+            main_handle.param<int>("ActionMode/type", type, 0);
+
+            switch (type) {
+              case 0:
+              {
+                main_handle.param<float>("Circle_Trajectory/Center_x", Center(0), 0.0);
+                main_handle.param<float>("Circle_Trajectory/Center_y", Center(1), 0.0);
+                main_handle.param<float>("Circle_Trajectory/Center_z", Center(2), 1.0);
+                main_handle.param<float>("Circle_Trajectory/radius", radius, 0.3);
+                main_handle.param<float>("Circle_Trajectory/linear_vel", vd, 0.3);
+                break;
+              }
+              case 1:
+              {
+                break;
+              }
+              default:
+              {
+                main_handle.param<float>("Circle_Trajectory/Center_x", Center(0), 0.0);
+                main_handle.param<float>("Circle_Trajectory/Center_y", Center(1), 0.0);
+                main_handle.param<float>("Circle_Trajectory/Center_z", Center(2), 1.0);
+                main_handle.param<float>("Circle_Trajectory/radius", radius, 0.3);
+                main_handle.param<float>("Circle_Trajectory/linear_vel", vd, 0.3);
+                break;
+              }
+            }
+
+
             // reset all the states
             u_l.setZero();
             u_d.setZero();
@@ -119,6 +159,9 @@ class pos_controller_TIE
             g_I<<0.0,
                  0.0,
                 -9.81;
+            unit_z<<0,
+                    0,
+                    1;
             payload_position_vision.setZero();
             payload_velocity_vision.setZero();
             payload_position_mocap.setZero();
@@ -131,14 +174,17 @@ class pos_controller_TIE
             isintegrationoverlimit = false;
             signallosscounter = 0;
             isEmergency = false;
+            isperformAction = false;
             // initialize subscriber:
+            serverAction = main_handle.advertiseService("/" + uav_pref +"/px4_command/action", &pos_controller_TIE::ResponseToActionCall, this);
             subVisualMeasurement =  main_handle.subscribe("/" + uav_pref +"/px4_command/visualmeasurement",
-                                                            100, 
+                                                            100,
                                                             &pos_controller_TIE::GetPayloadVisualMeasurement,
                                                             this);
             if (isPublishAuxiliarySate)  {
                pubAuxiliaryState   = main_handle.advertise<px4_command::AuxiliaryState_singleUAV> ("/" + uav_pref + "/px4_command/auxiliarystate_singleUAV", 1000);
             }
+            // initialize
         }
         void printf_param();
         void printf_result();
@@ -146,17 +192,31 @@ class pos_controller_TIE
         px4_command::ControlOutput pos_controller(const px4_command::DroneState& _DroneState,
                                                   const px4_command::TrajectoryPoint& _Reference_State,
                                                   float dt);
-        px4_command::ControlOutput _ControlOutput;                                          
+        px4_command::ControlOutput _ControlOutput;
     private:
-        // ------------ private functions-----------------//    
+        // ------------ private functions-----------------//
         void GetPayloadVisualMeasurement(const nav_msgs::Odometry::ConstPtr& msg);
         void SendAuxiliaryState();
+        bool ResponseToActionCall(px4_command::SinglePayloadAction::Request& req, px4_command::SinglePayloadAction::Response& res);
+        bool DroneGeoFenceCheck();
         //------------- private variables ---------------//
-        ros::Publisher pubAuxiliaryState;
-        ros::Subscriber subVisualMeasurement;
+        ros::Publisher       pubAuxiliaryState;
+        ros::Subscriber      subVisualMeasurement;
+        ros::ServiceClient   clientSendParameter;
+        ros::ServiceServer   serverAction;
         bool isPublishAuxiliarySate;
         bool isIntegrationOn;
         bool isEmergency;
+        bool isperformAction;
+        // action info
+        int type;
+        Eigen::Vector3f Center;
+        float radius;
+        float vd;
+        // geo geo_fence
+        Eigen::Vector2f geo_fence_x;
+        Eigen::Vector2f geo_fence_y;
+        Eigen::Vector2f geo_fence_z;
         //quadrotor and payload parameter
         string mode;
         string uav_pref;
@@ -168,6 +228,7 @@ class pos_controller_TIE
         double motor_slope;
         double motor_intercept;
         Eigen::Vector3f g_I;
+        Eigen::Vector3f unit_z;
         // payload states
         Eigen::Vector3f L;// cable vector
         Eigen::Vector3f L_dot;// cable velocity
@@ -179,7 +240,7 @@ class pos_controller_TIE
         Eigen::Matrix3f R_Ij;
         Eigen::Vector3f dot_vq;
         Eigen::Vector3f accel_body;
-        // visual measurement 
+        // visual measurement
         nav_msgs::Odometry payloadvisualfeedback;
         bool visualflag;
         bool isvisualfeedbacknormal;
@@ -225,7 +286,7 @@ class pos_controller_TIE
 };
 
 px4_command::ControlOutput pos_controller_TIE::pos_controller(
-    const px4_command::DroneState& _DroneState, 
+    const px4_command::DroneState& _DroneState,
     const px4_command::TrajectoryPoint& _Reference_State, float dt)
 {
     mode = _DroneState.mode;
@@ -293,7 +354,7 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
             L = R_Ij * Lb;
             L_dot = R_Ij *  Lb_dot + R_Ij * Hatmap(omega_j) *  Lb;
 
-            // 
+            //
 
             payload_position_vision = UAV_position + L;
             payload_velocity_vision = UAV_velocity + L_dot;
@@ -307,11 +368,47 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
     r(1) = L(1);
     v_p(0) = L_dot(0);
     v_p(1) = L_dot(1);
-    // calculate quadrotor position and velocity error:
 
-    pos_error = reference_position - UAV_position;
-    vel_error = - UAV_velocity; // position stabilization
-    
+    // determine the geo_fence
+    if(!DroneGeoFenceCheck()){// if out of bound, return to normal mode
+        isperformAction = false;
+    }
+    // calculate quadrotor position and velocity error:
+    if(isperformAction){
+      switch (type)
+      {
+        case 0:{
+          Eigen::Vector3f e1 = Center - UAV_position;
+          Eigen::Vector3f n;
+          float e_norm = e1.norm();
+          n.setZero();
+          if(e_norm<0.1){// for too a very small position error, set the norm and unit vector to a fixed number
+            n(0) = 1;
+            n(1) = 0;
+            n(2) = 0;
+            e_norm = 0.1;
+          }else{
+            n = e1.normalized();
+          }
+          Eigen::Vector3f vd_direction;
+          vd_direction = unit_z.cross(n);
+          vd_direction.normalize();// normalize itself
+
+          vel_error = vd*vd_direction - UAV_velocity;
+          pos_error =  (1-radius/e_norm )*e1;
+
+          break;
+        }
+        default:{
+
+          break;
+        }
+      }
+    }else{
+      pos_error = reference_position - UAV_position;
+      vel_error = - UAV_velocity; // position stabilization
+    }
+
     float sq_r = r(0)*r(0) + r(1)*r(1);
     // update b matrix:
     if (Cable_Length_sq - sq_r>0.01) {
@@ -331,10 +428,10 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
     // calculate the integral term:
     if((_DroneState.mode == "OFFBOARD") && isIntegrationOn) {
         if(u_s.norm() < int_start_error) {
-            // integral[i] += ( -Kp[i]*pos_error[i] - Kv[i] * vel_error[i]) * dt 
+            // integral[i] += ( -Kp[i]*pos_error[i] - Kv[i] * vel_error[i]) * dt
             // check whether if the integral is out of bound
             if(integral.norm() > int_max)  {
-                // if the norm is over limit, stop the integration 
+                // if the norm is over limit, stop the integration
                 isintegrationoverlimit = true;
             } else {
                 isintegrationoverlimit = false;
@@ -395,7 +492,7 @@ bool pos_controller_TIE::emergency_switch()
     return isEmergency;
 }
 
-void pos_controller_TIE::SendAuxiliaryState() 
+void pos_controller_TIE::SendAuxiliaryState()
 {
     px4_command::AuxiliaryState_singleUAV msg;
     msg.header.stamp = ros::Time::now();
@@ -455,10 +552,33 @@ void pos_controller_TIE::SendAuxiliaryState()
     msg.acc_z  = dot_vq(2);
 
     msg.isvisualfeedbacknormal = isvisualfeedbacknormal;
-    msg.isvisualqualitygood    = isvisualqualitygood ; 
+    msg.isvisualqualitygood    = isvisualqualitygood ;
     msg.signallosscounter      = signallosscounter ;
     pubAuxiliaryState.publish(msg);
 }
+
+bool pos_controller_TIE::ResponseToActionCall(px4_command::SinglePayloadAction::Request& req, px4_command::SinglePayloadAction::Response& res){
+
+    if(DroneGeoFenceCheck()&&req.perform_action){
+        isperformAction = req.perform_action;
+    }else{
+        isperformAction = false;
+    }
+    res.status_ok = isperformAction;
+    res.trajectory_type = type;
+    return true;
+}
+
+bool pos_controller_TIE::DroneGeoFenceCheck(){
+    if (UAV_position(0) < geo_fence_x[0] || UAV_position(0) > geo_fence_x[1] ||
+        UAV_position(1) < geo_fence_y[0] || UAV_position(1) > geo_fence_y[1] ||
+        UAV_position(2) < geo_fence_z[0] || UAV_position(2) > geo_fence_z[1]) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
 
 void pos_controller_TIE::printf_result()
 {
@@ -500,13 +620,19 @@ void pos_controller_TIE::printf_result()
         cout << "---Bad visual measurment quality, switch to mocap signal !!!---" <<endl;
     }
 
-    cout<< "payload vel [X Y Z] from mocap is : " << payload_velocity_mocap(0) << " [m/s] " 
+    if(isperformAction){
+      cout << "---Perfroming Action...--- \n";
+    }else{
+      cout << "---Not Performing Action, Normal Flight.--- \n";
+    }
+
+    cout<< "payload vel [X Y Z] from mocap is : " << payload_velocity_mocap(0) << " [m/s] "
                                                   << payload_velocity_mocap(1) << " [m/s] "
                                                   << payload_velocity_mocap(2) << " [m/s] " << endl;
-    cout<< "payload vel [X Y Z] from vision is :" << payload_velocity_vision(0) << " [m/s] " 
+    cout<< "payload vel [X Y Z] from vision is :" << payload_velocity_vision(0) << " [m/s] "
                                                   << payload_velocity_vision(1) << " [m/s] "
                                                   << payload_velocity_vision(2) << " [m/s] " << endl;
-    cout<< "vel measurement error : "  << payload_velocity_mocap(0) - payload_velocity_vision(0) << " [m/s] " 
+    cout<< "vel measurement error : "  << payload_velocity_mocap(0) - payload_velocity_vision(0) << " [m/s] "
                                        << payload_velocity_mocap(1) - payload_velocity_vision(2) << " [m/s] "
                                        << payload_velocity_mocap(1) - payload_velocity_vision(2) << " [m/s] " <<endl;
     cout<< "payload pos [X Y Z] from mocap is : " << payload_position_mocap(0) << " [m] "
@@ -515,10 +641,10 @@ void pos_controller_TIE::printf_result()
     cout<< "payload pos [X Y Z] from vision is : " << payload_position_vision(0) << " [m] "
                                                    << payload_position_vision(1) << " [m] "
                                                    << payload_position_vision(2) << " [m] " <<endl;
-    cout<< "pos measurement error : "  << payload_position_mocap(0) - payload_position_vision(0) << " [m] " 
+    cout<< "pos measurement error : "  << payload_position_mocap(0) - payload_position_vision(0) << " [m] "
                                        << payload_position_mocap(1) - payload_position_vision(1) << " [m] "
                                        << payload_position_mocap(2) - payload_position_vision(2) << " [m] " <<endl;
-    cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" <<endl;                                                  
+    cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" <<endl;
 }
 
 // 【打印参数函数】
@@ -547,7 +673,7 @@ void pos_controller_TIE::printf_param()
     cout <<"Kpv_x : "<< Kpv(0,0)<<endl;
     cout <<"Kpv_y : "<< Kpv(1,1)<<endl;
     cout <<"Kpv_z : "<< Kpv(2,2)<<endl;
- 
+
     cout << "KL : " << KL << endl;
 
     cout <<"Control output limit:  " <<endl;
@@ -571,6 +697,29 @@ void pos_controller_TIE::printf_param()
     } else {
         cout << "No Auxiliary state published! " <<endl;
     }
+    switch (type) {
+      case 0:
+      {
+        cout<<"circle trajectory is loaded"<<endl;
+        cout<<"center of circle is : X: "<< Center(0) << "m, Y: " << Center(1) << "m, Z: "<<Center(2) << "m" <<endl;
+        cout<<"radius is: " << radius << " m"<<endl;
+        cout<<"reference velocity is: "<< vd << " m"<<endl;
+        break;
+      }
+      case 1:
+      {
+        break;
+      }
+      default:
+      {
+        cout<<"circle trajectory is loaded"<<endl;
+        cout<<"center of circle is : X: "<< Center(0) << "m, Y: " << Center(1) << "m, Z: "<<Center(2) << "m" <<endl;
+        cout<<"radius is: " << radius << " m"<<endl;
+        cout<<"reference velocity is: "<< vd << " m"<<endl;
+        break;
+      }
+    }
+
     cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" <<endl;
 }
 

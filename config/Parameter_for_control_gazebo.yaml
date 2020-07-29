@@ -22,7 +22,7 @@ noise_start_time : 100.0
 noise_end_time : 30.0
 
 ## parameter for px4_pos_estimator.cpp
-pos_estimator: 
+pos_estimator:
 ## 使用激光SLAM数据orVicon数据 0 for vicon， 1 for 激光SLAM
   flag_use_laser_or_vicon : 0
 ## 0 for use the data from fcu, 1 for use the mocap raw data(only position), 2 for use the mocap raw data(position and velocity)
@@ -45,8 +45,11 @@ Cable:
 
 ## single or multi-UAV mode
 CooperativeMode:
-  isMulti: true
+  isMulti: false
   droneID: 2              # single UAV payload mode is activated in drone 2
+
+ActionMode:
+  type: 0
 
 ##geo fence for fsc
 geo_fence:
@@ -127,9 +130,9 @@ Pos_ne:
 Circle_Trajectory:
   Center_x: 0.0
   Center_y: 0.0
-  Center_z: 1.0
+  Center_z: 1.5
   radius: 1.0
-  linear_vel: 1.0
+  linear_vel: 0.1
   time_total: 50.0
   direction: 1.0
 
@@ -140,7 +143,7 @@ Pos_tie:
   isIntegrationOn: true
   isPubAuxiliaryState: true
   payload_mass: 0.5
-  quadrotor_mass : 1.45
+  quadrotor_mass : 1.63
   cablelength : 1
   motor_slope: 0.082
   motor_intercept: 0.26
@@ -149,12 +152,12 @@ Pos_tie:
   Kv_xy : 1.7
   Kv_z :  2
   T_tie_xy : 1.0
-  T_tie_z : 1.0
-  Kpv_xy: 0.3
-  Kpv_z: 0.3
+  T_tie_z : 0.8
+  Kpv_xy: 0.5
+  Kpv_z: 0.5
   KL : 0.1
 
-# parameter for payload cooperative control 
+# parameter for payload cooperative control
 uav0_Pos_GNC:
   mass : 1.60
   cablelength : 0.91
@@ -195,17 +198,17 @@ uav3_Pos_GNC:
   PayloadSharingPortion: 0
   motor_slope: 0.082
   motor_intercept: 0.26
-  
+
 Pos_GNC:
   ControllerInfo: -1
-  Type: 0              # 0 for TCST method 
+  Type: 0              # 0 for TCST method
   MaxInclination: 50.0 # maximum safty angle
   CableLengthTolerance: 1.2
   # debugging options
   UseAddonForce: true
   UseCrossFeedingTerms: true
   PubAuxiliaryState : true
-  # controller parametrers: 
+  # controller parametrers:
   num_drone : 2
   kv_xy : 0.25
   Kv_z  : 0.7
@@ -258,9 +261,3 @@ Pos_GNC:
   kvi_z  : 0.00
   kRi_xy : 0.0
   kRi_z  : 0.0
-
-
-
-  
-
-

@@ -26,6 +26,7 @@
 /*--------------------------utility classes-----------------------*/
 #include <px4_command_utils.h>
 #include <px4_command/ControlCommand.h>
+#include <px4_command/GeneralInfo.h>
 #include <px4_command/DroneState.h>
 #include <px4_command/TrajectoryPoint.h>
 #include <px4_command/AttitudeReference.h>
@@ -44,9 +45,10 @@ struct PubTopic
 {
     char str[100];
 };
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>UAV command and state <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-static px4_command::ControlCommand Command_Now;                      
-static px4_command::ControlCommand Command_Last;                    
+static px4_command::ControlCommand Command_Now;
+static px4_command::ControlCommand Command_Last;
 static px4_command::ControlCommand Command_to_gs;
 static px4_command::DroneState _DroneState;                         // drone state from estimator
 static Eigen::Vector3d throttle_sp;
@@ -57,7 +59,7 @@ static px4_command::Topic_for_log _Topic_for_log;
 
 /*--TO DO --- Auto Land*/
 
-static float Takeoff_height;                                       // 
+static float Takeoff_height;                                       //
 static float Disarm_height;                                        //
 
 static float Use_accel;                                            // 1 for use the accel command
@@ -105,7 +107,7 @@ void printf_param() {
             cout << "The payload controller can not be activated!" <<endl;
         } else {
             cout << "This is the correct drone for single-drone payload experiment! " <<endl;
-        }       
+        }
     }
     cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" <<endl;
 }
@@ -133,7 +135,7 @@ void Command_cb(const px4_command::ControlCommand::ConstPtr& msg) {
                     Command_Now = Command_Last;
                 }
             } else {
-                /* if this is not the correct drone, the drone should not respond neither 
+                /* if this is not the correct drone, the drone should not respond neither
                 Payload_Stabilization nor Payload_Stabilization_SingleUAV, therefore:
                 */
                 if (Command_Now.Mode == command_to_mavros_multidrone::Payload_Stabilization) {
@@ -143,12 +145,12 @@ void Command_cb(const px4_command::ControlCommand::ConstPtr& msg) {
                 }
                 // this way, the drone will only respond to Move ENU command
             }
-        }      
+        }
     }
 
     // Check for geo fence: If drone is out of the geo fence, it will land now.
     if(!CheckReferencePosition(Command_Now)) {
-        // if the reference command is out of the safe range, 
+        // if the reference command is out of the safe range,
         Command_Now = Command_Last;
     }
 }
@@ -156,6 +158,23 @@ void Command_cb(const px4_command::ControlCommand::ConstPtr& msg) {
 void drone_state_cb(const px4_command::DroneState::ConstPtr& msg) {
     _DroneState = *msg;
     _DroneState.time_from_start = cur_time;
+}
+
+void send_general_info_to_groundstation(ros::ServiceClient& client, px4_command::GeneralInfo& ParamSrv){
+    bool isresponserecieved = false;
+    ros::Time begin_time    = ros::Time::now();
+    float last_time         = px4_command_utils::get_time_in_sec(begin_time);
+    float cur_time          = last_time;
+    ROS_INFO("Sending general information to ground station ...");
+    while (!isresponserecieved) {
+      // very 3 seconds, send a parameter service call to the ground station.
+        cur_time = px4_command_utils::get_time_in_sec(begin_time);
+        if(((int)(cur_time*10) % 30) == 0) {
+            ROS_INFO("Waiting for response from ground station..., time elapsed %f [s]",cur_time);
+            isresponserecieved = client.call(ParamSrv);
+          }
+    }
+    ROS_INFO("General information sent to ground station !");
 }
 
 int main(int argc, char **argv) {
@@ -166,16 +185,19 @@ int main(int argc, char **argv) {
     SubTopic px4_commmand_control_command;
     SubTopic px4_commmand_drone_state;
     PubTopic px4_command_topic_for_log;
+    PubTopic px4_command_generalinfo;
     // add preflex:
     strcpy (px4_commmand_control_command.str,"/uav");
     strcpy (px4_commmand_drone_state.str,"/uav");
     strcpy (px4_command_topic_for_log.str,"/uav");
+    strcpy (px4_command_generalinfo.str,"/uav");
     char ID[20];
     if ( argc > 1) {
     // if ID is specified as the second argument
         strcat (px4_commmand_control_command.str,argv[1]);
         strcat (px4_commmand_drone_state.str,argv[1]);
         strcat (px4_command_topic_for_log.str,argv[1]);
+        strcat (px4_command_generalinfo.str,argv[1]);
         strcpy (ID,argv[1]);
         CurrentdroneID = *argv[1] - '0';
         ROS_INFO("UAV ID specified as: uav%s", argv[1]);
@@ -184,6 +206,7 @@ int main(int argc, char **argv) {
         strcat (px4_commmand_control_command.str,"0");
         strcat (px4_commmand_drone_state.str,"0");
         strcat (px4_command_topic_for_log.str,"0");
+        strcat (px4_command_generalinfo.str,"0");
         strcpy (ID,"0");
         CurrentdroneID = 0;
         ROS_WARN("NO UAV ID specified, set ID to 0.");
@@ -191,17 +214,20 @@ int main(int argc, char **argv) {
     strcat (px4_commmand_control_command.str,"/px4_command/control_command");
     strcat (px4_commmand_drone_state.str,"/px4_command/drone_state");
     strcat (px4_command_topic_for_log.str,"/px4_command/topic_for_log");
+    strcat (px4_command_generalinfo.str,"/px4_command/generalinfo");
 
     ROS_INFO("Subscribe ControlCommand from: %s", px4_commmand_control_command.str);
     ROS_INFO("Subscribe DroneState from: %s", px4_commmand_drone_state.str);
     ROS_INFO("Publish Topic_for_log to: %s", px4_command_topic_for_log.str);
-
+    ROS_INFO("Client call general info to: %s", px4_command_generalinfo.str);
     // 本话题来自根据需求自定义的上层模块，比如track_land.cpp 比如move.cpp
     ros::Subscriber Command_sub     = nh.subscribe<px4_command::ControlCommand>(px4_commmand_control_command.str, 100, Command_cb);
     // 本话题来自根据需求自定px4_pos_estimator.cpp
     ros::Subscriber drone_state_sub = nh.subscribe<px4_command::DroneState>(px4_commmand_drone_state.str, 100, drone_state_cb);
     // 发布log消息至ground_station.cpp
     ros::Publisher log_pub          = nh.advertise<px4_command::Topic_for_log>(px4_command_topic_for_log.str, 100);
+    // ros client to send the primary Parameters
+    ros::ServiceClient  clientSendParameter = nh.serviceClient<px4_command::GeneralInfo>(px4_command_generalinfo.str);
 
     // 参数读取
     nh.param<float>("Takeoff_height", Takeoff_height, 0.3);
@@ -241,11 +267,15 @@ int main(int argc, char **argv) {
     int CooperativePayload;
     nh.param<int>("SinglePayloadController", SingleUAVPayloadController, 0);
     nh.param<int>("CooperativePayload", CooperativePayload, 0);
- 
+    px4_command::GeneralInfo ParamSrv;
+    ParamSrv.request.TargetdroneID = TargetdroneID;
+    ParamSrv.request.isMulti = isMulti;
+
     if(isMulti) {
         switch (CooperativePayload) {
             case 0: {
                 pos_controller_GNC.printf_param();
+                ParamSrv.request.controllername = "TCST2020";
                 break;
             }
             case 1: {
@@ -258,6 +288,7 @@ int main(int argc, char **argv) {
             }
             default: {
                 pos_controller_GNC.printf_param();
+                ParamSrv.request.controllername = "TCST2020";
                 break;
             }
         }
@@ -265,22 +296,24 @@ int main(int argc, char **argv) {
         switch (SingleUAVPayloadController) {
             case 0: {
                 pos_controller_tie.printf_param();
+                ParamSrv.request.controllername = "TIE2019";
                 break;
             }
             default: {
                 pos_controller_tie.printf_param();
+                ParamSrv.request.controllername = "TIE2019";
                 break;
             }
-        }      
+        }
     }
-
+    send_general_info_to_groundstation(clientSendParameter, ParamSrv);
     /******-------------------print parameters ---------------------******/
     printf_param();
 
     /* set the parameter field on the ground station */
-    
+
     int check_flag;
-    // check the data output on 
+    // check the data output on
     ROS_INFO("Please check the parameter and setting, enter 1 to continue, else for quit: ");
     cin >> check_flag;
     if(check_flag != 1)
@@ -289,7 +322,7 @@ int main(int argc, char **argv) {
         return -1;
     }
     ROS_INFO("Parameter ok. Ready to start controller ...");
-    // waiting for the 
+    // waiting for the
     for(int i=0;i<50;i++)
     {
         ros::spinOnce();
@@ -457,7 +490,7 @@ int main(int argc, char **argv) {
             // stabilize payload with single UAV
             Command_to_gs = Command_Now;
             _ControlOutput = pos_controller_tie.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
-            
+
             if( pos_controller_tie.emergency_switch())
             { // true means not in normal flight
             Command_Now.Mode = command_to_mavros_multidrone::Payload_Land;
@@ -477,11 +510,11 @@ int main(int argc, char **argv) {
             }
 
             break;
-        case command_to_mavros_multidrone::Payload_Stabilization: 
+        case command_to_mavros_multidrone::Payload_Stabilization:
             Command_to_gs = Command_Now;
 
             _ControlOutput = pos_controller_GNC.payload_controller(_DroneState, Command_to_gs.Reference_State, dt);
-            
+
             // do a safty check, if not passed, switch to payload_land mode
 
             if(pos_controller_GNC.emergency_switch())

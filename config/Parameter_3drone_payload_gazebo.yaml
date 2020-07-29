@@ -21,7 +21,7 @@ noise_start_time : 100.0
 noise_end_time : 30.0
 
 ## parameter for px4_pos_estimator.cpp
-pos_estimator: 
+pos_estimator:
 ## 使用激光SLAM数据orVicon数据 0 for vicon， 1 for 激光SLAM
   flag_use_laser_or_vicon : 0
 ## 0 for use the data from fcu, 1 for use the mocap raw data(only position), 2 for use the mocap raw data(position and velocity)
@@ -127,8 +127,8 @@ Circle_Trajectory:
   Center_x: 0.0
   Center_y: 0.0
   Center_z: 1.0
-  radius: 1.0
-  linear_vel: 1.0
+  radius: 0.8
+  linear_vel: 0.3
   time_total: 50.0
   direction: 1.0
 
@@ -153,7 +153,7 @@ Pos_tie:
   Kpv_z: 0.3
   KL : 0.1
 
-# parameter for payload cooperative control 
+# parameter for payload cooperative control
 uav0_Pos_GNC:
   mass : 1.60
   cablelength : 0.98
@@ -186,16 +186,16 @@ uav2_Pos_GNC:
 
 Pos_GNC:
   ControllerInfo: -1
-  Type: 0              # 0 for TCST method 
+  Type: 0              # 0 for TCST method
   MaxInclination: 50.0 # maximum safty angle
   CableLengthTolerance: 1.2
   # debugging options
   UseAddonForce: true
   UseCrossFeedingTerms: true
   PubAuxiliaryState : true
-  # controller parametrers: 
+  # controller parametrers:
   num_drone : 3
-  kv_xy : 0.25
+  kv_xy : 0.3
   Kv_z  : 0.7
   kR_xy : 0.3
   kR_z  : 0.2
@@ -205,8 +205,8 @@ Pos_GNC:
   fp_max_x : 5
   fp_max_y : 5
   fp_max_z : 5
-  lambda_j : 0.5
-  lambda_Txy : 0.1
+  lambda_j : 1
+  lambda_Txy : 0.09
   lambda_Tz  : 0.3
   lambda_Rxy : 0.09
   lambda_Rz  : 0.09
@@ -246,9 +246,3 @@ Pos_GNC:
   kvi_z  : 0.00
   kRi_xy : 0.0
   kRi_z  : 0.0
-
-
-
-  
-
-
