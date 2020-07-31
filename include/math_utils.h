@@ -17,6 +17,14 @@
 
 using namespace std;
 
+namespace math_utils{
+    enum vector_component{
+        Vector_X = 0,
+        Vector_Y,
+        Vector_Z
+    };
+}
+
 // 四元数转欧拉角
 Eigen::Vector3d quaternion_to_rpy2(const Eigen::Quaterniond &q)
 {

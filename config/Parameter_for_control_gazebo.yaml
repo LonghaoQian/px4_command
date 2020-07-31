@@ -49,7 +49,7 @@ CooperativeMode:
   droneID: 2              # single UAV payload mode is activated in drone 2
 
 ActionMode:
-  type: 0
+  type: 1                  # 0 for circle path, 1 for rectangular path
 
 ##geo fence for fsc
 geo_fence:
@@ -135,6 +135,14 @@ Circle_Trajectory:
   linear_vel: 0.1
   time_total: 50.0
   direction: 1.0
+
+# parameter for rectangular trajectory
+Rectangular_Trajectory:
+  a_x: 2.0 # length along x axis
+  a_y: 2.0 # length along y axis
+  h: 1.5 # hight
+  vel_x: 0.2 # velocity along x axis
+  vel_y: 0.2 # velocity along y axis 
 
 # parameter for single UAV payload using method in TIE paper
 Pos_tie:

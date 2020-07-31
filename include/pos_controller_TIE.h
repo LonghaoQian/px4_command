@@ -19,6 +19,7 @@ Visual feedback from April Tag
 #include <math_utils.h>
 #include <iostream>
 #include <string>
+#include <rectangular_trajectory.h>
 #include <px4_command/DroneState.h>
 #include <px4_command/TrajectoryPoint.h>
 #include <px4_command/AttitudeReference.h>
@@ -118,6 +119,14 @@ class pos_controller_TIE
               }
               case 1:
               {
+                main_handle.param<float>("Rectangular_Trajectory/a_x",   rect_param.a_x, 0.0);
+                main_handle.param<float>("Rectangular_Trajectory/a_y",   rect_param.a_y, 0.0);
+                main_handle.param<float>("Rectangular_Trajectory/vel_x", rect_param.v_x, 0.0);
+                main_handle.param<float>("Rectangular_Trajectory/vel_y", rect_param.v_y, 0.0);
+                main_handle.param<float>("Rectangular_Trajectory/h",     rect_param.h, 0.0);
+
+                rec_traj.LoadParameter(rect_param);
+
                 break;
               }
               default:
@@ -213,6 +222,9 @@ class pos_controller_TIE
         Eigen::Vector3f Center;
         float radius;
         float vd;
+        trajectory::Reference_Path rect_path;
+        trajectory::Rectangular_Trajectory_Parameter rect_param;
+        trajectory::Rectangular_Trajectory rec_traj;
         // geo geo_fence
         Eigen::Vector2f geo_fence_x;
         Eigen::Vector2f geo_fence_y;
@@ -399,6 +411,13 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
 
           break;
         }
+        case 1:{
+            rect_path = rec_traj.UpdatePosition(UAV_position);
+            vel_error = rect_path.vd*rect_path.n - UAV_velocity;
+            pos_error = (Identity - rect_path.n*rect_path.n.transpose())*(rect_path.P-UAV_position);
+            break;
+        }
+
         default:{
 
           break;
@@ -644,6 +663,23 @@ void pos_controller_TIE::printf_result()
     cout<< "pos measurement error : "  << payload_position_mocap(0) - payload_position_vision(0) << " [m] "
                                        << payload_position_mocap(1) - payload_position_vision(1) << " [m] "
                                        << payload_position_mocap(2) - payload_position_vision(2) << " [m] " <<endl;
+
+     switch (type) {
+      case 0:
+      {
+        break;
+      }
+      case 1:
+      {
+        rec_traj.printf_result();
+        break;
+      }
+      default:
+      {
+        break;
+      }
+    }
+
     cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" <<endl;
 }
 
@@ -708,6 +744,7 @@ void pos_controller_TIE::printf_param()
       }
       case 1:
       {
+        rec_traj.printf_param();
         break;
       }
       default:
