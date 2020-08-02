@@ -139,10 +139,10 @@ Circle_Trajectory:
 # parameter for rectangular trajectory
 Rectangular_Trajectory:
   a_x: 2.0 # length along x axis
-  a_y: 2.0 # length along y axis
+  a_y: 1.8 # length along y axis
   h: 1.5 # hight
   vel_x: 0.2 # velocity along x axis
-  vel_y: 0.2 # velocity along y axis 
+  vel_y: 0.15 # velocity along y axis 
 
 # parameter for single UAV payload using method in TIE paper
 Pos_tie:
@@ -155,14 +155,14 @@ Pos_tie:
   cablelength : 1
   motor_slope: 0.082
   motor_intercept: 0.26
-  Kp_xy : 0.4
-  Kp_z :  0.6
-  Kv_xy : 1.7
-  Kv_z :  2
-  T_tie_xy : 1.0
-  T_tie_z : 0.8
-  Kpv_xy: 0.5
-  Kpv_z: 0.5
+  Kp_xy : 0.5
+  Kp_z :  0.5
+  Kv_xy : 2.0
+  Kv_z :  2.0
+  T_tie_xy : 0.8
+  T_tie_z : 0.6
+  Kpv_xy: 0.3
+  Kpv_z: 0.3
   KL : 0.1
 
 # parameter for payload cooperative control

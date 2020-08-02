@@ -229,6 +229,25 @@ void cal_vel_error(const px4_command::DroneState& _DroneState, const px4_command
 
 }
 
+Eigen::Vector3d ForceToThrust(const Eigen::Vector3d& Force, float tilt_max){
+    Eigen::Vector3d thrust_sp;
+    thrust_sp = Force / NUM_MOTOR;
+
+    // 推力限幅，根据最大倾斜角及最大油门
+    float thrust_max_XY_tilt = fabs(thrust_sp[2]) * tanf(tilt_max/180.0*M_PI);
+    float thrust_max_XY = sqrtf(thrust_max_single_motor * thrust_max_single_motor - pow(thrust_sp[2],2));
+    thrust_max_XY = min(thrust_max_XY_tilt, thrust_max_XY);
+
+    if ((pow(thrust_sp[0],2) + pow(thrust_sp[1],2)) > pow(thrust_max_XY,2)) 
+    {
+        float mag = sqrtf((pow(thrust_sp[0],2) + pow(thrust_sp[1],2)));
+        thrust_sp[0] = thrust_sp[0] / mag * thrust_max_XY;
+        thrust_sp[1] = thrust_sp[1] / mag * thrust_max_XY;
+    }
+    
+    return thrust_sp;  
+}
+
 Eigen::Vector3d accelToThrust(const Eigen::Vector3d& accel_sp, float mass, float tilt_max)
 {
     Eigen::Vector3d thrust_sp;

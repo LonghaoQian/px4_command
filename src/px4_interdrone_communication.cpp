@@ -162,10 +162,10 @@ void PrintEstimation(){
             cout << "R1 [X Y Z] : " << R1(0) << " [N] " << R1(1) << " [N] " << R1(2) << " [N] " <<endl;
             cout << "R2 [X Y Z] : " << R2(0) << " [N] " << R2(1) << " [N] " << R2(2) << " [N] " <<endl;
         } else {
-            cout << ">>>>>>> NOT IN PAYLOAD STABILIZATION MODE, ESTIMATION PAUSED <<<<<<<" << endl;
+            cout << ">>>>>>> NOT IN PAYLOAD STABILIZATION MODE, ESTIMATION PAUSED <<<<<<< \n";
         }
     } else {
-        cout << ">>>>>>> NOT IN OFFBOARD MODE <<<<<<<" << endl;
+        cout << ">>>>>>> NOT IN OFFBOARD MODE <<<<<<< \n";
     }
 }
 

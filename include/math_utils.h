@@ -18,10 +18,24 @@
 using namespace std;
 
 namespace math_utils{
+
     enum vector_component{
         Vector_X = 0,
         Vector_Y,
         Vector_Z
+    };
+    enum quaternion_component{
+        Quat_w = 0,
+        Quat_x,
+        Quat_y,
+        Quat_z
+    };
+
+    Eigen::Vector3f GetGravitationalAcc(){
+        Eigen::Vector3f g_I;
+        g_I(Vector_X) = 0.0;
+        g_I(Vector_Y) = 0.0;
+        g_I(Vector_Z) = -9.810;
     };
 }
 

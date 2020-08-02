@@ -23,6 +23,7 @@
 #include <pos_controller_cascade_PID.h>
 #include <pos_controller_TIE.h>
 #include <payload_controller_GNC.h>
+//#include <payload_controller_JGCD.h>
 /*--------------------------utility classes-----------------------*/
 #include <px4_command_utils.h>
 #include <px4_command/ControlCommand.h>
@@ -262,6 +263,7 @@ int main(int argc, char **argv) {
     pos_controller_TIE      pos_controller_tie(ID,nh);
     // methods of payload stabilization with multiple UAVs
     payload_controller_GNC  pos_controller_GNC(ID,nh);
+//    multidronepayload::payload_controller_JGCD pos_controller_JGCD(ID,nh);
     // pick control law will be specified in parameter files
     int SingleUAVPayloadController;
     int CooperativePayload;
@@ -279,11 +281,8 @@ int main(int argc, char **argv) {
                 break;
             }
             case 1: {
-                /*TODO: pos_controller_jgcd.printf_param();*/
-                break;
-            }
-            case 2: {
-                //pos_controller_gnc2019.printf_param();
+                //pos_controller_JGCDprintf_param();
+                ParamSrv.request.controllername = "JGCD2020";
                 break;
             }
             default: {
@@ -486,19 +485,19 @@ int main(int argc, char **argv) {
 
 
             break;
-        case command_to_mavros_multidrone::Payload_Stabilization_SingleUAV:
+        case command_to_mavros_multidrone::Payload_Stabilization_SingleUAV: {
             // stabilize payload with single UAV
             Command_to_gs = Command_Now;
             _ControlOutput = pos_controller_tie.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
 
-            if( pos_controller_tie.emergency_switch())
-            { // true means not in normal flight
-            Command_Now.Mode = command_to_mavros_multidrone::Payload_Land;
+            if( pos_controller_tie.emergency_switch()){ 
+                // true means not in normal flight
+                Command_Now.Mode = command_to_mavros_multidrone::Payload_Land;
             } else {
               // false means ok
-                throttle_sp[0] = _ControlOutput.Throttle[0];
-                throttle_sp[1] = _ControlOutput.Throttle[1];
-                throttle_sp[2] = _ControlOutput.Throttle[2];
+                throttle_sp[math_utils::Vector_X] = _ControlOutput.Throttle[math_utils::Vector_X];
+                throttle_sp[math_utils::Vector_Y] = _ControlOutput.Throttle[math_utils::Vector_Y];
+                throttle_sp[math_utils::Vector_Z] = _ControlOutput.Throttle[math_utils::Vector_Z];
 
                 _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, 0);
 
@@ -508,34 +507,48 @@ int main(int argc, char **argv) {
                     _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
                 }
             }
-
-            break;
-        case command_to_mavros_multidrone::Payload_Stabilization:
+                break;
+            }
+        case command_to_mavros_multidrone::Payload_Stabilization: {
             Command_to_gs = Command_Now;
+            bool emergencyflag = false;
+            switch (CooperativePayload) {
+                case 0: {
+                    _ControlOutput = pos_controller_GNC.payload_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                    emergencyflag = pos_controller_GNC.emergency_switch();
+                    break;
+                }
+                case 1: {
+                    //_ControlOutput = pos_controller_JGCD.payload_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                    //emergencyflag = pos_controller_JGCD.emergency_switch();
+                    break;
+                }
+                default: {
+                    _ControlOutput = pos_controller_GNC.payload_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                    emergencyflag = pos_controller_GNC.emergency_switch();
+                break;
+                }
+            }
 
-            _ControlOutput = pos_controller_GNC.payload_controller(_DroneState, Command_to_gs.Reference_State, dt);
-
-            // do a safty check, if not passed, switch to payload_land mode
-
-            if(pos_controller_GNC.emergency_switch())
-            { // true means not in normal flight
-            Command_Now.Mode = command_to_mavros_multidrone::Payload_Land;
+            if(emergencyflag) {   
+                // true means not in normal flight
+                Command_Now.Mode = command_to_mavros_multidrone::Payload_Land;
             } else {
-              // false means ok
-                throttle_sp[0] = _ControlOutput.Throttle[0];
-                throttle_sp[1] = _ControlOutput.Throttle[1];
-                throttle_sp[2] = _ControlOutput.Throttle[2];
+                // false means ok
+                throttle_sp[math_utils::Vector_X] = _ControlOutput.Throttle[math_utils::Vector_X];
+                throttle_sp[math_utils::Vector_Y] = _ControlOutput.Throttle[math_utils::Vector_Y];
+                throttle_sp[math_utils::Vector_Z] = _ControlOutput.Throttle[math_utils::Vector_Z];
 
                 _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, 0);
 
                 if (Use_accel > 0.5) {
                     _command_to_mavros.send_accel_setpoint(throttle_sp,0);
                 } else {
-                _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
+                    _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
                 }
             }
             break;
-
+        }
         case command_to_mavros_multidrone::Payload_Land :{
             Command_to_gs.Mode = Command_Now.Mode;
             Command_to_gs.Command_ID = Command_Now.Command_ID;
