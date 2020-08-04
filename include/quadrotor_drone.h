@@ -30,9 +30,9 @@ namespace experiment_drone {
     };
 
     struct drone_command{
-        Eigen::Vector3d accelSetpoint;     // acceleration setpoint based on translational control
-        Eigen::Vector3d thrustSetpoint;    // thrust setpoint under tilt angle constraint
-        Eigen::Vector3d throttleSetpoint;  // calculate the required throttle command based on the lift model
+        Eigen::Vector3f accelSetpoint;     // acceleration setpoint based on translational control
+        Eigen::Vector3f thrustSetpoint;    // thrust setpoint under tilt angle constraint
+        Eigen::Vector3f throttleSetpoint;  // calculate the required throttle command based on the lift model
     };
 
     struct quadrotor_parameter{
@@ -52,10 +52,10 @@ namespace experiment_drone {
             drone_command getDroneCommand();
             void loadparameter(const quadrotor_parameter& param);
             void updatestate(const px4_command::DroneState& _DroneState);
-            px4_command::ControlOutput outputdronecommand(const drone_command& accel_command,  
+            px4_command::ControlOutput outputdronecommand(const Eigen::Vector3f& accel_command,  
                                                           const float& effective_mass,
-                                                          const float u_l[3],
-                                                          const float u_d[3]);
+                                                          const Eigen::Vector3f& u_l,
+                                                          const Eigen::Vector3f& u_d);
             px4_command::ControlOutput outputdronecommand(const Eigen::Vector3f& desiredlift);                                                         
             void printf_param();
             void printf_state();
@@ -92,40 +92,40 @@ namespace experiment_drone {
         IMU.AccInertial = IMU.R_Ij * IMU.AccBody + g_I;// calculate true acc in inertial frame dot_vqj in TCST paper        
     }
 
-    px4_command::ControlOutput outputdronecommand(const drone_command::accelSetpoint& accelCommand,
+    px4_command::ControlOutput quadrotor_drone::outputdronecommand(const Eigen::Vector3f& accelCommand,
                                                   const float& effective_mass,
-                                                  const float u_l[3]
-                                                  const float u_d[3]){
+                                                  const Eigen::Vector3f& u_l,
+                                                  const Eigen::Vector3f& u_d){
         command.accelSetpoint =  accelCommand;
-        command.thrust_sp  =  px4_command_utils::accelToThrust(command.accelSetpoint, 
+        command.thrustSetpoint  =  px4_command_utils::accelToThrust(command.accelSetpoint, 
                                                                effective_mass,
-                                                               param.tiltlimit);
+                                                               parameter.tiltlimit);
         // calculate the required throttle command
-        command.throttle_sp = px4_command_utils::thrustToThrottleLinear(thrust_sp,
-                                                                        param.liftmodel.motor_slope, 
-                                                                        param.liftmodel.motor_intercept);
+        command.throttleSetpoint = px4_command_utils::thrustToThrottleLinear(command.thrustSetpoint,
+                                                                        parameter.liftmodel.motor_slope, 
+                                                                        parameter.liftmodel.motor_intercept);
 
         for (int i=0; i<3; i++) {
             output.u_l[i] = u_l[i];
             output.u_d[i] = u_d[i];
-            output.Thrust[i]   = command.thrust_sp(i);
-            output.Throttle[i] = command.throttle_sp(i);
+            output.Thrust[i]   = command.thrustSetpoint(i);
+            output.Throttle[i] = command.throttleSetpoint(i);
         }
 
         return output;
     }
-    px4_command::ControlOutput outputdronecommand(const Eigen::Vector3f& desiredlift) {
+    px4_command::ControlOutput quadrotor_drone::outputdronecommand(const Eigen::Vector3f& desiredlift) {
 
-        command.thrust_sp  = px4_command_utils::ForceToThrust(desiredlift,param.tiltlimit);
+        command.thrustSetpoint  = px4_command_utils::ForceToThrust(desiredlift,parameter.tiltlimit);
         // calculate the required throttle command
-        command.throttle_sp = px4_command_utils::thrustToThrottleLinear(thrust_sp,
-                                                                        param.liftmodel.motor_slope, 
-                                                                        param.liftmodel.motor_intercept);
+        command.throttleSetpoint = px4_command_utils::thrustToThrottleLinear(command.thrustSetpoint,
+                                                                             parameter.liftmodel.motor_slope, 
+                                                                             parameter.liftmodel.motor_intercept);
         for (int i=0; i<3; i++) {
             output.u_l[i] = 0.0;
             output.u_d[i] = 0.0;
-            output.Thrust[i]   = command.thrust_sp(i);
-            output.Throttle[i] = command.throttle_sp(i);
+            output.Thrust[i]   = command.thrustSetpoint(i);
+            output.Throttle[i] = command.throttleSetpoint(i);
         }
         return output;
     }
@@ -141,18 +141,18 @@ namespace experiment_drone {
     void quadrotor_drone::printf_param(){
         cout << parameter.uav_name << " parameter:  \n";
         cout <<"Quad_MASS : "<< parameter.Quad_MASS << " [kg] \n";
-        cout << "Motor Curve Slop: " << parameter.liftmodel.motor_slope << " Motor Curve Intercept: "<<motor_intercept <<"\n";
-        cout <<" Maximum tilt angle: "<< parameter.liftmodel.tilt_max << " [DEG] \n";
+        cout << "Motor Curve Slop: " << parameter.liftmodel.motor_slope << " Motor Curve Intercept: "<<parameter.liftmodel.motor_intercept <<"\n";
+        cout <<" Maximum tilt angle: "<< parameter.tiltlimit << " [DEG] \n";
     }
     void quadrotor_drone::printf_state(){
         // display total control force and throttle
         cout << parameter.uav_name << " control force [N] \n";
-        cout << "Thrust Setpoint  [X Y Z] : " << 4*command.thrust_sp(math_utils::Vector_X) <<" [N] "
-                                              << 4*command.thrust_sp(math_utils::Vector_Y) <<" [N] "
-                                              << 4*command.thrust_sp(math_utils::Vector_Z) <<" [N] \n";
-        cout << "Throttle Setpoint [X Y Z] : " << command.throttle_sp(math_utils::Vector_X) <<" [] " 
-                                               << command.throttle_sp(math_utils::Vector_Y) << " [] " 
-                                               << command.throttle_sp(math_utils::Vector_Z) << " [] \n";
+        cout << "Thrust Setpoint  [X Y Z] : " << 4*command.thrustSetpoint(math_utils::Vector_X) <<" [N] "
+                                              << 4*command.thrustSetpoint(math_utils::Vector_Y) <<" [N] "
+                                              << 4*command.thrustSetpoint(math_utils::Vector_Z) <<" [N] \n";
+        cout << "Throttle Setpoint [X Y Z] : " << command.throttleSetpoint(math_utils::Vector_X) <<" [] " 
+                                               << command.throttleSetpoint(math_utils::Vector_Y) << " [] " 
+                                               << command.throttleSetpoint(math_utils::Vector_Z) << " [] \n";
     }
 }
 

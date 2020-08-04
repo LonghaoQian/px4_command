@@ -18,7 +18,7 @@
 #include <px4_command_utils.h>
 #include <math_utils.h>
 #include <rectangular_trajectory.h>
-#include <drone_parameter_command.h>
+#include <quadrotor_drone.h>
 #include <px4_command/DroneState.h>
 #include <px4_command/TrajectoryPoint.h>
 #include <px4_command/AttitudeReference.h>
@@ -36,6 +36,8 @@ namespace multidronepayload {
         public:
             payload_controller_JGCD(char drone_ID[20],ros::NodeHandle& main_handle);
             ~payload_controller_JGCD();
+            // topic setup
+            void ros_topic_setup(ros::NodeHandle& main_handle);
             //Printf the controller parameter
             void printf_param();
             void printf_result();
@@ -67,7 +69,7 @@ namespace multidronepayload {
             bool   isPerformingAction;
             // action info
             int type;
-            rajectory::Reference_Path rect_path;
+            trajectory::Reference_Path rect_path;
             trajectory::Rectangular_Trajectory_Parameter rect_param;
             trajectory::Rectangular_Trajectory rec_traj;
             // ggeo_fence
@@ -75,7 +77,8 @@ namespace multidronepayload {
             Eigen::Vector2f geo_fence_y;
             Eigen::Vector2f geo_fence_z;
             // drone parameter:
-            experiment_drone::quadrotor_parameter;
+            string uav_pref;
+            experiment_drone::quadrotor_parameter drone_parameter;
             experiment_drone::quadrotor_drone drone;
             /* payload configuration parameters*/
             int   num_drone;
@@ -93,8 +96,6 @@ namespace multidronepayload {
             //Controller parameter for the control law
             Eigen::Matrix3f kv;
             Eigen::Matrix3f kR;
-            Eigen::Matrix3f kp;
-            Eigen::Matrix3f komega;
             Eigen::Matrix3f Kphi;
             float kL;
             Eigen::Matrix3f Ej;
@@ -106,6 +107,7 @@ namespace multidronepayload {
             Eigen::Vector4f AttitudeQuaternionv;
             Eigen::Matrix3f R_IPd;
             // disturbance estimation result:
+            Eigen::Vector3f PayloadDisturbance;
             Eigen::Vector3f Delta_pt;
             Eigen::Vector3f Delta_rt;
             Eigen::Matrix3f lambda_j;
@@ -122,6 +124,7 @@ namespace multidronepayload {
             Eigen::Vector2f r_j, v_j;
             Eigen::Matrix<float, 3,2> B_j, B_j_dot;
             // virtural control force
+            Eigen::Vector3f accel_sp;
             Eigen::Vector3f f_L_j;
             Eigen::Vector3f f_p_j;
             Eigen::Vector3f U;
@@ -133,6 +136,7 @@ namespace multidronepayload {
             Eigen::Vector3f mpc_T, mpc_R; // additive mpc term for payload translation and rotation  
             // error constraint parameters:
             Eigen::Vector3f pos_error;
+            Eigen::Vector3f vel_error;
             Eigen::Vector3f angle_error;
             Eigen::Vector3f pos_error_max;
             Eigen::Vector3f angular_error_max;
@@ -151,17 +155,17 @@ namespace multidronepayload {
         // use drone ID to get the correct name for parameters
         uav_pref = "uav";
         uav_pref = uav_pref + drone_ID[0];
-        quadrotor_parameter.uav_name = uav_pref;
+        drone_parameter.uav_name = uav_pref;
         // load uav and payload parameters
-        main_handle.param<float>(uav_pref + "_Pos_JGCD/mass", quadrotor_parameter.Quad_MASS, 1.0);
-        main_handle.param<float>(uav_pref + "_Pos_JGCD/cablelength", Cable_Length, 1.0);
+        main_handle.param<float>(uav_pref + "_Pos_GNC/mass", drone_parameter.Quad_MASS, 1.0);
+        main_handle.param<float>(uav_pref + "_Pos_GNC/cablelength", Cable_Length, 1.0);
         main_handle.param<int>("Pos_JGCD/num_drone",num_drone,1);
-        main_handle.param<float>(uav_pref + "_Pos_JGCD/TetherOffset_x", TetherOffset(math_utils::Vector_X), 0.5);
-        main_handle.param<float>(uav_pref + "_Pos_JGCD/TetherOffset_y", TetherOffset(math_utils::Vector_Y), 0);
-        main_handle.param<float>(uav_pref + "_Pos_JGCD/TetherOffset_z", TetherOffset(math_utils::Vector_Z), 0);
-        main_handle.param<double>(uav_pref + "_Pos_JGCD/motor_slope",     quadrotor_parameter.liftmodel.motor_slope,0.3);
-        main_handle.param<double>(uav_pref + "_Pos_JGCD/motor_intercept", quadrotor_parameter.liftmodel.motor_intercept, 0.0);
-        main_handle.param<float>(uav_pref + "_Pos_JGCD/PayloadSharingPortion", PayloadSharingPortion, 0.5);
+        main_handle.param<float>(uav_pref + "_Pos_GNC/TetherOffset_x", TetherOffset(math_utils::Vector_X), 0.5);
+        main_handle.param<float>(uav_pref + "_Pos_GNC/TetherOffset_y", TetherOffset(math_utils::Vector_Y), 0);
+        main_handle.param<float>(uav_pref + "_Pos_GNC/TetherOffset_z", TetherOffset(math_utils::Vector_Z), 0);
+        main_handle.param<double>(uav_pref + "_Pos_GNC/motor_slope",     drone_parameter.liftmodel.motor_slope,0.3);
+        main_handle.param<double>(uav_pref + "_Pos_GNC/motor_intercept", drone_parameter.liftmodel.motor_intercept, 0.0);
+        main_handle.param<float>(uav_pref + "_Pos_GNC/PayloadSharingPortion", PayloadSharingPortion, 0.5);
         main_handle.param<float>("Payload/mass", Payload_Mass, 1.0);
         main_handle.param<bool>("Pos_JGCD/PubAuxiliaryState", isPubAuxiliaryState, true);
         // set the estimated payload moment of inertia
@@ -190,7 +194,7 @@ namespace multidronepayload {
             Ej = TetherOffsetCross * D.inverse(); // Ej = t_jx D^-1 if at least 3 drones are used.
         }
         Cable_Length_sq = Cable_Length * Cable_Length;
-        TotalLiftedMass = Payload_Mass* PayloadSharingPortion + Quad_MASS;
+        TotalLiftedMass = Payload_Mass* PayloadSharingPortion + drone_parameter.Quad_MASS;
         kv.setZero();
         kR.setZero();
         
@@ -208,7 +212,7 @@ namespace multidronepayload {
         main_handle.param<float>("Limit/pxy_error_max", pos_error_max[math_utils::Vector_Y], 0.6);
         main_handle.param<float>("Limit/pz_error_max" , pos_error_max[math_utils::Vector_Z], 1.0);
 
-        main_handle.param<float>("Limit/tilt_max", quadrotor_parameter.tiltlimit, 20.0);
+        main_handle.param<float>("Limit/tilt_max", drone_parameter.tiltlimit, 20.0);
 
     
         main_handle.param<float>("Pos_JGCD/fp_max_x", fp_max(math_utils::Vector_X),1);
@@ -223,16 +227,6 @@ namespace multidronepayload {
         main_handle.param<float>("Pos_JGCD/lambda_j", lambda_j(math_utils::Vector_X,math_utils::Vector_X), 1);
         main_handle.param<float>("Pos_JGCD/lambda_j", lambda_j(math_utils::Vector_Y,math_utils::Vector_Y), 1);
         main_handle.param<float>("Pos_JGCD/lambda_j", lambda_j(math_utils::Vector_Z,math_utils::Vector_Z), 1);
-
-        kp.setZero();
-        komega.setZero();
-        main_handle.param<float> ("Pos_JGCD/kp_x", kp(math_utils::Vector_X,math_utils::Vector_X), 0.0);
-        main_handle.param<float> ("Pos_JGCD/kp_y", kp(math_utils::Vector_Y,math_utils::Vector_Y), 0.0);
-        main_handle.param<float> ("Pos_JGCD/kp_z", kp(math_utils::Vector_Z,math_utils::Vector_Z), 0.0);
-
-        main_handle.param<float> ("Pos_JGCD/komega_x", komega(math_utils::Vector_X,math_utils::Vector_X), 0.0);
-        main_handle.param<float> ("Pos_JGCD/komega_y", komega(math_utils::Vector_Y,math_utils::Vector_Y), 0.0);
-        main_handle.param<float> ("Pos_JGCD/komega_z", komega(math_utils::Vector_Z,math_utils::Vector_Z), 0.0);
 
         Kphi.setZero();
         main_handle.param<float> ("Pos_JGCD/Kphi_x", Kphi(math_utils::Vector_X,math_utils::Vector_X), 0.0);
@@ -259,6 +253,8 @@ namespace multidronepayload {
         Delta_rt.setZero();
         Delta_j.setZero();
         Delta_j_p.setZero();
+        vel_error.setZero();
+        accel_sp.setZero();
         f_L_j.setZero();          
         u_l.setZero();
         u_d.setZero();
@@ -277,24 +273,18 @@ namespace multidronepayload {
              0.0,
              1.0;
         PayloadDisturbance.setZero();
-        // setting up communication channel:
-        if (isPubAuxiliaryState)  {
-            pubAuxiliaryState   = main_handle.advertise<px4_command::AuxiliaryState > ("/" + uav_pref + "/px4_command/auxiliarystate", 1000);
-        }
-        clientSendParameter =  main_handle.serviceClient<px4_command::ControlParameter>("/" + uav_pref + "/px4_command/parameters");
-        pubFleetStatus      =  main_handle.advertise<px4_command::FleetStatus>("/" + uav_pref + "/px4_command/fleetstatus", 1000);
-        subAddonForce       =  main_handle.subscribe<px4_command::AddonForce>("/uav0/px4_command/addonforce", 100, &payload_controller_GNC::GetAddonForce, this);
         isEmergencyFromLeader= false;
         isEmergency          = false; 
         isPerformingAction   = false;
-        drone.loadparameter(quadrotor_parameter);
+        // load drone parameter
+        drone.loadparameter(drone_parameter);
         // read the geo geo_fence
-        main_handle.param<float>("geo_fence/x_min", geo_fence_x[0], -1.2);
-        main_handle.param<float>("geo_fence/x_max", geo_fence_x[1], 1.2);
-        main_handle.param<float>("geo_fence/y_min", geo_fence_y[0], -0.9);
-        main_handle.param<float>("geo_fence/y_max", geo_fence_y[1], 0.9);
-        main_handle.param<float>("geo_fence/z_min", geo_fence_z[0], 0.2);
-        main_handle.param<float>("geo_fence/z_max", geo_fence_z[1], 2);
+        main_handle.param<float>("geo_fence/x_min", geo_fence_x[math_utils::Vector_X], -1.2);
+        main_handle.param<float>("geo_fence/x_max", geo_fence_x[math_utils::Vector_Y], 1.2);
+        main_handle.param<float>("geo_fence/y_min", geo_fence_y[math_utils::Vector_X], -0.9);
+        main_handle.param<float>("geo_fence/y_max", geo_fence_y[math_utils::Vector_Y], 0.9);
+        main_handle.param<float>("geo_fence/z_min", geo_fence_z[math_utils::Vector_X], 0.2);
+        main_handle.param<float>("geo_fence/z_max", geo_fence_z[math_utils::Vector_Y], 2);
         // read the trajectory information
         main_handle.param<int>("ActionMode/type", type, 1);
         switch (type) {
@@ -325,6 +315,19 @@ namespace multidronepayload {
     payload_controller_JGCD::~payload_controller_JGCD(){
 
     }
+
+
+    void payload_controller_JGCD::ros_topic_setup(ros::NodeHandle& main_handle){
+        // setting up communication channel:
+        cout << " ros topic setup! (JGCD) " <<endl;
+        if (isPubAuxiliaryState)  {
+            pubAuxiliaryState   = main_handle.advertise<px4_command::AuxiliaryState > ("/" + uav_pref + "/px4_command/auxiliarystate", 1000);
+        }
+        clientSendParameter =  main_handle.serviceClient<px4_command::ControlParameter>("/" + uav_pref + "/px4_command/parameters");
+        pubFleetStatus      =  main_handle.advertise<px4_command::FleetStatus>("/" + uav_pref + "/px4_command/fleetstatus", 1000);
+        subAddonForce       =  main_handle.subscribe<px4_command::AddonForce>("/uav0/px4_command/addonforce", 100, &payload_controller_JGCD::GetAddonForce, this);
+    }
+
 
     px4_command::ControlOutput payload_controller_JGCD::payload_controller(
         const px4_command::DroneState& _DroneState, 
@@ -393,7 +396,7 @@ namespace multidronepayload {
         /*------Step 3 calculate payload position and attitude error--------*/
         /*  a. position error:
         determine whether the system is performing action */
-        if(isperformAction){
+        if(isPerformingAction){
         switch (type)
         {
             case 1:{
@@ -420,11 +423,8 @@ namespace multidronepayload {
 
         // b. angular error:
         angle_error = 0.5* Veemap(R_IPd.transpose()*R_IP- R_IP.transpose() * R_IPd);
-        atti_dot = CalculateAuxiliaryE(R_IP.transpose() * R_IPd);
-        if (num_drone<3) // if only two drones are involved, we have to remove one axis in control
-        {
-            angle_error(0) = 0;
-            atti_dot *=  Identity_30;
+        if (num_drone<3) {
+            angle_error(math_utils::Vector_X) = 0.0; // if only two drones are involved, we have to remove one axis in control
         }
         s_R = Omega_p + kR  * angle_error;
         /*------- Step 4 calculate control law form the GNC 2019 paper ---------*/
@@ -432,7 +432,7 @@ namespace multidronepayload {
         if(_DroneState.mode != "OFFBOARD") {
             Delta_j.setZero(); // estimation does not run in offboard mode
         } else {
-            Delta_j +=  lambda_j * dt * BB_j * (quadrotor_parameter.Quad_MASS * (drone.getProcessedIMU().AccInertial- g_I) - f_L_j - Delta_j);
+            Delta_j +=  lambda_j * dt * BB_j * (drone_parameter.Quad_MASS * (drone.getProcessedIMU().AccInertial- g_I) - f_L_j - Delta_j);
         }
         Delta_j_p = (Identity - L_j*L_j.transpose()/Cable_Length_sq)*Delta_j; // get the effective disturbance
         Delta_j_p =  constrain_vector(Delta_j_p, 10.0);// constraint the disturbance estimation.
@@ -450,8 +450,8 @@ namespace multidronepayload {
         accel_sp[math_utils::Vector_X] = u_l[math_utils::Vector_X] - u_d[math_utils::Vector_X];
         accel_sp[math_utils::Vector_Y] = u_l[math_utils::Vector_Y] - u_d[math_utils::Vector_Y];
         accel_sp[math_utils::Vector_Z] = u_l[math_utils::Vector_Z] - u_d[math_utils::Vector_Z] + 9.81;
-        Eigen::Vector3f temp_F = TotalLiftedMass * accel_sp.cast <float> ();
-        f_L_j = temp_F.norm() * (R_Ij * e_3);
+        Eigen::Vector3f temp_F = TotalLiftedMass * accel_sp;
+        f_L_j = temp_F.norm() * (drone.getProcessedIMU().R_Ij * e_3);
         // update the required thrust
         px4_command::ControlOutput _ControlOutput = drone.outputdronecommand(accel_sp, TotalLiftedMass, u_l, u_d);
         SendFleetStatus();// then send the fleet status for robust control
@@ -502,13 +502,13 @@ namespace multidronepayload {
             Auxstate.fLj_y  = f_L_j(math_utils::Vector_Y);
             Auxstate.fLj_z  = f_L_j(math_utils::Vector_Z);
 
-            Auxstate.Delta_jp_x = Delta_j_p(0);
-            Auxstate.Delta_jp_y = Delta_j_p(1);
-            Auxstate.Delta_jp_z = Delta_j_p(2);
+            Auxstate.Delta_jp_x = Delta_j_p(math_utils::Vector_X);
+            Auxstate.Delta_jp_y = Delta_j_p(math_utils::Vector_Y);
+            Auxstate.Delta_jp_z = Delta_j_p(math_utils::Vector_Z);
 
-            Auxstate.acc_x = drone.getProcessedIMU().AccInertia(math_utils::Vector_X);
-            Auxstate.acc_y = drone.getProcessedIMU().AccInertia(math_utils::Vector_Y);
-            Auxstate.acc_z = drone.getProcessedIMU().AccInertia(math_utils::Vector_Z);
+            Auxstate.acc_x = drone.getProcessedIMU().AccInertial(math_utils::Vector_X);
+            Auxstate.acc_y = drone.getProcessedIMU().AccInertial(math_utils::Vector_Y);
+            Auxstate.acc_z = drone.getProcessedIMU().AccInertial(math_utils::Vector_Z);
 
             Auxstate.rd_jx = rd_j(math_utils::Vector_X);
             Auxstate.rd_jy = rd_j(math_utils::Vector_Y);
@@ -542,20 +542,20 @@ namespace multidronepayload {
 
     void payload_controller_JGCD::GetAddonForce(const px4_command::AddonForce::ConstPtr& msg)  
     {
-        Delta_pt(math_utils::Vector_X) = *msg.delta_Tx;
-        Delta_pt(math_utils::Vector_Y) = *msg.delta_Ty;
-        Delta_pt(math_utils::Vector_Z) = *msg.delta_Tz;
-        Delta_rt(math_utils::Vector_X) = *msg.delta_Rx;
-        Delta_rt(math_utils::Vector_Y) = *msg.delta_Ry;
-        Delta_rt(math_utils::Vector_Z) = *msg.delta_Rz;
-        mpc_T(math_utils::Vector_X) = *msg.R_1x;
-        mpc_T(math_utils::Vector_Y) = *msg.R_1y;
-        mpc_T(math_utils::Vector_Z) = *msg.R_1z;
-        mpc_R(math_utils::Vector_X) = *msg.R_2x;
-        mpc_R(math_utils::Vector_Y) = *msg.R_2y;  
-        mpc_R(math_utils::Vector_Z) = *msg.R_2z; 
-        isPerformingAction = *msg.perform_action;
-        isEmergencyFromLeader = *msg.emergency;
+        Delta_pt(math_utils::Vector_X) = (*msg).delta_Tx;
+        Delta_pt(math_utils::Vector_Y) = (*msg).delta_Ty;
+        Delta_pt(math_utils::Vector_Z) = (*msg).delta_Tz;
+        Delta_rt(math_utils::Vector_X) = (*msg).delta_Rx;
+        Delta_rt(math_utils::Vector_Y) = (*msg).delta_Ry;
+        Delta_rt(math_utils::Vector_Z) = (*msg).delta_Rz;
+        mpc_T(math_utils::Vector_X) = (*msg).R_1x;
+        mpc_T(math_utils::Vector_Y) = (*msg).R_1y;
+        mpc_T(math_utils::Vector_Z) = (*msg).R_1z;
+        mpc_R(math_utils::Vector_X) = (*msg).R_2x;
+        mpc_R(math_utils::Vector_Y) = (*msg).R_2y;  
+        mpc_R(math_utils::Vector_Z) = (*msg).R_2z; 
+        isPerformingAction = (*msg).perform_action;
+        isEmergencyFromLeader = (*msg).emergency;
     }
 
     bool payload_controller_JGCD::emergency_switch()
@@ -582,36 +582,36 @@ namespace multidronepayload {
     {
         
         ParamSrv.request.controllername      = uav_pref + " with JGCD";
-        ParamSrv.request.dronemass           = Quad_MASS;
-        ParamSrv.request.cablelength = Cable_Length;
-        ParamSrv.request.a_j         = PayloadSharingPortion;
+        ParamSrv.request.dronemass           = drone_parameter.Quad_MASS;
+        ParamSrv.request.cablelength         = Cable_Length;
+        ParamSrv.request.a_j                 = PayloadSharingPortion;
         ParamSrv.request.payloadmass = Payload_Mass;
         ParamSrv.request.num_drone   = num_drone;
-        ParamSrv.request.motor_slope = (float)motor_slope;
-        ParamSrv.request.motor_intercept = (float)motor_intercept;
+        ParamSrv.request.motor_slope = (float)drone_parameter.liftmodel.motor_slope;
+        ParamSrv.request.motor_intercept = (float)drone_parameter.liftmodel.motor_intercept;
         ParamSrv.request.isPubAuxiliaryState     = isPubAuxiliaryState;
-        ParamSrv.request.isAddonForcedUsed       = isAddonForcedUsed;
-        ParamSrv.request.isCrossFeedingTermsUsed = isCrossFeedingTermsUsed;
-        ParamSrv.request.t_jx        = TetherOffset(0);
-        ParamSrv.request.t_jy        = TetherOffset(1);
-        ParamSrv.request.t_jz        = TetherOffset(2);
-        ParamSrv.request.kv_xy       = kv(0,0);
-        ParamSrv.request.kv_z        = kv(2,2);
+        ParamSrv.request.isAddonForcedUsed       = true;
+        ParamSrv.request.isCrossFeedingTermsUsed = false;
+        ParamSrv.request.t_jx        = TetherOffset(math_utils::Vector_X);
+        ParamSrv.request.t_jy        = TetherOffset(math_utils::Vector_Y);
+        ParamSrv.request.t_jz        = TetherOffset(math_utils::Vector_Z);
+        ParamSrv.request.kv_xy       = kv(math_utils::Vector_X,math_utils::Vector_X);
+        ParamSrv.request.kv_z        = kv(math_utils::Vector_Z,math_utils::Vector_Z);
         ParamSrv.request.kr1_x       = 0.0;
         ParamSrv.request.kr1_y       = 0.0;
         ParamSrv.request.kr1_z       = 0.0;
         ParamSrv.request.kr2_x       = 0.0;
         ParamSrv.request.kr2_y       = 0.0;
         ParamSrv.request.kr2_z       = 0.0;
-        ParamSrv.request.kp_x        = kp(0,0);
-        ParamSrv.request.kp_y        = kp(1,1);
-        ParamSrv.request.kp_z        = kp(2,2);
-        ParamSrv.request.komega_x    = komega(0,0);
-        ParamSrv.request.komega_y    = komega(1,1);
-        ParamSrv.request.komega_z    = komega(2,2);
-        ParamSrv.request.lambdaj_x   = lambda_j(0,0);
-        ParamSrv.request.lambdaj_y   = lambda_j(1,1);
-        ParamSrv.request.lambdaj_z   = lambda_j(2,2);
+        ParamSrv.request.kp_x        = 0.0;
+        ParamSrv.request.kp_y        = 0.0;
+        ParamSrv.request.kp_z        = 0.0;
+        ParamSrv.request.komega_x    = 0.0;
+        ParamSrv.request.komega_y    = 0.0;
+        ParamSrv.request.komega_z    = 0.0;
+        ParamSrv.request.lambdaj_x   = lambda_j(math_utils::Vector_X,math_utils::Vector_X);
+        ParamSrv.request.lambdaj_y   = lambda_j(math_utils::Vector_Y,math_utils::Vector_Y);
+        ParamSrv.request.lambdaj_z   = lambda_j(math_utils::Vector_Z,math_utils::Vector_Z);
         if (uav_pref.compare("uav0")==0) {
             
         ros::NodeHandle main_handle("~");
@@ -622,26 +622,26 @@ namespace multidronepayload {
         main_handle.param<float> ("Pos_JGCD/lambda_Rxy", ParamSrv.request.lambda_R_y, 0.0);
         main_handle.param<float> ("Pos_JGCD/lambda_Rz",  ParamSrv.request.lambda_R_z, 0.0);}
 
-        ParamSrv.request.lambda1_x   = lambda_1(0,0);
-        ParamSrv.request.lambda1_y   = lambda_1(1,1);
-        ParamSrv.request.lambda1_z   = lambda_1(2,2);
-        ParamSrv.request.lambda2_x   = lambda_2(0,0);
-        ParamSrv.request.lambda2_y   = lambda_2(1,1);
-        ParamSrv.request.lambda2_z   = lambda_2(2,2);
-        ParamSrv.request.kR_xy           = kR(0,0);
-        ParamSrv.request.kR_z            = kR(2,2);
+        ParamSrv.request.lambda1_x   = 0.0;
+        ParamSrv.request.lambda1_y   = 0.0;
+        ParamSrv.request.lambda1_z   = 0.0;
+        ParamSrv.request.lambda2_x   = 0.0;
+        ParamSrv.request.lambda2_y   = 0.0;
+        ParamSrv.request.lambda2_z   = 0.0;
+        ParamSrv.request.kR_xy           = kR(math_utils::Vector_X,math_utils::Vector_X);
+        ParamSrv.request.kR_z            = kR(math_utils::Vector_Z,math_utils::Vector_Z);
         ParamSrv.request.kL              = kL;
-        ParamSrv.request.Kphi_xy         = Kphi(0,0);
-        ParamSrv.request.Kphi_z          = Kphi(2,2);
-        ParamSrv.request.pxy_error_max   = pos_error_max[0];
-        ParamSrv.request.pz_error_max    = pos_error_max[2];
-        ParamSrv.request.pxy_int_max     = pos_int_max(0);
-        ParamSrv.request.pz_int_max      = pos_int_max(2);
-        ParamSrv.request.tilt_max        = tilt_max;
-        ParamSrv.request.int_start_error = pos_int_start_error;
-        ParamSrv.request.fp_max_x        = fp_max(0);
-        ParamSrv.request.fp_max_y        = fp_max(1);
-        ParamSrv.request.fp_max_z        = fp_max(2);
+        ParamSrv.request.Kphi_xy         = Kphi(math_utils::Vector_X,math_utils::Vector_X);
+        ParamSrv.request.Kphi_z          = Kphi(math_utils::Vector_Z,math_utils::Vector_Z);
+        ParamSrv.request.pxy_error_max   = pos_error_max[math_utils::Vector_X];
+        ParamSrv.request.pz_error_max    = pos_error_max[math_utils::Vector_Z];
+        ParamSrv.request.pxy_int_max     = 0.0;
+        ParamSrv.request.pz_int_max      = 0.0;
+        ParamSrv.request.tilt_max        = drone_parameter.tiltlimit;
+        ParamSrv.request.int_start_error = 0.0;
+        ParamSrv.request.fp_max_x        = fp_max(math_utils::Vector_X);
+        ParamSrv.request.fp_max_y        = fp_max(math_utils::Vector_Y);
+        ParamSrv.request.fp_max_z        = fp_max(math_utils::Vector_Z);
         // call the ground station to recieve the parameters and waiting for connection....
         bool isresponserecieved = false;
         ros::Time begin_time    = ros::Time::now();
@@ -676,11 +676,17 @@ namespace multidronepayload {
         if (!isEmergency) {
             cout << ">>>>>>  Payload Measurements and Errors <<<<<<<<<" <<endl;
             // priint out the control status.
-            cout << "r_j [X Y] : " << r_j(0) << " [m] " << r_j(1) << " [m] " <<endl;
-            cout << "v_j [X Y] : " << v_j(0) << " [m/s] "<< v_j(1) << " [m/s] " << endl;
+            cout << "r_j [X Y] : " << r_j(math_utils::Vector_X) << " [m] " << r_j(math_utils::Vector_Y) << " [m] \n";
+            cout << "v_j [X Y] : " << v_j(math_utils::Vector_X) << " [m/s] "<< v_j(math_utils::Vector_Y) << " [m/s] \n";
             cout << "length from mocap: " << L_j.norm() << " [m] " <<endl;
-            cout << "Pos Error [X Y Z] : " << pos_error[0] << " [m] " <<  pos_error[1] << " [m] " <<  pos_error[2] << " [m] " << endl;
-            cout << "Angle Error [X Y Z] : " << angle_error[0] << " [] "<< angle_error[1] << " [] " << angle_error[2] << " [] " <<endl;
+            cout << "Pos Error [X Y Z] : " << pos_error[math_utils::Vector_X] << " [m] " 
+                                           << pos_error[math_utils::Vector_Y] << " [m] " 
+                                           << pos_error[math_utils::Vector_Z] << " [m] \n";
+                                        
+            cout << "Angular Error [X Y Z] : " << angle_error[math_utils::Vector_X] << " [] "
+                                               << angle_error[math_utils::Vector_Y] << " [] " 
+                                               << angle_error[math_utils::Vector_Z] << " [] \n";
+
             cout << ">>>>>> Payload Target Attitude and Attitude Verification <<<<<<<<<" <<endl;
             // verify the target quaternion has been calculated:
             Eigen::Vector3d Euler_Target = quaternion_to_euler2(AttitudeTargetQuaternionv);
@@ -699,26 +705,57 @@ namespace multidronepayload {
             cout << "pitch : " << Euler(1)*57.3 << " [DEG] ";
             cout << "yaw : "   << Euler(2)*57.3 << " [DEG] ";
             cout << endl;
+            cout << ">>>>>> MPC control <<<<<<<<<" <<endl;
+            cout << "MPC_T x: "<< mpc_T(math_utils::Vector_X) << " [N] ";
+            cout << "MPC_T y: "<< mpc_T(math_utils::Vector_Y) << " [N] ";
+            cout << "MPC_T z: "<< mpc_T(math_utils::Vector_Z) << " [N] ";
+            cout << endl;
+            cout << "MPC_R x: "<< mpc_R(math_utils::Vector_X) << " [N] ";
+            cout << "MPC_R y: "<< mpc_R(math_utils::Vector_Y) << " [N] ";
+            cout << "MPC_R z: "<< mpc_R(math_utils::Vector_Z) << " [N] ";
+            cout << endl;             
+
             cout << ">>>>>> disturbance estimation <<<<<<<<<" <<endl;
             // display estimation force on quadrotor
-            cout << "Delta_jp x: " << Delta_j_p (0)<< " [N] ";
-            cout << "Delta_jp y: " << Delta_j_p (1)<< " [N] ";
-            cout << "Delta_jp z: " << Delta_j_p (2)<< " [N] ";
+            cout << "Delta_jp x: " << Delta_j_p (math_utils::Vector_X)<< " [N] ";
+            cout << "Delta_jp y: " << Delta_j_p (math_utils::Vector_Y)<< " [N] ";
+            cout << "Delta_jp z: " << Delta_j_p (math_utils::Vector_Z)<< " [N] ";
             cout << endl;
             /* display addon on force*/
-            cout << "Delta_pt x: "<< Delta_pt(0) << " [N] ";
-            cout << "Delta_pt y: "<< Delta_pt(1) << " [N] ";
-            cout << "Delta_pt z: "<< Delta_pt(2) << " [N] ";
+            cout << "Delta_pt x: "<< Delta_pt(math_utils::Vector_X) << " [N] ";
+            cout << "Delta_pt y: "<< Delta_pt(math_utils::Vector_Y) << " [N] ";
+            cout << "Delta_pt z: "<< Delta_pt(math_utils::Vector_Z) << " [N] ";
             cout << endl;
-            cout << "Delta_rt x: "<< Delta_rt(0) << " [N] ";
-            cout << "Delta_rt y: "<< Delta_rt(1) << " [N] ";
-            cout << "Delta_rt z: "<< Delta_rt(2) << " [N] ";
+            cout << "Delta_rt x: "<< Delta_rt(math_utils::Vector_X) << " [N] ";
+            cout << "Delta_rt y: "<< Delta_rt(math_utils::Vector_Y) << " [N] ";
+            cout << "Delta_rt z: "<< Delta_rt(math_utils::Vector_Z) << " [N] ";
             cout << endl;   
-
             /* display the total compensation force for payload*/ 
-            cout << "f_p_j [X Y Z]: " << f_p_j(0)<< " [N] " <<  f_p_j(1)<< " [N] " << f_p_j(2)<< " [N] " <<endl;
+            cout << "f_p_j [X Y Z]: " << f_p_j(math_utils::Vector_X)<< " [N] " 
+                                      << f_p_j(math_utils::Vector_Y)<< " [N] " 
+                                      << f_p_j(math_utils::Vector_Z)<< " [N] \n";
+
             /* display the desired cable inclination */
-            cout << "rd_j : " << rd_j(0) << " [m] " << rd_j(1) << " [m] " <<endl;
+            cout << "rd_j : " << rd_j(math_utils::Vector_X) << " [m] " << rd_j(math_utils::Vector_Y) << " [m] " <<endl;
+            /* display action */
+            if(isPerformingAction){
+                cout << "---Perfroming Action...--- \n";
+                switch (type) {
+                    case 1:
+                    {
+                        rec_traj.printf_result();
+                        break;
+                    }
+                    default:
+                    {
+                        rec_traj.printf_result();
+                        break;
+                    }      
+                }          
+            }else{
+                cout << "---Not Performing Action, Normal Flight.--- \n";
+            }
+
         } else {
             cout << "+++++++++++++++++++++++++++++++++++++++++++++" <<endl;
             ROS_WARN(">>>>>>> Danger, Switch to MoveENU !!<<<<<<<<<");
@@ -743,16 +780,15 @@ namespace multidronepayload {
         cout << endl;
         cout << "D: " <<D <<endl;
         cout << "Ej: " <<Ej <<endl;
-        cout <<"a_j : " <<PayloadSharingPortion<<endl;
+        cout <<" a_j : " <<PayloadSharingPortion<<endl;
 
         cout <<" Basic Control Gains:  " <<endl;
-        cout <<" kv_x : "<< kv(0,0) << endl;
-        cout <<" kv_y : "<< kv(1,1) << endl;
-        cout <<" kv_z : "<< kv(2,2) << endl;
-        cout <<" kR_x : "<< kR(0,0)<<endl;
-        cout <<" kR_y : "<< kR(1,1)<<endl;
-        cout <<" kR_z : "<< kR(2,2)<<endl;  
-
+        cout <<" kv_x : "<< kv(math_utils::Vector_X,math_utils::Vector_X) << endl;
+        cout <<" kv_y : "<< kv(math_utils::Vector_Y,math_utils::Vector_Y) << endl;
+        cout <<" kv_z : "<< kv(math_utils::Vector_Z,math_utils::Vector_Z) << endl;
+        cout <<" kR_x : "<< kR(math_utils::Vector_X,math_utils::Vector_X) <<endl;
+        cout <<" kR_y : "<< kR(math_utils::Vector_Y,math_utils::Vector_Y) <<endl;
+        cout <<" kR_z : "<< kR(math_utils::Vector_Z,math_utils::Vector_Z) <<endl;  
 
         if (isPubAuxiliaryState) {
             cout << "AuxiliaryState has been published..." << endl;
@@ -762,15 +798,30 @@ namespace multidronepayload {
 
         // Display estimation parameter:
         cout <<" UDE parameter:  " << endl;
-        cout << "lambda_jx: " <<  lambda_j(0,0) << " lambda_jy: " << lambda_j(1,1) << " lambda_jz: "<< lambda_j(2,2) << endl;
+        cout << " lambda_jx: " << lambda_j(math_utils::Vector_X,math_utils::Vector_X) 
+             << " lambda_jy: " << lambda_j(math_utils::Vector_Y,math_utils::Vector_Y)
+             << " lambda_jz: " << lambda_j(2,2) << endl;
         // Display control limitation:
-        cout <<"Control Limit:  " <<endl;
-        cout <<"pxy_error_max : "<< pos_error_max[0] << endl;
-        cout <<"pz_error_max :  "<< pos_error_max[2] << endl;
+        cout <<" Control Limit:  " <<endl;
+        cout <<" pxy_error_max : "<< pos_error_max[math_utils::Vector_X] << endl;
+        cout <<" pz_error_max :  "<< pos_error_max[math_utils::Vector_Z] << endl;
         // maximum lift
         cout << " fpmax_x : " << fp_max(math_utils::Vector_X) 
              << " fpmax_y : " << fp_max(math_utils::Vector_Y) 
              << " fpmax_z : " << fp_max(math_utils::Vector_Z) <<endl;
+
+        switch (type) {
+            case 1:
+            {
+                rec_traj.printf_param();
+                break;
+            }
+            default:
+            {
+                rec_traj.printf_param();
+                break;
+            }
+        }
         // send the parameters to ground station:
         send_parameter_to_ground_station();
     }

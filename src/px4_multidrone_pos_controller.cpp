@@ -23,7 +23,7 @@
 #include <pos_controller_cascade_PID.h>
 #include <pos_controller_TIE.h>
 #include <payload_controller_GNC.h>
-//#include <payload_controller_JGCD.h>
+#include <payload_controller_JGCD.h>
 /*--------------------------utility classes-----------------------*/
 #include <px4_command_utils.h>
 #include <px4_command/ControlCommand.h>
@@ -263,7 +263,7 @@ int main(int argc, char **argv) {
     pos_controller_TIE      pos_controller_tie(ID,nh);
     // methods of payload stabilization with multiple UAVs
     payload_controller_GNC  pos_controller_GNC(ID,nh);
-//    multidronepayload::payload_controller_JGCD pos_controller_JGCD(ID,nh);
+    multidronepayload::payload_controller_JGCD pos_controller_JGCD(ID,nh);
     // pick control law will be specified in parameter files
     int SingleUAVPayloadController;
     int CooperativePayload;
@@ -276,16 +276,19 @@ int main(int argc, char **argv) {
     if(isMulti) {
         switch (CooperativePayload) {
             case 0: {
+                pos_controller_GNC.ros_topic_setup(nh);
                 pos_controller_GNC.printf_param();
                 ParamSrv.request.controllername = "TCST2020";
                 break;
             }
             case 1: {
-                //pos_controller_JGCDprintf_param();
+                pos_controller_JGCD.ros_topic_setup(nh);
+                pos_controller_JGCD.printf_param();
                 ParamSrv.request.controllername = "JGCD2020";
                 break;
             }
             default: {
+                pos_controller_GNC.ros_topic_setup(nh);
                 pos_controller_GNC.printf_param();
                 ParamSrv.request.controllername = "TCST2020";
                 break;
@@ -519,8 +522,8 @@ int main(int argc, char **argv) {
                     break;
                 }
                 case 1: {
-                    //_ControlOutput = pos_controller_JGCD.payload_controller(_DroneState, Command_to_gs.Reference_State, dt);
-                    //emergencyflag = pos_controller_JGCD.emergency_switch();
+                    _ControlOutput = pos_controller_JGCD.payload_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                    emergencyflag = pos_controller_JGCD.emergency_switch();
                     break;
                 }
                 default: {

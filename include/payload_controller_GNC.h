@@ -240,17 +240,11 @@ class payload_controller_GNC
             PayloadDisturbance.setZero();
             thrust_sp.setZero();
             throttle_sp.setZero();
-            // setting up communication channel:
-            if (isPubAuxiliaryState)  {
-                pubAuxiliaryState   = main_handle.advertise<px4_command::AuxiliaryState > ("/" + uav_pref + "/px4_command/auxiliarystate", 1000);
-            }
-            clientSendParameter = main_handle.serviceClient<px4_command::ControlParameter>("/" + uav_pref + "/px4_command/parameters");
-            pubFleetStatus      =  main_handle.advertise<px4_command::FleetStatus>("/" + uav_pref + "/px4_command/fleetstatus", 1000);
-            subAddonForce       =  main_handle.subscribe<px4_command::AddonForce>("/uav0/px4_command/addonforce", 100, &payload_controller_GNC::GetAddonForce, this);
-            //emergencyKill       = main_handle.serviceClient<px4_command::Emergency>("/" + uav_pref + "/px4_command/emergencyKill"); 
             // initialize emergency flag
             isEmergency = false;
         }
+        // setup topics
+        void ros_topic_setup(ros::NodeHandle& main_handle);
         //Printf the controller parameter
         void printf_param();
         void printf_result();
@@ -389,6 +383,16 @@ class payload_controller_GNC
         float acc_y;
         float acc_z;
 };
+
+void payload_controller_GNC::ros_topic_setup(ros::NodeHandle& main_handle){
+    cout << " ros topic setup! (TCST) " <<endl;
+    if (isPubAuxiliaryState)  {
+        pubAuxiliaryState   = main_handle.advertise<px4_command::AuxiliaryState > ("/" + uav_pref + "/px4_command/auxiliarystate", 1000);
+    }
+    clientSendParameter =  main_handle.serviceClient<px4_command::ControlParameter>("/" + uav_pref + "/px4_command/parameters");
+    pubFleetStatus      =  main_handle.advertise<px4_command::FleetStatus>("/" + uav_pref + "/px4_command/fleetstatus", 1000);
+    subAddonForce       =  main_handle.subscribe<px4_command::AddonForce>("/uav0/px4_command/addonforce", 100, &payload_controller_GNC::GetAddonForce, this);
+}
 
 px4_command::ControlOutput payload_controller_GNC::payload_controller(
     const px4_command::DroneState& _DroneState, 
