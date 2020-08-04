@@ -39,18 +39,6 @@ static Eigen::Vector3f Delta_rt;
 static Eigen::Vector3f Delta_pt;
 static Eigen::Matrix3f Delta_sq;
 // states 
-<<<<<<< HEAD
-Eigen::Matrix<float,2,3> r_sq;
-Eigen::Matrix<float,2,3> v_sq;
-Eigen::Matrix<float,2,3> rd_sq;
-Eigen::Matrix3f f_L_sq;// 
-float cur_time;
-Eigen::Matrix3f R_IP;
-Eigen::Matrix3f R_PI;
-Eigen::Vector3f v_p;
-Eigen::Vector3f omega_p;
-Eigen::Matrix3f omega_p_cross;
-=======
 static Eigen::Matrix<float,2,3> r_sq;
 static Eigen::Matrix<float,2,3> rd_sq;
 static Eigen::Matrix<float,2,3> v_sq;
@@ -61,7 +49,6 @@ static Eigen::Matrix3f R_PI;
 static Eigen::Vector3f v_p;
 static Eigen::Vector3f omega_p;
 static Eigen::Matrix3f omega_p_cross;
->>>>>>> TCST_complete
 // auxiliary variables:
 static Eigen::Vector3f FT;
 static Eigen::Vector3f FR;
@@ -71,26 +58,6 @@ static Eigen::Vector3f DT;
 static Eigen::Vector3f DR;
 static Eigen::Matrix<float,3,2> B_j;
 // parameters:
-<<<<<<< HEAD
-int   num_of_drones;
-float payload_mass;
-float M_q;
-Eigen::Vector3f g_I;
-Eigen::Matrix3f t_sq;
-Eigen::Matrix3f A;
-Eigen::Matrix3f J_q;
-Eigen::Matrix3f J_p;
-Eigen::Matrix3f D;
-Eigen::Vector3f quadrotor_mass;
-Eigen::Vector3f a_j_sq;
-Eigen::Matrix3f lambda_T;
-Eigen::Matrix3f lambda_R;
-Eigen::Vector3f cablelength;
-Eigen::Vector3f cablelength_squared;
-Eigen::Matrix<float 3, Dynamic> E_j;
-// cross feeding terms
-Eigen::Vector3f F1,F2,R1,R2, Zeta, Eta;
-=======
 static int   num_of_drones;
 static float payload_mass;
 static float M_q;
@@ -108,7 +75,6 @@ static Eigen::Vector3f cablelength;
 static Eigen::Vector3f cablelength_squared;
 static Eigen::Vector3f R1,R2;
 static Eigen::Matrix<float,3, Eigen::Dynamic> E_j;
->>>>>>> TCST_complete
 void GetCommand(const px4_command::ControlCommand::ConstPtr& msg)
 {
     Command_Now = *msg;
@@ -268,14 +234,6 @@ int main(int argc,
     nh.param<float> ("Pos_GNC/lambda_Rxy", lambda_R(0,0),0.2);
     nh.param<float> ("Pos_GNC/lambda_Rxy", lambda_R(1,1),0.2);
     nh.param<float> ("Pos_GNC/lambda_Rz", lambda_R(2,2),0.2);
-<<<<<<< HEAD
-    nh.param<float> ("Pos_GNC/ kL", kL, 0.1);
-    nh.param<float> ("Payload/mass", payload_mass, 1.0);
-    Eigen::Vector3f temp_t_j;
-    M_q = 0.0;// total mass of all quadrotorsa_j_sq
-    E_j.resize(3,num_of_drones*3);
-    E_j.setZero();
-=======
     nh.param<float> ("Pos_GNC/kL", kL, 0.1);
     
     // temp variables
@@ -283,7 +241,6 @@ int main(int argc,
     M_q = 0.0;// total mass of all quadrotorsa_j_sq
     float e_n = 1.0;
     E_j.resize(3,num_of_drones*3);
->>>>>>> TCST_complete
     for (int i = 0; i < num_of_drones ; i ++) {
         temp_t_j.setZero();
         nh.param<float>("uav" + to_string(i) + "_Pos_GNC/TetherOffset_x", temp_t_j(0), 0.5);
@@ -298,9 +255,6 @@ int main(int argc,
         M_q += quadrotor_mass(i);
         A += quadrotor_mass(i) * Hatmap(temp_t_j);
         J_q += - quadrotor_mass(i) * Hatmap(temp_t_j) * Hatmap(temp_t_j);
-<<<<<<< HEAD
-        // TO DO: calculate Ej
-=======
         e_n *= temp_t_j.norm();
     }
     // for 2 drone case, E_j is special
@@ -312,7 +266,6 @@ int main(int argc,
             E_j.block(0,i*3,3,3) = Hatmap(t_sq.col(i)) * D.inverse();
         }
     }
->>>>>>> TCST_complete
 
     }
     for (int i = 0, i< num_of_drones; i++ ) {
@@ -335,12 +288,7 @@ int main(int argc,
     Eigen::Vector2f mu_j;
     Eigen::Vector2f v_j;
     Eigen::Vector4f AttitudeQuaternionv;
-<<<<<<< HEAD
-    Eigen::Vector2f mu_j;
-    Eigen::Vector2f temp;
-=======
     Eigen::Vector3f temp;
->>>>>>> TCST_complete
     t_j_cross.setZero();
     DisplayParameters();// display parameters for checking...
     int check_flag;
@@ -399,11 +347,7 @@ int main(int argc,
                     for (int i = 0; i < num_of_drones ; i ++) {
                         r_j = r_sq.col(i);
                         v_j = v_sq.col(i);
-<<<<<<< HEAD
-                        mu_j = kL * (r_j - rd_j.col(i));
-=======
                         mu_j = kL * (r_j - rd_sq.col(i));
->>>>>>> TCST_complete
                         t_j_cross = Hatmap(t_sq.col(i));
                         DT += Delta_sq.col(i);
                         DR += t_j_cross * R_PI *  Delta_sq.col(i);
@@ -419,11 +363,7 @@ int main(int argc,
                         }
                         temp = B_j * (v_j + mu_j);
                         R1 += a_j_sq(i) * temp;
-<<<<<<< HEAD
-                        R2 += a_j_sq(i) * E_j.segment(0,i*3,3,3).transpose() * R_PI * temp;
-=======
                         R2 += a_j_sq(i) * E_j.block(0,i*3,3,3).transpose() * R_PI * temp;
->>>>>>> TCST_complete
                         BT += quadrotor_mass(i) * B_j * v_j;
                         FR += t_j_cross * (quadrotor_mass(i)*(omega_p_cross * R_PI *B_j*v_j - omega_p_cross * t_j_cross *omega_p -  R_PI * g_I) - R_PI * f_L_sq.col(i));
                         FR2 += quadrotor_mass(i)* t_j_cross * R_PI * B_j * v_j;
