@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+	<arg name="paramfile" default = "Parameter_for_control_gazebo.yaml"/>
+	<node pkg="px4_command" type="px4_interdrone_communication" name="px4_interdrone_communication" output="screen">
+	<rosparam command="load" file="$(find px4_command)/config/$(arg paramfile)" />
+	</node>
+</launch>

@@ -15,32 +15,9 @@
 ***************************************************************************************************************************/
 #include <ros/ros.h>
 #include <iostream>
-#include <vector>
 #include <Eigen/Eigen>
-
 #include <math_utils.h>
-#include <mavros_msgs/State.h>
-#include <Frame_tf_utils.h>
-#include <mavros_msgs/CommandBool.h>
-#include <mavros_msgs/SetMode.h>
-#include <mavros_msgs/State.h>
-#include <geometry_msgs/Vector3.h>
-#include <geometry_msgs/TwistStamped.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <nav_msgs/Odometry.h>
-#include <sensor_msgs/Imu.h>
-#include <std_msgs/Bool.h>
-#include <geometry_msgs/Pose.h>
-#include <geometry_msgs/Vector3Stamped.h>
-#include <geometry_msgs/Point.h>
-#include <std_msgs/UInt16.h>
-#include <std_msgs/Float64.h>
-#include <tf2_msgs/TFMessage.h>
-#include <geometry_msgs/TransformStamped.h>
-#include <sensor_msgs/Imu.h>
-
 #include <px4_command/DroneState.h>
-#include <px4_command/Mocap.h>
 #include <px4_command/AddonForce.h>
 #include <px4_command/FleetStatus.h>
 #include <px4_command/ControlCommand.h>
@@ -48,19 +25,21 @@
 #include <command_to_mavros_multidrone.h>
 using std::vector;
 using std::string;
+
 // messages:
-px4_command::AddonForce  _AddonForce;// addonforce to be published
-px4_command::DroneState  _DroneState;// dronestate from uav0
-px4_command::ControlCommand Command_Now;
+static px4_command::AddonForce  _AddonForce;// addonforce to be published
+static px4_command::DroneState  _DroneState;// dronestate from uav0
+static px4_command::ControlCommand Command_Now;
 //estimation:
-Eigen::Vector3f Delta_T_I;
-Eigen::Vector3f Delta_R_I;
-Eigen::Vector3f Delta_T;
-Eigen::Vector3f Delta_R;
-Eigen::Vector3f Delta_rt;
-Eigen::Vector3f Delta_pt;
-Eigen::Matrix3f Delta_sq;
+static Eigen::Vector3f Delta_T_I;
+static Eigen::Vector3f Delta_R_I;
+static Eigen::Vector3f Delta_T;
+static Eigen::Vector3f Delta_R;
+static Eigen::Vector3f Delta_rt;
+static Eigen::Vector3f Delta_pt;
+static Eigen::Matrix3f Delta_sq;
 // states 
+<<<<<<< HEAD
 Eigen::Matrix<float,2,3> r_sq;
 Eigen::Matrix<float,2,3> v_sq;
 Eigen::Matrix<float,2,3> rd_sq;
@@ -71,15 +50,28 @@ Eigen::Matrix3f R_PI;
 Eigen::Vector3f v_p;
 Eigen::Vector3f omega_p;
 Eigen::Matrix3f omega_p_cross;
+=======
+static Eigen::Matrix<float,2,3> r_sq;
+static Eigen::Matrix<float,2,3> rd_sq;
+static Eigen::Matrix<float,2,3> v_sq;
+static Eigen::Matrix3f f_L_sq;// 
+static float cur_time;
+static Eigen::Matrix3f R_IP;
+static Eigen::Matrix3f R_PI;
+static Eigen::Vector3f v_p;
+static Eigen::Vector3f omega_p;
+static Eigen::Matrix3f omega_p_cross;
+>>>>>>> TCST_complete
 // auxiliary variables:
-Eigen::Vector3f FT;
-Eigen::Vector3f FR;
-Eigen::Vector3f FR2;
-Eigen::Vector3f BT;
-Eigen::Vector3f DT;
-Eigen::Vector3f DR;
-Eigen::Matrix<float,3,2> B_j;
+static Eigen::Vector3f FT;
+static Eigen::Vector3f FR;
+static Eigen::Vector3f FR2;
+static Eigen::Vector3f BT;
+static Eigen::Vector3f DT;
+static Eigen::Vector3f DR;
+static Eigen::Matrix<float,3,2> B_j;
 // parameters:
+<<<<<<< HEAD
 int   num_of_drones;
 float payload_mass;
 float M_q;
@@ -98,6 +90,25 @@ Eigen::Vector3f cablelength_squared;
 Eigen::Matrix<float 3, Dynamic> E_j;
 // cross feeding terms
 Eigen::Vector3f F1,F2,R1,R2, Zeta, Eta;
+=======
+static int   num_of_drones;
+static float payload_mass;
+static float M_q;
+static Eigen::Vector3f g_I;
+static Eigen::Matrix3f t_sq;
+static Eigen::Matrix3f A;
+static Eigen::Matrix3f J_q;
+static Eigen::Matrix3f J_p;
+static Eigen::Matrix3f D;
+static Eigen::Vector3f quadrotor_mass;
+static Eigen::Vector3f a_j_sq;
+static Eigen::Matrix3f lambda_T;
+static Eigen::Matrix3f lambda_R;
+static Eigen::Vector3f cablelength;
+static Eigen::Vector3f cablelength_squared;
+static Eigen::Vector3f R1,R2;
+static Eigen::Matrix<float,3, Eigen::Dynamic> E_j;
+>>>>>>> TCST_complete
 void GetCommand(const px4_command::ControlCommand::ConstPtr& msg)
 {
     Command_Now = *msg;
@@ -174,6 +185,7 @@ void PrintEstimation(){
                 cout << "F_L_" << i << " [X Y Z] : " << f_L_sq(0,i) <<" [N] "<<f_L_sq(1,i) <<" [N] "<< f_L_sq(2,i)<<" [N] "<<endl;
                 cout << "r_" << i << " [X Y] : "<< r_sq(0,i) << " [m] " << r_sq(1,i) << " [m] "    << endl;
                 cout << "v_" << i << " [X Y] : "<< v_sq(0,i) << " [m/s] " << v_sq(1,i) << " [m/s] "<< endl;
+                cout << "rd_" << i << " [X Y] : " << rd_sq(0,i) << " [m] " << rd_sq(1,i) << " [m] " << endl;
             }
             // then display estimation results
             cout << ">>>>>>> IN PAYLOAD STABILIZATION MODE, CALCULATING ESTIMATION <<<<<<<" << endl;
@@ -181,11 +193,13 @@ void PrintEstimation(){
             cout << "Delta_pt [X Y Z] : " << Delta_pt(0) << " [N] "<< Delta_pt(1)<<" [N] "<<Delta_pt(2)<<" [N] "<<endl;
             cout << "Delta_R [X Y Z] : " << Delta_R(0) << " [N] "<< Delta_R(1)<<" [N] "<<Delta_R(2)<<" [N] "<<endl;
             cout << "Delta_rt [X Y Z] : " << Delta_rt(0) << " [N] "<< Delta_rt(1)<<" [N] "<<Delta_rt(2)<<" [N] "<<endl;
+            cout << "R1 [X Y Z] : " << R1(0) << " [N] " << R1(1) << " [N] " << R1(2) << " [N] " <<endl;
+            cout << "R2 [X Y Z] : " << R2(0) << " [N] " << R2(1) << " [N] " << R2(2) << " [N] " <<endl;
         } else {
-            cout << ">>>>>>> NOT IN PAYLOAD STABILIZATION MODE, ESTIMATION PAUSED <<<<<<<" << endl;
+            cout << ">>>>>>> NOT IN PAYLOAD STABILIZATION MODE, ESTIMATION PAUSED <<<<<<< \n";
         }
     } else {
-        cout << ">>>>>>> NOT IN OFFBOARD MODE <<<<<<<" << endl;
+        cout << ">>>>>>> NOT IN OFFBOARD MODE <<<<<<< \n";
     }
 }
 
@@ -195,13 +209,15 @@ void DisplayParameters() {
     cout <<"lambda_T: "<< lambda_T(0,0) << " " << lambda_T(1,1) << " " << lambda_T(2,2) << " " << endl;
     cout <<"lambda_R: "<< lambda_R(0,0) << " " << lambda_R(1,1) << " " << lambda_R(2,2) << " " << endl;
     cout <<"Payload Mass: " << payload_mass << " [kg]" <<endl;
-    cout << num_of_drones << " are used ! "<< endl;
+    cout << num_of_drones << " drones are used ! "<< endl;
     for (int i = 0; i< num_of_drones ; i ++) {
         cout << ">>>>>>> ---- <<<<<<<<" <<endl;
         cout <<"Quadrotor " << i << " mass: " << quadrotor_mass(i) << " [kg] "<<  endl;
         cout << "a_" << i << " = " << a_j_sq(i) << endl;
         cout << "Tether Point [X Y Z]: "<< t_sq(0,i) << " [m] " << t_sq(1,i) << " [m] " << t_sq(2,i) << " [m] " << endl;
         cout << "cablelength_" << i << " = " << cablelength(i) << " [m] " <<endl;
+        cout << "E_j matrix is : " << endl;
+        cout << E_j.block(0,i*3,3,3) <<endl;
     }
     cout << "Total Quadrotor Mass: " << M_q << " [kg] " << endl;
     cout << "J_q : " << endl;
@@ -241,20 +257,33 @@ int main(int argc,
     J_p << 0.1, 0.0, 0.0,
            0.0, 0.1, 0.0,
            0.0, 0.0, 0.1;
+    float kL = 0;
     // loading all parameters into the estimator:
     nh.param<int>   ("Pos_GNC/num_drone",num_of_drones,1);
+    nh.param<float> ("Payload/mass", payload_mass, 1.0);
+
     nh.param<float> ("Pos_GNC/lambda_Txy", lambda_T(0,0),0.2);
     nh.param<float> ("Pos_GNC/lambda_Txy", lambda_T(1,1),0.2);
     nh.param<float> ("Pos_GNC/lambda_Tz", lambda_T(2,2),0.2);
     nh.param<float> ("Pos_GNC/lambda_Rxy", lambda_R(0,0),0.2);
     nh.param<float> ("Pos_GNC/lambda_Rxy", lambda_R(1,1),0.2);
     nh.param<float> ("Pos_GNC/lambda_Rz", lambda_R(2,2),0.2);
+<<<<<<< HEAD
     nh.param<float> ("Pos_GNC/ kL", kL, 0.1);
     nh.param<float> ("Payload/mass", payload_mass, 1.0);
     Eigen::Vector3f temp_t_j;
     M_q = 0.0;// total mass of all quadrotorsa_j_sq
     E_j.resize(3,num_of_drones*3);
     E_j.setZero();
+=======
+    nh.param<float> ("Pos_GNC/kL", kL, 0.1);
+    
+    // temp variables
+    Eigen::Vector3f temp_t_j;
+    M_q = 0.0;// total mass of all quadrotorsa_j_sq
+    float e_n = 1.0;
+    E_j.resize(3,num_of_drones*3);
+>>>>>>> TCST_complete
     for (int i = 0; i < num_of_drones ; i ++) {
         temp_t_j.setZero();
         nh.param<float>("uav" + to_string(i) + "_Pos_GNC/TetherOffset_x", temp_t_j(0), 0.5);
@@ -269,7 +298,21 @@ int main(int argc,
         M_q += quadrotor_mass(i);
         A += quadrotor_mass(i) * Hatmap(temp_t_j);
         J_q += - quadrotor_mass(i) * Hatmap(temp_t_j) * Hatmap(temp_t_j);
+<<<<<<< HEAD
         // TO DO: calculate Ej
+=======
+        e_n *= temp_t_j.norm();
+    }
+    // for 2 drone case, E_j is special
+
+    for (int i = 0;  i< num_of_drones; i++ ) {
+        if (num_of_drones < 3) { 
+            E_j.block(0,i*3,3,3) = - Hatmap(t_sq.col(i)) / e_n;
+        } else {
+            E_j.block(0,i*3,3,3) = Hatmap(t_sq.col(i)) * D.inverse();
+        }
+    }
+>>>>>>> TCST_complete
 
     }
     for (int i = 0, i< num_of_drones; i++ ) {
@@ -289,10 +332,15 @@ int main(int argc,
            0.0,0.0;
     Eigen::Matrix3f t_j_cross;
     Eigen::Vector2f r_j;
+    Eigen::Vector2f mu_j;
     Eigen::Vector2f v_j;
     Eigen::Vector4f AttitudeQuaternionv;
+<<<<<<< HEAD
     Eigen::Vector2f mu_j;
     Eigen::Vector2f temp;
+=======
+    Eigen::Vector3f temp;
+>>>>>>> TCST_complete
     t_j_cross.setZero();
     DisplayParameters();// display parameters for checking...
     int check_flag;
@@ -351,7 +399,11 @@ int main(int argc,
                     for (int i = 0; i < num_of_drones ; i ++) {
                         r_j = r_sq.col(i);
                         v_j = v_sq.col(i);
+<<<<<<< HEAD
                         mu_j = kL * (r_j - rd_j.col(i));
+=======
+                        mu_j = kL * (r_j - rd_sq.col(i));
+>>>>>>> TCST_complete
                         t_j_cross = Hatmap(t_sq.col(i));
                         DT += Delta_sq.col(i);
                         DR += t_j_cross * R_PI *  Delta_sq.col(i);
@@ -367,27 +419,27 @@ int main(int argc,
                         }
                         temp = B_j * (v_j + mu_j);
                         R1 += a_j_sq(i) * temp;
+<<<<<<< HEAD
                         R2 += a_j_sq(i) * E_j.segment(0,i*3,3,3).transpose() * R_PI * temp;
+=======
+                        R2 += a_j_sq(i) * E_j.block(0,i*3,3,3).transpose() * R_PI * temp;
+>>>>>>> TCST_complete
                         BT += quadrotor_mass(i) * B_j * v_j;
                         FR += t_j_cross * (quadrotor_mass(i)*(omega_p_cross * R_PI *B_j*v_j - omega_p_cross * t_j_cross *omega_p -  R_PI * g_I) - R_PI * f_L_sq.col(i));
                         FR2 += quadrotor_mass(i)* t_j_cross * R_PI * B_j * v_j;
                     }
                     // calculate estimation based on the TCST paper. 
-                    Delta_T_I +=  dt* ( Delta_T + FT + (M_q + payload_mass) * g_I);
+                    Delta_T_I +=  dt* ( Delta_T + FT + (M_q + payload_mass) * g_I + DT);
                     Delta_T = lambda_T * ( - Delta_T_I + (M_q + payload_mass) * v_p + R_IP * A.transpose() * omega_p +  BT);
-                    Delta_R_I += dt *(A* omega_p_cross * R_PI * v_p + omega_p_cross * J_p * omega_p - Delta_R +  FR );
+                    Delta_R_I += dt *(A* omega_p_cross * R_PI * v_p + omega_p_cross * J_p * omega_p - Delta_R +  FR - DR);
                     Delta_R = lambda_R * (Delta_R_I  + A * R_PI * v_p + (J_p + J_q ) * omega_p +  FR2 );
                     // calculate effective disturbance: 
-                    Delta_pt = Delta_T - DT;
-                    Delta_pt = constrain_vector(Delta_pt, 10.0);
-                    Delta_rt = Delta_R - DR;
-                    Delta_rt = constrain_vector(Delta_rt, 5.0);
-                    // check whether the estimation is out of bound
-                    /* Step 3  TO calculate all remaining cross-feeding terms */ 
-                    //F1_dot = - lambda_1 * F1 + kr1*R1;
-                    //F2_dot = - lambda_2 * F2 + kr1*R2;
-                    //F1 += dt * F1_dot;
-                    //F2 += dt * F2_dot;
+                    //Delta_pt = Delta_T - DT;
+                    //Delta_pt = constrain_vector(Delta_pt, 10.0);
+                    //Delta_rt = Delta_R - DR;
+                    //Delta_rt = constrain_vector(Delta_rt, 5.0);
+                    Delta_pt = constrain_vector(Delta_T, 10.0);
+                    Delta_rt = constrain_vector(Delta_R, 5.0);
                 }
                 break;
             default:
@@ -404,12 +456,12 @@ int main(int argc,
         _AddonForce.delta_Ry = Delta_rt(1);  
         _AddonForce.delta_Rz = Delta_rt(2);
         // send cross-feeding forces to each quadrotor
-        _AddonForce.R_1x = 0;
-        _AddonForce.R_1y = 0;
-        _AddonForce.R_1z = 0;
-        _AddonForce.R_2x = 0;
-        _AddonForce.R_2y = 0;
-        _AddonForce.R_2z = 0;
+        _AddonForce.R_1x = R1(0);
+        _AddonForce.R_1y = R1(1);
+        _AddonForce.R_1z = R1(2);
+        _AddonForce.R_2x = R2(0);
+        _AddonForce.R_2y = R2(1);
+        _AddonForce.R_2z = R2(2);
         _AddonForce.header.stamp = ros::Time::now();
         pubAddonForce.publish(_AddonForce);
         rate.sleep();

@@ -229,6 +229,49 @@ void cal_vel_error(const px4_command::DroneState& _DroneState, const px4_command
 
 }
 
+// lift to thrust setpoint double 
+
+Eigen::Vector3d ForceToThrust(const Eigen::Vector3d& Force, float tilt_max){
+    Eigen::Vector3d thrust_sp;
+    thrust_sp = Force / NUM_MOTOR;
+
+    // 推力限幅，根据最大倾斜角及最大油门
+    float thrust_max_XY_tilt = fabs(thrust_sp[2]) * tanf(tilt_max/180.0*M_PI);
+    float thrust_max_XY = sqrtf(thrust_max_single_motor * thrust_max_single_motor - pow(thrust_sp[2],2));
+    thrust_max_XY = min(thrust_max_XY_tilt, thrust_max_XY);
+
+    if ((pow(thrust_sp[0],2) + pow(thrust_sp[1],2)) > pow(thrust_max_XY,2)) 
+    {
+        float mag = sqrtf((pow(thrust_sp[0],2) + pow(thrust_sp[1],2)));
+        thrust_sp[0] = thrust_sp[0] / mag * thrust_max_XY;
+        thrust_sp[1] = thrust_sp[1] / mag * thrust_max_XY;
+    }
+    
+    return thrust_sp;  
+}
+
+// lift to thrust setpoint float 
+
+Eigen::Vector3f ForceToThrust(const Eigen::Vector3f& Force, float tilt_max){
+    Eigen::Vector3f thrust_sp;
+    thrust_sp = Force / NUM_MOTOR;
+
+    // 推力限幅，根据最大倾斜角及最大油门
+    float thrust_max_XY_tilt = fabs(thrust_sp[2]) * tanf(tilt_max/180.0*M_PI);
+    float thrust_max_XY = sqrtf(thrust_max_single_motor * thrust_max_single_motor - pow(thrust_sp[2],2));
+    thrust_max_XY = min(thrust_max_XY_tilt, thrust_max_XY);
+
+    if ((pow(thrust_sp[0],2) + pow(thrust_sp[1],2)) > pow(thrust_max_XY,2)) 
+    {
+        float mag = sqrtf((pow(thrust_sp[0],2) + pow(thrust_sp[1],2)));
+        thrust_sp[0] = thrust_sp[0] / mag * thrust_max_XY;
+        thrust_sp[1] = thrust_sp[1] / mag * thrust_max_XY;
+    }
+    
+    return thrust_sp;  
+}
+
+// accelToThrust setpoint 
 Eigen::Vector3d accelToThrust(const Eigen::Vector3d& accel_sp, float mass, float tilt_max)
 {
     Eigen::Vector3d thrust_sp;
@@ -251,6 +294,28 @@ Eigen::Vector3d accelToThrust(const Eigen::Vector3d& accel_sp, float mass, float
     return thrust_sp;   
 }
 
+Eigen::Vector3f accelToThrust(const Eigen::Vector3f& accel_sp, float mass, float tilt_max)
+{
+    Eigen::Vector3f thrust_sp;
+
+    //除以电机个数得到单个电机的期望推力
+    thrust_sp = mass * accel_sp / NUM_MOTOR;
+
+    // 推力限幅，根据最大倾斜角及最大油门
+    float thrust_max_XY_tilt = fabs(thrust_sp[2]) * tanf(tilt_max/180.0*M_PI);
+    float thrust_max_XY = sqrtf(thrust_max_single_motor * thrust_max_single_motor - pow(thrust_sp[2],2));
+    thrust_max_XY = min(thrust_max_XY_tilt, thrust_max_XY);
+
+    if ((pow(thrust_sp[0],2) + pow(thrust_sp[1],2)) > pow(thrust_max_XY,2)) 
+    {
+        float mag = sqrtf((pow(thrust_sp[0],2) + pow(thrust_sp[1],2)));
+        thrust_sp[0] = thrust_sp[0] / mag * thrust_max_XY;
+        thrust_sp[1] = thrust_sp[1] / mag * thrust_max_XY;
+    }
+    
+    return thrust_sp;   
+}
+// convert thrust to throttle based on quadrotor thrust model
 Eigen::Vector3d thrustToThrottle(const Eigen::Vector3d& thrust_sp)
 {
     Eigen::Vector3d throttle_sp;
@@ -268,6 +333,14 @@ Eigen::Vector3d thrustToThrottle(const Eigen::Vector3d& thrust_sp)
 Eigen::Vector3d thrustToThrottleLinear(const Eigen::Vector3d& thrust_sp, double slope, double intercept)
 {
     Eigen::Vector3d throttle_sp;
+    //Linear motor model
+    throttle_sp = (slope * thrust_sp.norm() + intercept) * thrust_sp.normalized();
+    return throttle_sp; 
+}
+
+Eigen::Vector3f thrustToThrottleLinear(const Eigen::Vector3f& thrust_sp, double slope, double intercept)
+{
+    Eigen::Vector3f throttle_sp;
     //Linear motor model
     throttle_sp = (slope * thrust_sp.norm() + intercept) * thrust_sp.normalized();
     return throttle_sp; 

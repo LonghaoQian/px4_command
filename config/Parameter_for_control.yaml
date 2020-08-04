@@ -35,7 +35,7 @@ pos_estimator:
 
 ## 飞机参数
 Quad:
-  mass: 1.6
+  mass: 1.541
 ## payload mass
 Payload:
   mass: 0.95
@@ -48,14 +48,17 @@ CooperativeMode:
   isMulti: false
   droneID: 2              # single UAV payload mode is activated in drone 2
 
+ActionMode:
+  type: 1                  # 0 for circle path, 1 for rectangular path
+
 ##geo fence for fsc
 geo_fence:
   x_min: -1.6
   x_max:  1.5
-  y_min: -1.2
-  y_max:  1.2
+  y_min: -1.3
+  y_max:  1.3
   z_min: -0.05
-  z_max:  1.8
+  z_max:  2.5
 
 ## 限制参数
 Limit:
@@ -65,7 +68,7 @@ Limit:
   vz_error_max: 10.0
   pxy_int_max : 10.0
   pz_int_max : 10.0
-  tilt_max: 20.0
+  tilt_max: 35.0
   int_start_error: 10.0
 
   XY_VEL_MAX : 10.0
@@ -133,94 +136,114 @@ Circle_Trajectory:
   time_total: 50.0
   direction: 1.0
 
+Rectangular_Trajectory:
+  a_x: 2.0 # length along x axis
+  a_y: 1.8 # length along y axis
+  h: 1.5 # hight
+  vel_x: 0.2 # velocity along x axis
+  vel_y: 0.15 # velocity along y axis 
+  
 # parameter for single UAV payload using method in TIE paper
 Pos_tie:
   issingleUAVused: true   # is single UAV payload used in control
   isVisionused: false
   isIntegrationOn: true
   isPubAuxiliaryState: true
-  payload_mass: 0.45
-  quadrotor_mass : 1.57
+  payload_mass: 0.5
+  quadrotor_mass : 1.63
   cablelength : 1
-  motor_slope: 0.0943
-  motor_intercept: 0.1407
-  Kp_xy : 0.4
-  Kp_z :  0.6
-  Kv_xy : 1.7
-  Kv_z :  2
-  T_tie_xy : 1.0
-  T_tie_z : 1.0
+  motor_slope: 0.082
+  motor_intercept: 0.26
+  Kp_xy : 0.5
+  Kp_z :  0.5
+  Kv_xy : 2.0
+  Kv_z :  2.0
+  T_tie_xy : 0.8
+  T_tie_z : 0.6
   Kpv_xy: 0.3
   Kpv_z: 0.3
   KL : 0.1
 
 # parameter for payload cooperative control 
 uav0_Pos_GNC:
-  mass : 1.67
-  cablelength : 0.91
-  TetherOffset_x: 0.99
+  mass : 1.541
+  cablelength : 0.98
+  TetherOffset_x: 1.085
   TetherOffset_y: 0
   TetherOffset_z: 0
-  PayloadSharingPortion : 0.5
-  motor_slope: 0.079
-  motor_intercept: 0.188
+  PayloadSharingPortion : 0.33333
+  motor_slope: 0.09603
+  motor_intercept: 0.13213
 
 uav1_Pos_GNC:
   mass : 1.541
-  cablelength : 0.91
-  TetherOffset_x: -0.99
-  TetherOffset_y: 0
+  cablelength : 0.98
+  TetherOffset_x: -0.5425
+  TetherOffset_y: -0.9396
   TetherOffset_z: 0
-  PayloadSharingPortion: 0.5
+  PayloadSharingPortion: 0.33333
   motor_slope: 0.09603
   motor_intercept: 0.13213
 
 uav2_Pos_GNC:
-  mass : 1.45
-  cablelength : 0
-  TetherOffset_x: 0
-  TetherOffset_y: 0
+  mass : 1.541
+  cablelength : 0.98
+  TetherOffset_x: -0.5425
+  TetherOffset_y: 0.9396
   TetherOffset_z: 0
-  PayloadSharingPortion: 0
-  motor_slope: 0.3
-  motor_intercept: 0.1
-
-uav3_Pos_GNC:
-  mass : 1.45
-  cablelength : 0
-  TetherOffset_x: 0
-  TetherOffset_y: 0
-  TetherOffset_z: 0
-  PayloadSharingPortion: 0
-  motor_slope: 0.3
-  motor_intercept: 0.1
+  PayloadSharingPortion: 0.33333
+  motor_slope: 0.09603
+  motor_intercept: 0.13213
 
 Pos_GNC:
-  Type: 0 # 0 for TCST method, 1 for JGCD method
-  MaxInclination: 50.0 # maximum inclination for 
+  ControllerInfo: -1
+  Type: 0              # 0 for TCST method 
+  MaxInclination: 50.0 # maximum safty angle
   CableLengthTolerance: 1.2
+  # debugging options
   UseAddonForce: true
+  UseCrossFeedingTerms: true
   PubAuxiliaryState : true
-  num_drone : 2
-  kv_xy : 0.4
-  Kv_z  : 0.6
-  kvi_xy : 0.00
-  kvi_z  : 0.00
-  kR_xy : 0.4
-  kR_z  : 0.25
-  kRi_xy : 0.0
-  kRi_z  : 0.0
-  kL    : 0.14
-  Kphi_xy : 3.2
+  # controller parametrers: 
+  num_drone : 3
+  kv_xy : 0.25
+  Kv_z  : 0.7
+  kR_xy : 0.3
+  kR_z  : 0.2
+  kL    : 0.15
+  Kphi_xy : 3
   Kphi_z  : 4.5
   fp_max_x : 5
   fp_max_y : 5
   fp_max_z : 5
-  lambda_j : 0.5
-  lambda_T : 0.10
-  lambda_R : 0.09
+  lambda_j : 0.30
+  lambda_Txy : 0.08
+  lambda_Tz  : 0.3
+  lambda_Rxy : 0.09
+  lambda_Rz  : 0.09
   kF_xy : 0.4
   kF_z :  0.5
+  kr1_x : 0.15
+  kr1_y : 0.15
+  kr1_z : 0.15
+  kr2_x : 0.15
+  kr2_y : 0.15
+  kr2_z : 0.15
+
+  kp_x : 0.1
+  kp_y : 0.1
+  kp_z : 0.1
+
+  komega_x : 0.1
+  komega_y : 0.1
+  komega_z : 0.1
+
+  lambda1_x : 0.3
+  lambda1_y : 0.3
+  lambda1_z : 0.3
+  lambda2_x : 0.3
+  lambda2_y : 0.3
+  lambda2_z : 0.3
   pos_int_max_x: 10
   pos_int_max_y: 10
   pos_int_max_z: 10
@@ -229,7 +252,30 @@ Pos_GNC:
   ang_int_max_z : 1
   pos_int_start_error: 0.3
   angle_int_start_error: 0.5
+  ## temporary disabled: (integral gain for payload stabilization)
+  kvi_xy : 0.00
+  kvi_z  : 0.00
+  kRi_xy : 0.0
+  kRi_z  : 0.0
 
-  
-
-
+Pos_JGCD:
+  MaxInclination: 50.0 # maximum safty angle
+  CableLengthTolerance: 1.2
+  PubAuxiliaryState : true
+  # controller parametrers:
+  num_drone : 3
+  kv_xy : 0.3
+  Kv_z  : 0.7
+  kR_xy : 0.3
+  kR_z  : 0.2
+  kL    : 0.12
+  Kphi_xy : 3
+  Kphi_z  : 4.5
+  fp_max_x : 10
+  fp_max_y : 10
+  fp_max_z : 10
+  lambda_j : 1
+  lambda_Txy : 0.09
+  lambda_Tz  : 0.3
+  lambda_Rxy : 0.09
+  lambda_Rz  : 0.09

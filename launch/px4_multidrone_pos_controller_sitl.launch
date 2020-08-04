@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+<arg name="uavID" default="uav0"/>
+<arg name="paramfile" default = "Parameter_for_control_gazebo.yaml"/>
+   <group ns="$(arg uavID)" >
+	<node pkg="px4_command" type="px4_multidrone_pos_controller" name="px4_multidrone_pos_controller" output="screen" args="$(eval arg('uavID')[-1:])">
+	<rosparam command="load" file="$(find px4_command)/config/$(arg paramfile)" />
+	</node>
+   </group>
+</launch>
