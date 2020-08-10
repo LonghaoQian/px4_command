@@ -21,7 +21,9 @@
 #include <px4_command/AddonForce.h>
 #include <px4_command/FleetStatus.h>
 #include <px4_command/ControlCommand.h>
+#include <px4_command/MultiPayloadAction.h>
 #include <px4_command_utils.h>
+#include <rectangular_trajectory.h>
 #include <command_to_mavros_multidrone.h>
 using std::vector;
 using std::string;
@@ -44,11 +46,17 @@ static Eigen::Matrix<float,2,3> rd_sq;
 static Eigen::Matrix<float,2,3> v_sq;
 static Eigen::Matrix3f f_L_sq;// 
 static float cur_time;
+static Eigen::Vector3f Xp;
 static Eigen::Matrix3f R_IP;
 static Eigen::Matrix3f R_PI;
 static Eigen::Vector3f v_p;
 static Eigen::Vector3f omega_p;
 static Eigen::Matrix3f omega_p_cross;
+// command 
+static Eigen::Vector3f reference_position;
+static Eigen::Vector3f vel_error;
+static Eigen::Vector3f pos_error;
+static Eigen::Vector3f angle_error;
 // auxiliary variables:
 static Eigen::Vector3f FT;
 static Eigen::Vector3f FR;
@@ -75,9 +83,26 @@ static Eigen::Vector3f cablelength;
 static Eigen::Vector3f cablelength_squared;
 static Eigen::Vector3f R1,R2;
 static Eigen::Matrix<float,3, Eigen::Dynamic> E_j;
+static Eigen::Matrix3f Identity;
+static Eigen::Matrix3f kv,KR;
+int CooperativePayload;
+// action state
+static bool isperformAction;
+static int type;
+static trajectory::Reference_Path rect_path;
+static trajectory::Rectangular_Trajectory_Parameter rect_param;
+static trajectory::Rectangular_Trajectory rec_traj;
+// geo_fence
+static Eigen::Vector2f geo_fence_x;
+static Eigen::Vector2f geo_fence_y;
+static Eigen::Vector2f geo_fence_z;
+
 void GetCommand(const px4_command::ControlCommand::ConstPtr& msg)
 {
     Command_Now = *msg;
+    reference_position(math_utils::Vector_X) = Command_Now.Reference_State.position_ref[math_utils::Vector_X];
+    reference_position(math_utils::Vector_Y) = Command_Now.Reference_State.position_ref[math_utils::Vector_Y];
+    reference_position(math_utils::Vector_Z) = Command_Now.Reference_State.position_ref[math_utils::Vector_Z];
 }
 
 void GetDroneState(const px4_command::DroneState::ConstPtr& msg) {
@@ -134,6 +159,30 @@ void GetUAV2Status(const px4_command::FleetStatus::ConstPtr& msg){
     rd_sq(1,2) = uav2_status.rd_jy;
 }
 
+bool PayloadGeoFenceCheck(){
+    if (Xp(math_utils::Vector_X) < geo_fence_x[0] || Xp(math_utils::Vector_X) > geo_fence_x[1] ||
+        Xp(math_utils::Vector_Y) < geo_fence_y[0] || Xp(math_utils::Vector_Y) > geo_fence_y[1] ||
+        Xp(math_utils::Vector_Z) < geo_fence_z[0] || Xp(math_utils::Vector_Z) > geo_fence_z[1]) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+bool ResponseToActionCall(px4_command::MultiPayloadAction::Request& req, px4_command::MultiPayloadAction::Response& res){
+
+    if(PayloadGeoFenceCheck()&&req.perform_action){
+        isperformAction = req.perform_action;
+    }else{
+        isperformAction = false;
+    }
+    res.status_ok = isperformAction;
+    res.trajectory_type = type;
+    return true;
+}
+
+
+
 void PrintEstimation(){
     cout <<">>>>>>>>  TCST 2019 Disturbance Estimator <<<<<<<" <<endl;
     cout.setf(ios::fixed);//固定的浮点显示
@@ -161,6 +210,23 @@ void PrintEstimation(){
             cout << "Delta_rt [X Y Z] : " << Delta_rt(0) << " [N] "<< Delta_rt(1)<<" [N] "<<Delta_rt(2)<<" [N] "<<endl;
             cout << "R1 [X Y Z] : " << R1(0) << " [N] " << R1(1) << " [N] " << R1(2) << " [N] " <<endl;
             cout << "R2 [X Y Z] : " << R2(0) << " [N] " << R2(1) << " [N] " << R2(2) << " [N] " <<endl;
+
+            if(isperformAction){
+                cout << "---Perfroming Action...--- \n";
+                switch (type) {
+                    case 1:{
+                        rec_traj.printf_result();
+                        break;
+                        }
+                    default:{
+                        rec_traj.printf_result();
+                        break;
+                        }
+                }
+            }else{
+                cout << "---Not Performing Action, Normal Flight.--- \n";
+            }
+
         } else {
             cout << ">>>>>>> NOT IN PAYLOAD STABILIZATION MODE, ESTIMATION PAUSED <<<<<<< \n";
         }
@@ -192,6 +258,64 @@ void DisplayParameters() {
     cout <<  J_p << endl;
     cout << "A : " << endl;
     cout << A << endl;
+    if(CooperativePayload!=0){
+        switch (CooperativePayload){
+            case 1:{
+                cout <<" Using MPC control law...." <<endl;
+                break;
+            }
+            default:{
+                cout <<" Using MPC control law...." <<endl;
+                break;
+            }
+        }
+    }
+
+    switch (type) {
+      case 1:
+      {
+        rec_traj.printf_param();
+        break;
+      }
+      default:
+      {
+        rec_traj.printf_param();
+        break;
+      }
+    }
+
+}
+
+void MPCDummy( Eigen::Vector3f& R1, Eigen::Vector3f& R2) {
+
+    // first determine the geo_fence is satisfied
+    if(!PayloadGeoFenceCheck()){// if out of bound, return to normal mode
+        isperformAction = false;
+    }
+    // calculate quadrotor position and velocity error:
+    if(isperformAction){
+        switch (type) {
+            case 1:{
+                rect_path = rec_traj.UpdatePosition(Xp);
+                vel_error = rect_path.vd*rect_path.n - v_p;
+                pos_error = (Identity - rect_path.n*rect_path.n.transpose())*(rect_path.P-Xp);
+                break;
+            }
+        default:{
+                rect_path = rec_traj.UpdatePosition(Xp);
+                vel_error = rect_path.vd*rect_path.n - v_p;
+                pos_error = (Identity - rect_path.n*rect_path.n.transpose())*(rect_path.P-Xp);
+            break;
+        }
+      }
+    }else{
+        pos_error = reference_position - Xp;
+        vel_error = - v_p; // position stabilization
+    }
+    R1.setZero();
+    R2.setZero();
+   // R1 = vel_error + kv*pos_error;
+    //R2 = omega_p+KR*angle_error;
 }
 
 void ResetStates() {
@@ -201,6 +325,8 @@ void ResetStates() {
     Delta_R.setZero();
     Delta_pt.setZero();
     Delta_rt.setZero();
+    R1.setZero();
+    R2.setZero();
 }
 
 int main(int argc, 
@@ -209,7 +335,12 @@ int main(int argc,
     ros::init(argc, argv, "px4_interdrone_communication");
     ros::NodeHandle nh("~");
     ros::Rate rate(50.0);
-    // initialize all parameters: 
+    // initialize all parameters:
+    reference_position.setZero();
+    vel_error.setZero();
+    pos_error.setZero();
+    angle_error.setZero();
+    Identity.setIdentity();
     lambda_T.setZero();
     lambda_R.setZero();
     A.setZero();
@@ -234,7 +365,17 @@ int main(int argc,
     nh.param<float> ("Pos_GNC/lambda_Rxy", lambda_R(1,1),0.2);
     nh.param<float> ("Pos_GNC/lambda_Rz", lambda_R(2,2),0.2);
     nh.param<float> ("Pos_GNC/kL", kL, 0.1);
-    
+    // load trajectory data
+    isperformAction = false;
+    type = 1;
+    nh.param<float>("Rectangular_Trajectory/a_x",   rect_param.a_x, 0.0);
+    nh.param<float>("Rectangular_Trajectory/a_y",   rect_param.a_y, 0.0);
+    nh.param<float>("Rectangular_Trajectory/vel_x", rect_param.v_x, 0.0);
+    nh.param<float>("Rectangular_Trajectory/vel_y", rect_param.v_y, 0.0);
+    nh.param<float>("Rectangular_Trajectory/h",     rect_param.h, 0.0);
+    rec_traj.LoadParameter(rect_param);
+    // load the parameter for controller 
+    nh.param<int>("CooperativePayload", CooperativePayload, 0);
     // temp variables
     Eigen::Vector3f temp_t_j;
     M_q = 0.0;// total mass of all quadrotorsa_j_sq
@@ -273,6 +414,7 @@ int main(int argc,
     ros::Publisher  pubAddonForce = nh.advertise<px4_command::AddonForce> ("/uav0/px4_command/addonforce", 1000);
     ros::Subscriber subdronestate = nh.subscribe<px4_command::DroneState>("/uav0/px4_command/drone_state", 100, GetDroneState);
     ros::Subscriber subCommand    = nh.subscribe<px4_command::ControlCommand>("/uav0/px4_command/control_command", 100, GetCommand);
+    ros::ServiceServer serverAction = nh.advertiseService("/uav0/px4_command/multi_action", &ResponseToActionCall);
     // initialize all estimations
     ResetStates();
     B_j << 1.0,0.0,
@@ -356,12 +498,19 @@ int main(int argc,
                             B_j(2,0) = -0.1;
                             B_j(2,1) = -0.1;
                         }
-                        temp = B_j * (v_j + mu_j);
-                        R1 += a_j_sq(i) * temp;
-                        R2 += a_j_sq(i) * E_j.block(0,i*3,3,3).transpose() * R_PI * temp;
+                        // determine the controller type
+                        if(CooperativePayload == 0){ // 0 for TCST, as cross feeding term
+                            temp = B_j * (v_j + mu_j);
+                            R1 += a_j_sq(i) * temp;
+                            R2 += a_j_sq(i) * E_j.block(0,i*3,3,3).transpose() * R_PI * temp;                            
+                        }
                         BT += quadrotor_mass(i) * B_j * v_j;
                         FR += t_j_cross * (quadrotor_mass(i)*(omega_p_cross * R_PI *B_j*v_j - omega_p_cross * t_j_cross *omega_p -  R_PI * g_I) - R_PI * f_L_sq.col(i));
                         FR2 += quadrotor_mass(i)* t_j_cross * R_PI * B_j * v_j;
+                    }
+                    // 1 for JGCD
+                    if(CooperativePayload == 1){
+                       MPCDummy(R1,R2);
                     }
                     // calculate estimation based on the TCST paper. 
                     Delta_T_I +=  dt* ( Delta_T + FT + (M_q + payload_mass) * g_I + DT);
@@ -369,10 +518,6 @@ int main(int argc,
                     Delta_R_I += dt *(A* omega_p_cross * R_PI * v_p + omega_p_cross * J_p * omega_p - Delta_R +  FR - DR);
                     Delta_R = lambda_R * (Delta_R_I  + A * R_PI * v_p + (J_p + J_q ) * omega_p +  FR2 );
                     // calculate effective disturbance: 
-                    //Delta_pt = Delta_T - DT;
-                    //Delta_pt = constrain_vector(Delta_pt, 10.0);
-                    //Delta_rt = Delta_R - DR;
-                    //Delta_rt = constrain_vector(Delta_rt, 5.0);
                     Delta_pt = constrain_vector(Delta_T, 10.0);
                     Delta_rt = constrain_vector(Delta_R, 5.0);
                 }
@@ -398,8 +543,10 @@ int main(int argc,
         _AddonForce.R_2y = R2(1);
         _AddonForce.R_2z = R2(2);
         _AddonForce.header.stamp = ros::Time::now();
+        _AddonForce.perform_action = isperformAction;
         pubAddonForce.publish(_AddonForce);
         rate.sleep();
     }
     return 0;
 }
+

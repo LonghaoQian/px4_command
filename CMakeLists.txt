@@ -55,6 +55,7 @@ add_service_files(
   Emergency.srv
   GeneralInfo.srv
   SinglePayloadAction.srv
+  MultiPayloadAction.srv
 )
 
 ## Generate added messages and services with any dependencies listed here

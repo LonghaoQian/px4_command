@@ -616,7 +616,20 @@ int main(int argc, char **argv) {
             px4_command_utils::printf_command_control(Command_to_gs);
             // print out cooperative payload control result
             if (Command_Now.Mode == command_to_mavros_multidrone::Payload_Stabilization ) {
-                pos_controller_GNC.printf_result();
+                switch (CooperativePayload) {
+                    case 0: {
+                        pos_controller_GNC.printf_result();
+                        break;
+                    }
+                    case 1: {
+                        pos_controller_JGCD.printf_result();
+                        break;
+                    }
+                    default: {
+                        pos_controller_GNC.printf_result();
+                        break;
+                    }
+                }
             } else if (Command_Now.Mode == command_to_mavros_multidrone::Payload_Stabilization_SingleUAV) {
                 pos_controller_tie.printf_result();
             } else {

@@ -21,14 +21,14 @@ namespace math_utils{
 
     enum vector_component{
         Vector_X = 0,
-        Vector_Y,
-        Vector_Z
+        Vector_Y = 1,
+        Vector_Z = 2
     };
     enum quaternion_component{
         Quat_w = 0,
-        Quat_x,
-        Quat_y,
-        Quat_z
+        Quat_x = 1,
+        Quat_y = 2,
+        Quat_z = 3
     };
 
     Eigen::Vector3f GetGravitationalAcc(){
@@ -36,6 +36,7 @@ namespace math_utils{
         g_I(Vector_X) = 0.0;
         g_I(Vector_Y) = 0.0;
         g_I(Vector_Z) = -9.810;
+        return g_I;
     };
 }
 

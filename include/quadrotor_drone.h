@@ -153,6 +153,14 @@ namespace experiment_drone {
         cout << "Throttle Setpoint [X Y Z] : " << command.throttleSetpoint(math_utils::Vector_X) <<" [] " 
                                                << command.throttleSetpoint(math_utils::Vector_Y) << " [] " 
                                                << command.throttleSetpoint(math_utils::Vector_Z) << " [] \n";
+        cout << "Accbody: [X Y Z] : " << IMU.AccBody(math_utils::Vector_X) <<" [m/s^2] "
+                                      << IMU.AccBody(math_utils::Vector_Y) <<" [m/s^2] "
+                                      << IMU.AccBody(math_utils::Vector_Z) <<" [m/s^2] \n";
+        cout << "AccInertial: [X Y Z] : " << IMU.AccInertial(math_utils::Vector_X) <<" [m/s^2] "
+                                      << IMU.AccInertial(math_utils::Vector_Y) <<" [m/s^2] "
+                                      << IMU.AccInertial(math_utils::Vector_Z) <<" [m/s^2] \n";
+        cout << " Quadrotor Attitude: []: \n";
+        cout << IMU.R_Ij <<"\n"; 
     }
 }
 
