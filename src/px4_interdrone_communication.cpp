@@ -283,6 +283,13 @@ void DisplayParameters() {
         break;
       }
     }
+    cout<< "Payload geofence is :" << endl;
+    cout<< "Geofence_x_min: " << geo_fence_x(0) << " m "<<endl;
+    cout<< "Geofence_x_max: " << geo_fence_x(1) << " m "<<endl;
+    cout<< "Geofence_y_min: " << geo_fence_y(0) << " m "<<endl;
+    cout<< "Geofence_y_max: " << geo_fence_y(1) << " m "<<endl;
+    cout<< "Geofence_z_min: " << geo_fence_z(0) << " m "<<endl;
+    cout<< "Geofence_z_max: " << geo_fence_z(1) << " m "<<endl;
 
 }
 
@@ -373,6 +380,15 @@ int main(int argc,
     nh.param<float>("Rectangular_Trajectory/vel_x", rect_param.v_x, 0.0);
     nh.param<float>("Rectangular_Trajectory/vel_y", rect_param.v_y, 0.0);
     nh.param<float>("Rectangular_Trajectory/h",     rect_param.h, 0.0);
+
+
+    nh.param<float>("payload_geofence/x_min", geo_fence_x[math_utils::Vector_X], -0.6);
+    nh.param<float>("payload_geofence/x_max", geo_fence_x[math_utils::Vector_Y], 0.6);
+    nh.param<float>("payload_geofence/y_min", geo_fence_y[math_utils::Vector_X], -0.3);
+    nh.param<float>("payload_geofence/y_max", geo_fence_y[math_utils::Vector_Y], 0.3);
+    nh.param<float>("payload_geofence/z_min", geo_fence_z[math_utils::Vector_X],-0.05);
+    nh.param<float>("payload_geofence/z_max", geo_fence_z[math_utils::Vector_Y], 0.6);
+
     rec_traj.LoadParameter(rect_param);
     // load the parameter for controller 
     nh.param<int>("CooperativePayload", CooperativePayload, 0);

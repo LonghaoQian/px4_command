@@ -45,7 +45,7 @@ Cable:
 
 ## single or multi-UAV mode
 CooperativeMode:
-  isMulti: false
+  isMulti: true
   droneID: 2              # single UAV payload mode is activated in drone 2
 
 ActionMode:
@@ -137,11 +137,19 @@ Circle_Trajectory:
   direction: 1.0
 
 Rectangular_Trajectory:
-  a_x: 2.0 # length along x axis
-  a_y: 1.8 # length along y axis
-  h: 1.5 # hight
-  vel_x: 0.2 # velocity along x axis
-  vel_y: 0.15 # velocity along y axis 
+  a_x: 0.8 # length along x axis
+  a_y: 0.5 # length along y axis
+  h: 0.4 # hight
+  vel_x: 0.08 # velocity along x axis
+  vel_y: 0.05 # velocity along y axis 
+
+payload_geofence:
+  x_min: -0.5
+  x_max:  0.6
+  y_min: -0.45
+  y_max:  0.45
+  z_min: -0.05
+  z_max:  0.6
   
 # parameter for single UAV payload using method in TIE paper
 Pos_tie:
@@ -279,3 +287,21 @@ Pos_JGCD:
   lambda_Tz  : 0.3
   lambda_Rxy : 0.09
   lambda_Rz  : 0.09
+
+Pos_JGCD:
+  MaxInclination: 50.0 # maximum safty angle
+  CableLengthTolerance: 1.2
+  PubAuxiliaryState : true
+  # controller parametrers:
+  num_drone : 3
+  kv_xy : 0.3
+  Kv_z  : 0.7
+  kR_xy : 0.3
+  kR_z  : 0.2
+  kL    : 0.12
+  Kphi_xy : 3.0
+  Kphi_z  : 4.5
+  fp_max_x : 10.0
+  fp_max_y : 10.0
+  fp_max_z : 10.0
+  lambda_j : 1.0

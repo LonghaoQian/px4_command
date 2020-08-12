@@ -279,12 +279,12 @@ namespace multidronepayload {
         // load drone parameter
         drone.loadparameter(drone_parameter);
         // read the geo geo_fence
-        main_handle.param<float>("geo_fence/x_min", geo_fence_x[math_utils::Vector_X], -1.2);
-        main_handle.param<float>("geo_fence/x_max", geo_fence_x[math_utils::Vector_Y], 1.2);
-        main_handle.param<float>("geo_fence/y_min", geo_fence_y[math_utils::Vector_X], -0.9);
-        main_handle.param<float>("geo_fence/y_max", geo_fence_y[math_utils::Vector_Y], 0.9);
-        main_handle.param<float>("geo_fence/z_min", geo_fence_z[math_utils::Vector_X], 0.2);
-        main_handle.param<float>("geo_fence/z_max", geo_fence_z[math_utils::Vector_Y], 2);
+        main_handle.param<float>("payload_geofence/x_min", geo_fence_x[math_utils::Vector_X], -0.6);
+        main_handle.param<float>("payload_geofence/x_max", geo_fence_x[math_utils::Vector_Y], 0.6);
+        main_handle.param<float>("payload_geofence/y_min", geo_fence_y[math_utils::Vector_X], -0.3);
+        main_handle.param<float>("payload_geofence/y_max", geo_fence_y[math_utils::Vector_Y], 0.3);
+        main_handle.param<float>("payload_geofence/z_min", geo_fence_z[math_utils::Vector_X],-0.05);
+        main_handle.param<float>("payload_geofence/z_max", geo_fence_z[math_utils::Vector_Y], 0.6);
         // read the trajectory information
         main_handle.param<int>("ActionMode/type", type, 1);
         switch (type) {
@@ -396,6 +396,7 @@ namespace multidronepayload {
         /*------Step 3 calculate payload position and attitude error--------*/
         /*  a. position error:
         determine whether the system is performing action */
+        
         if(isPerformingAction){
             switch (type)
             {
