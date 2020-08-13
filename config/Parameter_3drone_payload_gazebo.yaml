@@ -139,8 +139,11 @@ Rectangular_Trajectory:
   a_x: 0.8 # length along x axis
   a_y: 0.5 # length along y axis
   h: 0.4 # hight
-  vel_x: 0.08 # velocity along x axis
-  vel_y: 0.05 # velocity along y axis 
+  vel_x: 0.05 # velocity along x axis
+  vel_y: 0.05 # velocity along y axis
+  center_x: 0.15
+  center_y: 0.0
+  center_z: 0.0
 
 payload_geofence:
   x_min: -0.5

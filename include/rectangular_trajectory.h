@@ -20,7 +20,10 @@ namespace trajectory{
         float a_y;
         float h;
         float v_x;
-        float v_y;        
+        float v_y;
+        float center_x;
+        float center_y;
+        float center_z;
     };
 
     struct Reference_Path{
@@ -62,18 +65,18 @@ namespace trajectory{
     void Rectangular_Trajectory::LoadParameter(Rectangular_Trajectory_Parameter& parameter)
     {
         param_ = parameter;
-        path[0].P(math_utils::Vector_X) = parameter.a_x/2.0;
-        path[0].P(math_utils::Vector_Y) = parameter.a_y/2.0;
-        path[0].P(math_utils::Vector_Z) = parameter.h;
+        path[0].P(math_utils::Vector_X) = parameter.a_x/2.0 + parameter.center_x;
+        path[0].P(math_utils::Vector_Y) = parameter.a_y/2.0 + parameter.center_y;
+        path[0].P(math_utils::Vector_Z) = parameter.h + parameter.center_z;
 
         path[0].n(math_utils::Vector_X) = -1.0;
         path[0].n(math_utils::Vector_Y) = 0.0;
         path[0].n(math_utils::Vector_Z) = 0.0;
         path[0].vd = parameter.v_x;
 
-        path[1].P(math_utils::Vector_X) = -parameter.a_x/2.0;
-        path[1].P(math_utils::Vector_Y) = parameter.a_y/2.0;
-        path[1].P(math_utils::Vector_Z) = parameter.h;
+        path[1].P(math_utils::Vector_X) = -parameter.a_x/2.0 + parameter.center_x ;
+        path[1].P(math_utils::Vector_Y) = parameter.a_y/2.0 + parameter.center_y;
+        path[1].P(math_utils::Vector_Z) = parameter.h + + parameter.center_z;
 
         path[1].n(math_utils::Vector_X) = 0.0;
         path[1].n(math_utils::Vector_Y) = -1.0;
@@ -81,9 +84,9 @@ namespace trajectory{
 
         path[1].vd = parameter.v_y;
 
-        path[2].P(math_utils::Vector_X) = -parameter.a_x/2.0;
-        path[2].P(math_utils::Vector_Y) = -parameter.a_y/2.0;
-        path[2].P(math_utils::Vector_Z) = parameter.h;
+        path[2].P(math_utils::Vector_X) = -parameter.a_x/2.0 + parameter.center_x;
+        path[2].P(math_utils::Vector_Y) = -parameter.a_y/2.0 + parameter.center_y;
+        path[2].P(math_utils::Vector_Z) = parameter.h + parameter.center_z;
 
         path[2].n(math_utils::Vector_X) = 1.0;
         path[2].n(math_utils::Vector_Y) = 0.0;
@@ -91,9 +94,9 @@ namespace trajectory{
 
         path[2].vd = parameter.v_x;
 
-        path[3].P(math_utils::Vector_X) = parameter.a_x/2.0;
-        path[3].P(math_utils::Vector_Y) = -parameter.a_y/2.0;
-        path[3].P(math_utils::Vector_Z) = parameter.h;
+        path[3].P(math_utils::Vector_X) = parameter.a_x/2.0 + parameter.center_x;
+        path[3].P(math_utils::Vector_Y) = -parameter.a_y/2.0 + parameter.center_y;
+        path[3].P(math_utils::Vector_Z) = parameter.h + parameter.center_z;
 
         path[3].n(math_utils::Vector_X) = 0.0;
         path[3].n(math_utils::Vector_Y) = 1.0;
@@ -111,7 +114,7 @@ namespace trajectory{
     }
 
     Reference_Path Rectangular_Trajectory::UpdatePosition(Eigen::Vector3f& position){
-        theta_now = atan2(position(math_utils::Vector_Y),position(math_utils::Vector_X));// get the theta at the position
+        theta_now = atan2(position(math_utils::Vector_Y)-param_.center_y,position(math_utils::Vector_X)-param_.center_x);// get the theta at the position
         DetermineState();// determine state
         // determine whether the drone is close to the turning point 
         Eigen::Vector3f n_q;

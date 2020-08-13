@@ -124,7 +124,9 @@ class pos_controller_TIE
                 main_handle.param<float>("Rectangular_Trajectory/vel_x", rect_param.v_x, 0.0);
                 main_handle.param<float>("Rectangular_Trajectory/vel_y", rect_param.v_y, 0.0);
                 main_handle.param<float>("Rectangular_Trajectory/h",     rect_param.h, 0.0);
-
+                main_handle.param<float>("Rectangular_Trajectory/center_x",     rect_param.center_x, 0.0);
+                main_handle.param<float>("Rectangular_Trajectory/center_y",     rect_param.center_y, 0.0);
+                main_handle.param<float>("Rectangular_Trajectory/center_z",     rect_param.center_z, 0.0);
                 rec_traj.LoadParameter(rect_param);
 
                 break;

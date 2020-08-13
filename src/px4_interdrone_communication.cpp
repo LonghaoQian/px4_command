@@ -380,7 +380,9 @@ int main(int argc,
     nh.param<float>("Rectangular_Trajectory/vel_x", rect_param.v_x, 0.0);
     nh.param<float>("Rectangular_Trajectory/vel_y", rect_param.v_y, 0.0);
     nh.param<float>("Rectangular_Trajectory/h",     rect_param.h, 0.0);
-
+    nh.param<float>("Rectangular_Trajectory/center_x",     rect_param.center_x, 0.0);
+    nh.param<float>("Rectangular_Trajectory/center_y",     rect_param.center_y, 0.0);
+    nh.param<float>("Rectangular_Trajectory/center_z",     rect_param.center_z, 0.0);
 
     nh.param<float>("payload_geofence/x_min", geo_fence_x[math_utils::Vector_X], -0.6);
     nh.param<float>("payload_geofence/x_max", geo_fence_x[math_utils::Vector_Y], 0.6);
