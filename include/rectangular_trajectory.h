@@ -104,7 +104,7 @@ namespace trajectory{
 
         path[3].vd = parameter.v_y;
         for(int i = 0;i<4;i++){
-            theta[i] = atan2(path[i].P(math_utils::Vector_Y),path[i].P(math_utils::Vector_X));
+            theta[i] = atan2(path[i].P(math_utils::Vector_Y)-param_.center_y,path[i].P(math_utils::Vector_X)-param_.center_x);
         }
         target_theta[0] = 1;
         target_theta[1] = 2;
