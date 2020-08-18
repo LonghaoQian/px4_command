@@ -41,6 +41,9 @@ static Eigen::Vector3f Delta_rt;
 static Eigen::Vector3f Delta_pt;
 static Eigen::Matrix3f Delta_sq;
 // states 
+static Eigen::Matrix<float,24,1> X_total;
+static Eigen::Matrix<float,6,1>  MPCU_total;
+static Eigen::Matrix<float,6,24> MPCK;
 static Eigen::Matrix<float,2,3> r_sq;
 static Eigen::Matrix<float,2,3> rd_sq;
 static Eigen::Matrix<float,2,3> v_sq;
@@ -57,6 +60,10 @@ static Eigen::Vector3f reference_position;
 static Eigen::Vector3f vel_error;
 static Eigen::Vector3f pos_error;
 static Eigen::Vector3f angle_error;
+static Eigen::Vector3d AttitudeTargetEuler;
+static Eigen::Vector4f AttitudeTargetQuaternionv;
+static Eigen::Quaterniond AttitudeTargetQuaterniond;
+static Eigen::Matrix3f R_IPd ;
 // auxiliary variables:
 static Eigen::Vector3f FT;
 static Eigen::Vector3f FR;
@@ -103,11 +110,23 @@ void GetCommand(const px4_command::ControlCommand::ConstPtr& msg)
     reference_position(math_utils::Vector_X) = Command_Now.Reference_State.position_ref[math_utils::Vector_X];
     reference_position(math_utils::Vector_Y) = Command_Now.Reference_State.position_ref[math_utils::Vector_Y];
     reference_position(math_utils::Vector_Z) = Command_Now.Reference_State.position_ref[math_utils::Vector_Z];
+    AttitudeTargetEuler(0) = (double)Command_Now.Reference_State.roll_ref;
+    AttitudeTargetEuler(1) = (double)Command_Now.Reference_State.pitch_ref;
+    AttitudeTargetEuler(2) = (double)Command_Now.Reference_State.yaw_ref;
+    AttitudeTargetQuaterniond = quaternion_from_rpy(AttitudeTargetEuler);
+    AttitudeTargetQuaternionv(0) = (float)AttitudeTargetQuaterniond.w();
+    AttitudeTargetQuaternionv(1) = (float)AttitudeTargetQuaterniond.x();
+    AttitudeTargetQuaternionv(2) = (float)AttitudeTargetQuaterniond.y();
+    AttitudeTargetQuaternionv(3) = (float)AttitudeTargetQuaterniond.z();
+    R_IPd =  QuaterionToRotationMatrix(AttitudeTargetQuaternionv);
 }
 
 void GetDroneState(const px4_command::DroneState::ConstPtr& msg) {
     _DroneState = *msg;
     _DroneState.time_from_start = cur_time;
+    for (int i = 0; i < 3; i ++) {
+        Xp(i) = _DroneState.payload_pos[i];
+    }
 }
 
 void GetUAV0Status(const px4_command::FleetStatus::ConstPtr& msg){
@@ -181,7 +200,16 @@ bool ResponseToActionCall(px4_command::MultiPayloadAction::Request& req, px4_com
     return true;
 }
 
-
+void LoadMPCGain(ros::NodeHandle& nh){
+    MPCK.setZero();
+    float k_gain;
+    string name_head = "MPCgain/Kmpc_";
+    for(int i = 0; i < 6; i++){
+        for(int j = 0; j < 24; j++){
+            nh.param<float> (name_head + std::to_string(i) + "_" + std::to_string(j), MPCK(i,j),0.0);
+        }
+    }
+}
 
 void PrintEstimation(){
     cout <<">>>>>>>>  TCST 2019 Disturbance Estimator <<<<<<<" <<endl;
@@ -227,6 +255,29 @@ void PrintEstimation(){
                 cout << "---Not Performing Action, Normal Flight.--- \n";
             }
 
+            if(CooperativePayload==1){
+                cout << "Xtotal is:\n";
+                cout << X_total.transpose() << "\n";
+                cout << "U mpc is:\n";
+                cout << MPCU_total.transpose() <<"\n";
+                cout <<" vel error: " <<"\n";
+                cout <<vel_error <<"\n";
+                cout <<" pos error: " <<"\n";
+                cout <<pos_error <<"\n";   
+                cout <<" omega_p error: " <<"\n";
+                cout <<omega_p <<"\n";
+                cout <<" angle_error error: " <<"\n";
+                cout <<angle_error <<"\n";                              
+                for(int i = 0; i < num_of_drones; i ++) {
+                    cout <<"v_"<<i<<":\n";
+                    cout<< v_sq.col(i)<<"\n";// v_j
+                    cout <<"r_"<<i<<":\n";
+                    cout<< r_sq.col(i)<<"\n";// r_j
+                }
+
+                
+            }
+
         } else {
             cout << ">>>>>>> NOT IN PAYLOAD STABILIZATION MODE, ESTIMATION PAUSED <<<<<<< \n";
         }
@@ -262,10 +313,18 @@ void DisplayParameters() {
         switch (CooperativePayload){
             case 1:{
                 cout <<" Using MPC control law...." <<endl;
+                cout <<" MPC Gain (from col 0 - col 11 )is: " <<endl;
+                cout << MPCK.block<6,12>(0,0) << endl;
+                cout <<" MPC Gain (from col 12 - col 23 )is: " <<endl;
+                cout << MPCK.block<6,12>(0,12) << endl;    
                 break;
             }
             default:{
                 cout <<" Using MPC control law...." <<endl;
+                cout <<" MPC Gain (from col 0 - col 11 )is: " <<endl;
+                cout << MPCK.block<6,12>(0,0) << endl;
+                cout <<" MPC Gain (from col 12 - col 23 )is: " <<endl;
+                cout << MPCK.block<6,12>(0,12) << endl;             
                 break;
             }
         }
@@ -295,6 +354,10 @@ void DisplayParameters() {
 
 void MPCDummy( Eigen::Vector3f& R1, Eigen::Vector3f& R2) {
 
+
+    // calculate angluar error
+    angle_error = 0.5* Veemap(R_IPd.transpose()*R_IP- R_IP.transpose() * R_IPd);
+
     // first determine the geo_fence is satisfied
     if(!PayloadGeoFenceCheck()){// if out of bound, return to normal mode
         isperformAction = false;
@@ -304,25 +367,36 @@ void MPCDummy( Eigen::Vector3f& R1, Eigen::Vector3f& R2) {
         switch (type) {
             case 1:{
                 rect_path = rec_traj.UpdatePosition(Xp);
-                vel_error = rect_path.vd*rect_path.n - v_p;
-                pos_error = (Identity - rect_path.n*rect_path.n.transpose())*(rect_path.P-Xp);
+                vel_error = v_p - rect_path.vd*rect_path.n;
+                pos_error = (Identity - rect_path.n*rect_path.n.transpose())*(Xp - rect_path.P);
                 break;
             }
         default:{
                 rect_path = rec_traj.UpdatePosition(Xp);
-                vel_error = rect_path.vd*rect_path.n - v_p;
-                pos_error = (Identity - rect_path.n*rect_path.n.transpose())*(rect_path.P-Xp);
+                vel_error = v_p - rect_path.vd*rect_path.n;
+                pos_error = (Identity - rect_path.n*rect_path.n.transpose())*(Xp- rect_path.P);
             break;
         }
       }
     }else{
-        pos_error = reference_position - Xp;
-        vel_error = - v_p; // position stabilization
+        pos_error = Xp - reference_position;
+        vel_error = v_p; // position stabilization
     }
     R1.setZero();
     R2.setZero();
-   // R1 = vel_error + kv*pos_error;
-    //R2 = omega_p+KR*angle_error;
+    
+    // assemble xe vector
+    X_total.segment<3>(0) = vel_error; // vp
+    X_total.segment<3>(3) = omega_p; // omega_p
+    X_total.segment<3>(12) = pos_error ; // ex
+    X_total.segment<3>(15) = angle_error ; // ex
+    for(int i = 0; i < num_of_drones; i ++) { // r_j v_j
+           X_total.segment<2>(6+2*i)= v_sq.col(i);// v_j
+           X_total.segment<2>(18+2*i) = r_sq.col(i); //r_j
+    }
+    MPCU_total = MPCK *  X_total;
+    R1 = MPCU_total.segment<3>(0);
+    R2 = MPCU_total.segment<3>(3);
 }
 
 void ResetStates() {
@@ -343,6 +417,7 @@ int main(int argc,
     ros::NodeHandle nh("~");
     ros::Rate rate(50.0);
     // initialize all parameters:
+    R_IPd.setZero();
     reference_position.setZero();
     vel_error.setZero();
     pos_error.setZero();
@@ -394,6 +469,14 @@ int main(int argc,
     rec_traj.LoadParameter(rect_param);
     // load the parameter for controller 
     nh.param<int>("CooperativePayload", CooperativePayload, 0);
+    if(CooperativePayload==1){
+        LoadMPCGain(nh);
+        X_total.setZero();
+        MPCU_total.setZero();
+    }else{
+        R1.setZero();
+        R2.setZero();
+    }
     // temp variables
     Eigen::Vector3f temp_t_j;
     M_q = 0.0;// total mass of all quadrotorsa_j_sq
