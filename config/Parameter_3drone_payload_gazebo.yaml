@@ -176,6 +176,7 @@ Pos_tie:
 
 # cooperative method
 CooperativePayload: 1
+IntegrationStartHeight: 0.15
 
 # parameter for payload cooperative control
 uav0_Pos_GNC:
@@ -291,57 +292,57 @@ Pos_JGCD:
   lambda_j : 1.0
 
 MPCgain: 
-   Kmpc_0_0: 0.0031879
+   Kmpc_0_0: 0.034149
    Kmpc_0_1: 0
    Kmpc_0_2: 0
    Kmpc_0_3: 0
    Kmpc_0_4: 0
    Kmpc_0_5: 0
-   Kmpc_0_6: 0.081688
+   Kmpc_0_6: 0.01913
    Kmpc_0_7: 0
-   Kmpc_0_8: 0.081688
+   Kmpc_0_8: 0.01913
    Kmpc_0_9: 0
-   Kmpc_0_10: 0.081688
+   Kmpc_0_10: 0.01913
    Kmpc_0_11: 0
-   Kmpc_0_12: 0.0046047
+   Kmpc_0_12: 0.039987
    Kmpc_0_13: 0
    Kmpc_0_14: 0
    Kmpc_0_15: 0
    Kmpc_0_16: 0
    Kmpc_0_17: 0
-   Kmpc_0_18: 0.17708
+   Kmpc_0_18: 0.059665
    Kmpc_0_19: 0
-   Kmpc_0_20: 0.17708
+   Kmpc_0_20: 0.059665
    Kmpc_0_21: 0
-   Kmpc_0_22: 0.17708
+   Kmpc_0_22: 0.059665
    Kmpc_0_23: 0
    Kmpc_1_0: 0
-   Kmpc_1_1: 0.0031879
+   Kmpc_1_1: 0.034149
    Kmpc_1_2: 0
    Kmpc_1_3: 0
    Kmpc_1_4: 0
    Kmpc_1_5: 0
    Kmpc_1_6: 0
-   Kmpc_1_7: 0.081688
+   Kmpc_1_7: 0.01913
    Kmpc_1_8: 0
-   Kmpc_1_9: 0.081688
+   Kmpc_1_9: 0.01913
    Kmpc_1_10: 0
-   Kmpc_1_11: 0.081688
+   Kmpc_1_11: 0.01913
    Kmpc_1_12: 0
-   Kmpc_1_13: 0.0046047
+   Kmpc_1_13: 0.039987
    Kmpc_1_14: 0
    Kmpc_1_15: 0
    Kmpc_1_16: 0
    Kmpc_1_17: 0
    Kmpc_1_18: 0
-   Kmpc_1_19: 0.17708
+   Kmpc_1_19: 0.059665
    Kmpc_1_20: 0
-   Kmpc_1_21: 0.17708
+   Kmpc_1_21: 0.059665
    Kmpc_1_22: 0
-   Kmpc_1_23: 0.17708
+   Kmpc_1_23: 0.059665
    Kmpc_2_0: 0
    Kmpc_2_1: 0
-   Kmpc_2_2: 0.0060523
+   Kmpc_2_2: 0.029668
    Kmpc_2_3: 0
    Kmpc_2_4: 0
    Kmpc_2_5: 0
@@ -353,7 +354,7 @@ MPCgain:
    Kmpc_2_11: 0
    Kmpc_2_12: 0
    Kmpc_2_13: 0
-   Kmpc_2_14: 0.0076184
+   Kmpc_2_14: 0.037247
    Kmpc_2_15: 0
    Kmpc_2_16: 0
    Kmpc_2_17: 0
@@ -366,7 +367,7 @@ MPCgain:
    Kmpc_3_0: 0
    Kmpc_3_1: 0
    Kmpc_3_2: 0
-   Kmpc_3_3: 0.053611
+   Kmpc_3_3: 0.028949
    Kmpc_3_4: 0
    Kmpc_3_5: 0
    Kmpc_3_6: 0
@@ -378,7 +379,7 @@ MPCgain:
    Kmpc_3_12: 0
    Kmpc_3_13: 0
    Kmpc_3_14: 0
-   Kmpc_3_15: 0.063936
+   Kmpc_3_15: 0.03769
    Kmpc_3_16: 0
    Kmpc_3_17: 0
    Kmpc_3_18: 0
@@ -391,7 +392,7 @@ MPCgain:
    Kmpc_4_1: 0
    Kmpc_4_2: 0
    Kmpc_4_3: 0
-   Kmpc_4_4: 0.053611
+   Kmpc_4_4: 0.028949
    Kmpc_4_5: 0
    Kmpc_4_6: 0
    Kmpc_4_7: 0
@@ -403,7 +404,7 @@ MPCgain:
    Kmpc_4_13: 0
    Kmpc_4_14: 0
    Kmpc_4_15: 0
-   Kmpc_4_16: 0.063936
+   Kmpc_4_16: 0.03769
    Kmpc_4_17: 0
    Kmpc_4_18: 0
    Kmpc_4_19: 0
@@ -416,22 +417,22 @@ MPCgain:
    Kmpc_5_2: 0
    Kmpc_5_3: 0
    Kmpc_5_4: 0
-   Kmpc_5_5: 0.051347
+   Kmpc_5_5: 0.028147
    Kmpc_5_6: 0
-   Kmpc_5_7: 0.13381
-   Kmpc_5_8: 0.11588
-   Kmpc_5_9: -0.066907
-   Kmpc_5_10: -0.11588
-   Kmpc_5_11: -0.066907
+   Kmpc_5_7: 0.024841
+   Kmpc_5_8: 0.021512
+   Kmpc_5_9: -0.012421
+   Kmpc_5_10: -0.021512
+   Kmpc_5_11: -0.012421
    Kmpc_5_12: 0
    Kmpc_5_13: 0
    Kmpc_5_14: 0
    Kmpc_5_15: 0
    Kmpc_5_16: 0
-   Kmpc_5_17: 0.056684
+   Kmpc_5_17: 0.036876
    Kmpc_5_18: 0
-   Kmpc_5_19: 0.36465
-   Kmpc_5_20: 0.31578
-   Kmpc_5_21: -0.18232
-   Kmpc_5_22: -0.31578
-   Kmpc_5_23: -0.18232
+   Kmpc_5_19: 0.077785
+   Kmpc_5_20: 0.067361
+   Kmpc_5_21: -0.038892
+   Kmpc_5_22: -0.067361
+   Kmpc_5_23: -0.038892

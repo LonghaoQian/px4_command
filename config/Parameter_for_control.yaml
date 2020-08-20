@@ -156,6 +156,7 @@ payload_geofence:
 
 # cooperative method
 CooperativePayload: 1
+IntegrationStartHeight: 0.10
 
 # parameter for single UAV payload using method in TIE paper
 Pos_tie:
