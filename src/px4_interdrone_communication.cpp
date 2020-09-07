@@ -214,32 +214,32 @@ void LoadMPCGain(ros::NodeHandle& nh){
 }
 
 void PrintEstimation(){
-    cout <<">>>>>>>>  TCST 2019 Disturbance Estimator <<<<<<<" <<endl;
+    cout <<">>>>>>>>  TCST 2019 Disturbance Estimator <<<<<<< \n";
     cout.setf(ios::fixed);//固定的浮点显示
     cout.setf(ios::left);//左对齐
     cout.setf(ios::showpoint);// 强制显示小数点
     cout.setf(ios::showpos);// 强制显示符号
     cout<<setprecision(3);// number of decimals 
-    cout << "Current command mode is: " << _DroneState.mode << endl;
+    cout << "Current command mode is: " << _DroneState.mode << "\n";
     if(_DroneState.mode == "OFFBOARD") {
         if (Command_Now.Mode == command_to_mavros_multidrone::Payload_Stabilization) {
             // display fleet info first
             for (int i = 0; i < num_of_drones ; i ++) {
-                cout << ">>>>>>> UAV "<< i << " info <<<<<<<" << endl;
-                cout << "Delta_"<< i <<" [X Y Z] : " << Delta_sq(0,i) << " [N] "<< Delta_sq(1,i) <<" [N] "<< Delta_sq(2,i)<<" [N] "<<endl;
-                cout << "F_L_" << i << " [X Y Z] : " << f_L_sq(0,i) <<" [N] "<<f_L_sq(1,i) <<" [N] "<< f_L_sq(2,i)<<" [N] "<<endl;
-                cout << "r_" << i << " [X Y] : "<< r_sq(0,i) << " [m] " << r_sq(1,i) << " [m] "    << endl;
-                cout << "v_" << i << " [X Y] : "<< v_sq(0,i) << " [m/s] " << v_sq(1,i) << " [m/s] "<< endl;
-                cout << "rd_" << i << " [X Y] : " << rd_sq(0,i) << " [m] " << rd_sq(1,i) << " [m] " << endl;
+                cout << ">>>>>>> UAV "<< i << " info <<<<<<<" << "\n";
+                cout << "Delta_"<< i <<" [X Y Z] : " << Delta_sq(0,i) << " [N] "<< Delta_sq(1,i) <<" [N] "<< Delta_sq(2,i)<<" [N] "<<"\n";
+                cout << "F_L_" << i << " [X Y Z] : " << f_L_sq(0,i) <<" [N] "<<f_L_sq(1,i) <<" [N] "<< f_L_sq(2,i)<<" [N] "<<"\n";
+                cout << "r_" << i << " [X Y] : "<< r_sq(0,i) << " [m] " << r_sq(1,i) << " [m] "    << "\n";
+                cout << "v_" << i << " [X Y] : "<< v_sq(0,i) << " [m/s] " << v_sq(1,i) << " [m/s] "<< "\n";
+                cout << "rd_" << i << " [X Y] : " << rd_sq(0,i) << " [m] " << rd_sq(1,i) << " [m] " << "\n";
             }
             // then display estimation results
-            cout << ">>>>>>> IN PAYLOAD STABILIZATION MODE, CALCULATING ESTIMATION <<<<<<<" << endl;
-            cout << "Delta_T [X Y Z] : " << Delta_T(0) << " [N] "<< Delta_T(1)<<" [N] "<<Delta_T(2)<<" [N] "<<endl;
-            cout << "Delta_pt [X Y Z] : " << Delta_pt(0) << " [N] "<< Delta_pt(1)<<" [N] "<<Delta_pt(2)<<" [N] "<<endl;
-            cout << "Delta_R [X Y Z] : " << Delta_R(0) << " [N] "<< Delta_R(1)<<" [N] "<<Delta_R(2)<<" [N] "<<endl;
-            cout << "Delta_rt [X Y Z] : " << Delta_rt(0) << " [N] "<< Delta_rt(1)<<" [N] "<<Delta_rt(2)<<" [N] "<<endl;
-            cout << "R1 [X Y Z] : " << R1(0) << " [N] " << R1(1) << " [N] " << R1(2) << " [N] " <<endl;
-            cout << "R2 [X Y Z] : " << R2(0) << " [N] " << R2(1) << " [N] " << R2(2) << " [N] " <<endl;
+            cout << ">>>>>>> IN PAYLOAD STABILIZATION MODE, CALCULATING ESTIMATION <<<<<<<" << "\n";
+            cout << "Delta_T [X Y Z] : " << Delta_T(0) << " [N] "<< Delta_T(1)<<" [N] "<<Delta_T(2)<<" [N] "<<"\n";
+            cout << "Delta_pt [X Y Z] : " << Delta_pt(0) << " [N] "<< Delta_pt(1)<<" [N] "<<Delta_pt(2)<<" [N] "<<"\n";
+            cout << "Delta_R [X Y Z] : " << Delta_R(0) << " [N] "<< Delta_R(1)<<" [N] "<<Delta_R(2)<<" [N] "<<"\n";
+            cout << "Delta_rt [X Y Z] : " << Delta_rt(0) << " [N] "<< Delta_rt(1)<<" [N] "<<Delta_rt(2)<<" [N] "<<"\n";
+            cout << "R1 [X Y Z] : " << R1(0) << " [N] " << R1(1) << " [N] " << R1(2) << " [N] " <<"\n";
+            cout << "R2 [X Y Z] : " << R2(0) << " [N] " << R2(1) << " [N] " << R2(2) << " [N] " <<"\n";
             // display integration flag
             if( integration_start ){
                 cout<<"Integration Start... \n";
@@ -248,7 +248,7 @@ void PrintEstimation(){
             }
 
             if(isperformAction){
-                cout << "---Perfroming Action...--- \n";
+                cout << "--- Perfroming Action...--- \n";
                 switch (type) {
                     case 1:{
                         rec_traj.printf_result();
@@ -262,7 +262,7 @@ void PrintEstimation(){
             }else{
                 cout << "---Not Performing Action, Normal Flight.--- \n";
             }
-
+/* 
             if(CooperativePayload==1){
                 cout << "Xtotal is:\n";
                 cout << X_total.transpose() << "\n";
@@ -284,7 +284,7 @@ void PrintEstimation(){
                 }
 
                 
-            }
+            }*/
 
         } else {
             cout << ">>>>>>> NOT IN PAYLOAD STABILIZATION MODE, ESTIMATION PAUSED <<<<<<< \n";
@@ -404,7 +404,8 @@ void MPCDummy( Eigen::Vector3f& R1, Eigen::Vector3f& R2) {
     }
     MPCU_total = MPCK *  X_total;
     R1 = MPCU_total.segment<3>(0);
-    R2 = MPCU_total.segment<3>(3);
+    // for R2, rotation matric should be included
+    R2 = R_PI*MPCU_total.segment<3>(3);
 }
 
 void ResetStates() {

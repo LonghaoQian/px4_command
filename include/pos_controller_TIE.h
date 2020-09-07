@@ -1,16 +1,16 @@
 #ifndef POS_CONTROLLER_TIE_H
 #define POS_CONTROLLER_TIE_H
 
-/*
+/****************************
 
 Author: Longhao Qian
-Date : 2019 12 16
+Date : 2020 9 05
 
 Robust control from TIE paper
 
 Visual feedback from April Tag
 
-*/
+***************************/
 
 #include <Eigen/Eigen>
 #include <math.h>

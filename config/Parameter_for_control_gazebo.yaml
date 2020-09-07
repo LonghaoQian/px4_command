@@ -169,9 +169,9 @@ Pos_tie:
   Kv_z :  2.0
   T_tie_xy : 0.8
   T_tie_z : 0.6
-  Kpv_xy: 0.3
-  Kpv_z: 0.3
-  KL : 0.1
+  Kpv_xy: 0.0
+  Kpv_z: 0.0
+  KL : 0.0
 
 # parameter for payload cooperative control
 uav0_Pos_GNC:
