@@ -44,6 +44,7 @@ static bool integration_start;
 static float intergration_start_height;
 // states 
 static Eigen::Matrix<float,24,1> X_total;
+static Eigen::Matrix<float,24,1> X_total_rj_modified;
 static Eigen::Matrix<float,6,1>  MPCU_total;
 static Eigen::Matrix<float,6,24> MPCK;
 static Eigen::Matrix<float,2,3> r_sq;
@@ -392,7 +393,7 @@ void MPCDummy( Eigen::Vector3f& R1, Eigen::Vector3f& R2) {
     }
     R1.setZero();
     R2.setZero();
-    
+    // step 1 convert all r_j and v_j into body-fixed frame    
     // assemble xe vector
     X_total.segment<3>(0) = vel_error; // vp
     X_total.segment<3>(3) = omega_p; // omega_p
@@ -402,10 +403,14 @@ void MPCDummy( Eigen::Vector3f& R1, Eigen::Vector3f& R2) {
            X_total.segment<2>(6+2*i)= v_sq.col(i);// v_j
            X_total.segment<2>(18+2*i) = r_sq.col(i) - rd_sq.col(i); //r_j
     }
-    MPCU_total = MPCK *  X_total;
-    R1 = MPCU_total.segment<3>(0);
+    R1 = MPCK.topRows<3>() *  X_total;
     // for R2, rotation matric should be included
-    R2 = R_PI*MPCU_total.segment<3>(3);
+    X_total_rj_modified = X_total;
+    for(int i = 0; i < num_of_drones; i++) {
+          X_total_rj_modified.segment<2>(6+2*i)= R_PI.topLeftCorner<2,2>()*v_sq.col(i);// 
+          X_total_rj_modified.segment<2>(18+2*i) = R_PI.topLeftCorner<2,2>()*(r_sq.col(i) - rd_sq.col(i)); 
+    }
+    R2 = MPCK.bottomRows<3>() * X_total_rj_modified;
 }
 
 void ResetStates() {
