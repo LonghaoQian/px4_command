@@ -45,7 +45,7 @@ Cable:
 
 ## single or multi-UAV mode
 CooperativeMode:
-  isMulti: false
+  isMulti: true
   droneID: 2              # single UAV payload mode is activated in drone 2
 
 ActionMode:
@@ -137,12 +137,12 @@ Circle_Trajectory:
   direction: 1.0
 
 Rectangular_Trajectory:
-  a_x: 2.0 # length along x axis
-  a_y: 2.0 # length along y axis
-  h: 1.5 # hight
-  vel_x: 0.1 # velocity along x axis
-  vel_y: 0.1 # velocity along y axis 
-  center_x: 0.0
+  a_x: 0.8 # length along x axis
+  a_y: 0.5 # length along y axis
+  h: 0.4 # hight
+  vel_x: 0.05 # velocity along x axis
+  vel_y: 0.05 # velocity along y axis
+  center_x: 0.15
   center_y: 0.0
   center_z: 0.0
 
@@ -289,60 +289,60 @@ Pos_JGCD:
   fp_max_x : 10.0
   fp_max_y : 10.0
   fp_max_z : 10.0
-  lambda_j : 1.0
+  lambda_j : 0.3
 
 MPCgain: 
-   Kmpc_0_0: 0.0031879
+   Kmpc_0_0: 0.024206
    Kmpc_0_1: 0
    Kmpc_0_2: 0
    Kmpc_0_3: 0
    Kmpc_0_4: 0
    Kmpc_0_5: 0
-   Kmpc_0_6: 0.081688
+   Kmpc_0_6: 0.029622
    Kmpc_0_7: 0
-   Kmpc_0_8: 0.081688
+   Kmpc_0_8: 0.029622
    Kmpc_0_9: 0
-   Kmpc_0_10: 0.081688
+   Kmpc_0_10: 0.029622
    Kmpc_0_11: 0
-   Kmpc_0_12: 0.0046047
+   Kmpc_0_12: 0.039126
    Kmpc_0_13: 0
    Kmpc_0_14: 0
    Kmpc_0_15: 0
    Kmpc_0_16: 0
    Kmpc_0_17: 0
-   Kmpc_0_18: 0.17708
+   Kmpc_0_18: 0.071271
    Kmpc_0_19: 0
-   Kmpc_0_20: 0.17708
+   Kmpc_0_20: 0.071271
    Kmpc_0_21: 0
-   Kmpc_0_22: 0.17708
+   Kmpc_0_22: 0.071271
    Kmpc_0_23: 0
    Kmpc_1_0: 0
-   Kmpc_1_1: 0.0031879
+   Kmpc_1_1: 0.024206
    Kmpc_1_2: 0
    Kmpc_1_3: 0
    Kmpc_1_4: 0
    Kmpc_1_5: 0
    Kmpc_1_6: 0
-   Kmpc_1_7: 0.081688
+   Kmpc_1_7: 0.029622
    Kmpc_1_8: 0
-   Kmpc_1_9: 0.081688
+   Kmpc_1_9: 0.029622
    Kmpc_1_10: 0
-   Kmpc_1_11: 0.081688
+   Kmpc_1_11: 0.029622
    Kmpc_1_12: 0
-   Kmpc_1_13: 0.0046047
+   Kmpc_1_13: 0.039126
    Kmpc_1_14: 0
    Kmpc_1_15: 0
    Kmpc_1_16: 0
    Kmpc_1_17: 0
    Kmpc_1_18: 0
-   Kmpc_1_19: 0.17708
+   Kmpc_1_19: 0.071271
    Kmpc_1_20: 0
-   Kmpc_1_21: 0.17708
+   Kmpc_1_21: 0.071271
    Kmpc_1_22: 0
-   Kmpc_1_23: 0.17708
+   Kmpc_1_23: 0.071271
    Kmpc_2_0: 0
    Kmpc_2_1: 0
-   Kmpc_2_2: 0.0060523
+   Kmpc_2_2: 0.038858
    Kmpc_2_3: 0
    Kmpc_2_4: 0
    Kmpc_2_5: 0
@@ -354,7 +354,7 @@ MPCgain:
    Kmpc_2_11: 0
    Kmpc_2_12: 0
    Kmpc_2_13: 0
-   Kmpc_2_14: 0.0076184
+   Kmpc_2_14: 0.040435
    Kmpc_2_15: 0
    Kmpc_2_16: 0
    Kmpc_2_17: 0
@@ -367,7 +367,7 @@ MPCgain:
    Kmpc_3_0: 0
    Kmpc_3_1: 0
    Kmpc_3_2: 0
-   Kmpc_3_3: 0.053611
+   Kmpc_3_3: 0.035162
    Kmpc_3_4: 0
    Kmpc_3_5: 0
    Kmpc_3_6: 0
@@ -379,7 +379,7 @@ MPCgain:
    Kmpc_3_12: 0
    Kmpc_3_13: 0
    Kmpc_3_14: 0
-   Kmpc_3_15: 0.063936
+   Kmpc_3_15: 0.068544
    Kmpc_3_16: 0
    Kmpc_3_17: 0
    Kmpc_3_18: 0
@@ -392,7 +392,7 @@ MPCgain:
    Kmpc_4_1: 0
    Kmpc_4_2: 0
    Kmpc_4_3: 0
-   Kmpc_4_4: 0.053611
+   Kmpc_4_4: 0.035162
    Kmpc_4_5: 0
    Kmpc_4_6: 0
    Kmpc_4_7: 0
@@ -404,7 +404,7 @@ MPCgain:
    Kmpc_4_13: 0
    Kmpc_4_14: 0
    Kmpc_4_15: 0
-   Kmpc_4_16: 0.063936
+   Kmpc_4_16: 0.068544
    Kmpc_4_17: 0
    Kmpc_4_18: 0
    Kmpc_4_19: 0
@@ -417,22 +417,22 @@ MPCgain:
    Kmpc_5_2: 0
    Kmpc_5_3: 0
    Kmpc_5_4: 0
-   Kmpc_5_5: 0.051347
+   Kmpc_5_5: 0.030569
    Kmpc_5_6: 0
-   Kmpc_5_7: 0.13381
-   Kmpc_5_8: 0.11588
-   Kmpc_5_9: -0.066907
-   Kmpc_5_10: -0.11588
-   Kmpc_5_11: -0.066907
+   Kmpc_5_7: 0.036703
+   Kmpc_5_8: 0.031785
+   Kmpc_5_9: -0.018352
+   Kmpc_5_10: -0.031785
+   Kmpc_5_11: -0.018352
    Kmpc_5_12: 0
    Kmpc_5_13: 0
    Kmpc_5_14: 0
    Kmpc_5_15: 0
    Kmpc_5_16: 0
-   Kmpc_5_17: 0.056684
+   Kmpc_5_17: 0.055152
    Kmpc_5_18: 0
-   Kmpc_5_19: 0.36465
-   Kmpc_5_20: 0.31578
-   Kmpc_5_21: -0.18232
-   Kmpc_5_22: -0.31578
-   Kmpc_5_23: -0.18232
+   Kmpc_5_19: 0.11207
+   Kmpc_5_20: 0.097051
+   Kmpc_5_21: -0.056035
+   Kmpc_5_22: -0.097051
+   Kmpc_5_23: -0.056035
