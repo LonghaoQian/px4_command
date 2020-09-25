@@ -89,7 +89,7 @@ namespace experiment_drone {
         for( int i = 0; i < 3 ; i ++) {
             IMU.AccBody(i) = _DroneState.acceleration[i];
         }
-        IMU.AccInertial = IMU.R_Ij * IMU.AccBody + g_I;// calculate true acc in inertial frame dot_vqj in TCST paper        
+        IMU.AccInertial = IMU.R_Ij * IMU.AccBody + g_I;// calculate true acc in inertial frame dot_vqj in TCST paper   
     }
 
     px4_command::ControlOutput quadrotor_drone::outputdronecommand(const Eigen::Vector3f& accelCommand,
