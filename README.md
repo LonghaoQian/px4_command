@@ -1,6 +1,7 @@
 # px4_command
 Send command to PX4 using Mavros package
 
+[![Generic badge](https://img.shields.io/badge/controller%20node-latest-brightgreen)](https://shields.io/) [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity) 
 
 # Installation
 
