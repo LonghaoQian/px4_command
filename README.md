@@ -2,7 +2,10 @@
 
 [![Generic badge](https://img.shields.io/badge/controller%20node-latest-brightgreen)](https://shields.io/) [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity) 
 
+
 <img src="images/Lab.PNG">
+
+[![image alt text](https://github.com/LonghaoQian/px4_command/blob/master/images/Thumbnail.PNG)](https://www.youtube.com/watch?v=Z9-OlCR-daI&list=PLGJ05aPUKXH-Y6WUyEvXKBSRT5AAzUQf-&index=5)
 
 The controller runs on the Nvida Jeston Nano on each quadrotor. The command is sent by ground station from the ground station desktop. 
 
