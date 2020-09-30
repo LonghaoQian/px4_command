@@ -1,7 +1,11 @@
 # px4_command
-Send command to PX4 using Mavros package
+Controller node for multiple quadrotors carrying a payload as shown in the following figure.
+
+<img src="images/formation.PNG">
 
 [![Generic badge](https://img.shields.io/badge/controller%20node-latest-brightgreen)](https://shields.io/) [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity) 
+
+The controller runs on the Nvida Jeston Nano on each quadrotor. The command is sent by ground station from the ground station desktop. 
 
 # Installation
 
@@ -47,11 +51,8 @@ Send command to PX4 using Mavros package
 
   >  MAVROS does translate Aerospace NED frames, used in FCUs to ROS ENU frames and vice-versa. For translate airframe related data we simply apply rotation 180° about ROLL (X) axis. For local we apply 180° about ROLL (X) and 90° about YAW (Z) axes
 
-# Branch
+# Overal node structure
 
-fsc_lab branch is used for fsc_lab quadrotor experiment.
-    
-Use this command to switch to fsc_lab branch
+<img src="images/node_structure.PNG">
 
-`git checkout fsc_lab`
 
