@@ -1,11 +1,15 @@
 # px4_command
 Controller node for multiple quadrotors carrying a payload as shown in the following figure.
 
-<img src="images/formation.PNG">
-
 [![Generic badge](https://img.shields.io/badge/controller%20node-latest-brightgreen)](https://shields.io/) [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity) 
 
+<img src="images/Lab.PNG">
+
 The controller runs on the Nvida Jeston Nano on each quadrotor. The command is sent by ground station from the ground station desktop. 
+
+# Quadrotor fleet
+
+<img src="images/formation.PNG">
 
 # Installation
 
