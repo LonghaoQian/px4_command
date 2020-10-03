@@ -123,6 +123,14 @@ add_executable(set_uav2_mode src/Utilities/set_uav2_mode.cpp)
 add_dependencies(set_uav2_mode px4_command_gencpp)
 target_link_libraries(set_uav2_mode ${catkin_LIBRARIES})
 
+add_executable(outdoorwifitest src/Utilities/outdoorwifitest.cpp)
+add_dependencies(outdoorwifitest px4_command_gencpp)
+target_link_libraries(outdoorwifitest ${catkin_LIBRARIES})
+
+add_executable(outdoorwifitest_ground src/Utilities/outdoorwifitest_ground.cpp)
+add_dependencies(outdoorwifitest_ground px4_command_gencpp)
+target_link_libraries(outdoorwifitest_ground ${catkin_LIBRARIES})
+
 ###### Application File ##########
 
 

@@ -533,11 +533,11 @@ int main(int argc, char **argv) {
                 }
             }
 
-            if(emergencyflag) {   
+            if(emergencyflag) {  
                 // true means not in normal flight
                 Command_Now.Mode = command_to_mavros_multidrone::Payload_Land;
             } else {
-                // false means ok
+                // false means
                 throttle_sp[math_utils::Vector_X] = _ControlOutput.Throttle[math_utils::Vector_X];
                 throttle_sp[math_utils::Vector_Y] = _ControlOutput.Throttle[math_utils::Vector_Y];
                 throttle_sp[math_utils::Vector_Z] = _ControlOutput.Throttle[math_utils::Vector_Z];
