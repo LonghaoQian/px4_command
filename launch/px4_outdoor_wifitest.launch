@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>
+	<node pkg="px4_command" type="outdoorwifitest" name="outdoorwifitest" output="screen">
+	</node>
+</launch>
