@@ -16,7 +16,6 @@
 #include <iostream>
 #include <Eigen/Eigen>
 #include <math_utils.h>
-#include <mavros_msgs/State.h>
 #include <sensor_msgs/BatteryState.h>
 #include <Frame_tf_utils.h>
 #include <mavros_msgs/CommandBool.h>
@@ -26,7 +25,6 @@
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
-#include <sensor_msgs/Imu.h>
 #include <std_msgs/Bool.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Vector3Stamped.h>

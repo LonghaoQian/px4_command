@@ -109,6 +109,11 @@ add_executable(px4_interdrone_communication src/px4_interdrone_communication.cpp
 add_dependencies(px4_interdrone_communication px4_command_gencpp)
 target_link_libraries(px4_interdrone_communication ${catkin_LIBRARIES})
 
+##px4_multidrone_pos_estimator_outdoor.cpp
+add_executable(px4_multidrone_pos_estimator_outdoor src/px4_multidrone_pos_estimator_outdoor.cpp)
+add_dependencies(px4_multidrone_pos_estimator_outdoor px4_command_gencpp)
+target_link_libraries(px4_multidrone_pos_estimator_outdoor ${catkin_LIBRARIES})
+
 ###### Utilities File ##########
 
 add_executable(set_uav0_mode src/Utilities/set_uav0_mode.cpp)
@@ -130,6 +135,8 @@ target_link_libraries(outdoorwifitest ${catkin_LIBRARIES})
 add_executable(outdoorwifitest_ground src/Utilities/outdoorwifitest_ground.cpp)
 add_dependencies(outdoorwifitest_ground px4_command_gencpp)
 target_link_libraries(outdoorwifitest_ground ${catkin_LIBRARIES})
+
+
 
 ###### Application File ##########
 

@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+<arg name="uavID" default="uav0"/>
+   <group ns="$(arg uavID)" >
+	<node pkg="px4_command" type="px4_multidrone_pos_estimator_outdoor" name="px4_multidrone_pos_estimator_outdoor" output="screen" args="$(eval arg('uavID')[-1:])">
+                <rosparam command="load" file="$(find px4_command)/config/Parameter_for_control.yaml" />
+	</node>
+   </group>
+</launch>

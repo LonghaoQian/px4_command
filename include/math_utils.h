@@ -31,6 +31,12 @@ namespace math_utils{
         Quat_z = 3
     };
 
+    enum euler_component{
+        EULER_ROLL = 0,
+        EULER_PITCH,
+        EULER_YAW
+    };
+
     Eigen::Vector3f GetGravitationalAcc(){
         Eigen::Vector3f g_I;
         g_I(Vector_X) = 0.0;
