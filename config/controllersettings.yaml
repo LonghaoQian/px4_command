@@ -1,0 +1,12 @@
+# settings for controller node
+
+## true for print state
+PrintState : true
+
+## single or multi-UAV mode
+CooperativeMode:
+  isMulti: false
+  droneID: 2              # single UAV payload mode is activated in drone 2
+
+ActionMode:
+  type: 1                  # 0 for circle path, 1 for rectangular path

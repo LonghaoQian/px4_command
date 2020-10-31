@@ -30,8 +30,6 @@
 
 using namespace std;
 
-
-
 class pos_controller_cascade_PID
 {
      //public表明该数据成员、成员函数是对全部用户开放的。全部用户都能够直接进行调用，在程序的不论什么其他地方訪问。

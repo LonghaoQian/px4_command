@@ -47,6 +47,7 @@ add_message_files(
   AddonForce.msg
   FleetStatus.msg
   PayloadPoseCommand.msg
+  HomePosition.msg
 )
 
 add_service_files(
@@ -56,6 +57,7 @@ add_service_files(
   GeneralInfo.srv
   SinglePayloadAction.srv
   MultiPayloadAction.srv
+  SetHome.srv
 )
 
 ## Generate added messages and services with any dependencies listed here
@@ -65,6 +67,7 @@ generate_messages(
   sensor_msgs
   std_msgs
   nav_msgs
+  geographic_msgs
 )
 
 catkin_package(

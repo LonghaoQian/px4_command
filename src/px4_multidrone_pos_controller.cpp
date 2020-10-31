@@ -3,12 +3,12 @@
 *
 * Author: Longhao Qian
 *
-* Update Time: 2019.8.31
+* Update Time: 2020.10.30
 *
-* Introduction:  PX4 controller for multi drone implimentation. UAV is IDed as UAV#. UAV# is added to the preflex of very topic
+* Introduction:  PX4 controller for multi drone implimentation. UAV is labeled as UAV#. UAV# is added to the preflex of very topic
 *         1. get control command from /UAV# /px4_command/control_command topic. Message type:（ControlCommand.msg）
-*         2. 从command_from_mavros.h读取无人机的状态信息（DroneState.msg）。
-*         3. 调用位置环控制算法，计算加速度控制量。可选择cascade_PID,
+*         2. obtain drone state information from px4_multidrone_estimator
+*         3. The position control is set to cascade_PID,
 *         4. 通过command_to_mavros.h将计算出来的控制指令发送至飞控（通过mavros包）(mavros package will send the message to PX4 as Mavlink msg)
 *         5. PX4 firmware will recieve the Mavlink msg by mavlink_receiver.cpp in mavlink module.
 *         6. 发送相关信息至地面站节点(/UAV#/px4_command/attitude_reference)，供监控使用。
@@ -33,7 +33,6 @@
 #include <px4_command/AttitudeReference.h>
 #include <px4_command/Trajectory.h>
 #include <px4_command/Topic_for_log.h>
-#include <px4_command/Trajectory.h>
 #include <px4_command/ControlOutput.h>
 #include <px4_command/PayloadPoseCommand.h>
 using namespace std;
@@ -47,7 +46,7 @@ struct PubTopic
     char str[100];
 };
 
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>UAV command and state <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>> UAV command and state <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 static px4_command::ControlCommand Command_Now;
 static px4_command::ControlCommand Command_Last;
 static px4_command::ControlCommand Command_to_gs;
@@ -63,13 +62,11 @@ static px4_command::Topic_for_log _Topic_for_log;
 static float Takeoff_height;                                       //
 static float Disarm_height;                                        //
 
-static float Use_accel;                                            // 1 for use the accel command
-
-static int Flag_printf;
+static bool PrintState;
 static bool isMulti;                                               // cooperative mode true for multi-drone, false for single drone
 static bool isCorrectDrone;                                        // this is used in single-drone mode for determine whether the correct drone is used.
-static int CurrentdroneID;
-static int TargetdroneID;
+static int  CurrentdroneID;
+static int  TargetdroneID;
 //>>--------------------------  geographic fence --------------------------------<<
 static Eigen::Vector2f geo_fence_x;
 static Eigen::Vector2f geo_fence_y;
@@ -90,7 +87,7 @@ bool CheckReferencePosition(const px4_command::ControlCommand& command_) {
         return true;
     }
 }
-void printf_param() {
+void PrintParam() {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Parameter <<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
     cout << "Takeoff_height: "<< Takeoff_height<<" [m] "<<endl;
     cout << "Disarm_height : "<< Disarm_height <<" [m] "<<endl;
@@ -116,7 +113,7 @@ void printf_param() {
 void Command_cb(const px4_command::ControlCommand::ConstPtr& msg) {
     Command_Now = *msg;
 
-    // if "land"  is received, the drone does not respond to anthor command
+    // if "land"  is received, the drone does not respond to any other commands
     if(Command_Last.Mode == command_to_mavros_multidrone::Land) {
         Command_Now.Mode = command_to_mavros_multidrone::Land;
     } else {
@@ -161,7 +158,7 @@ void drone_state_cb(const px4_command::DroneState::ConstPtr& msg) {
     _DroneState.time_from_start = cur_time;
 }
 
-void send_general_info_to_groundstation(ros::ServiceClient& client, px4_command::GeneralInfo& ParamSrv){
+void SendGeneralInfoToGroundstation(ros::ServiceClient& client, px4_command::GeneralInfo& ParamSrv){
     bool isresponserecieved = false;
     ros::Time begin_time    = ros::Time::now();
     float last_time         = px4_command_utils::get_time_in_sec(begin_time);
@@ -233,14 +230,13 @@ int main(int argc, char **argv) {
     // 参数读取
     nh.param<float>("Takeoff_height", Takeoff_height, 0.3);
     nh.param<float>("Disarm_height", Disarm_height, 0.15);
-    nh.param<float>("Use_accel", Use_accel, 0.0);
-    nh.param<int>  ("Flag_printf", Flag_printf, 0.0);
-    nh.param<float>("geo_fence/x_min", geo_fence_x[0], -1.2);
-    nh.param<float>("geo_fence/x_max", geo_fence_x[1], 1.2);
-    nh.param<float>("geo_fence/y_min", geo_fence_y[0], -0.9);
-    nh.param<float>("geo_fence/y_max", geo_fence_y[1], 0.9);
-    nh.param<float>("geo_fence/z_min", geo_fence_z[0], 0.2);
-    nh.param<float>("geo_fence/z_max", geo_fence_z[1], 2);
+    nh.param<bool> ("PrintState", PrintState, false);
+    nh.param<float>("DroneGeoFence/x_min", geo_fence_x[0], -1.2);
+    nh.param<float>("DroneGeoFence/x_max", geo_fence_x[1], 1.2);
+    nh.param<float>("DroneGeoFence/y_min", geo_fence_y[0], -0.9);
+    nh.param<float>("DroneGeoFence/y_max", geo_fence_y[1], 0.9);
+    nh.param<float>("DroneGeoFence/z_min", geo_fence_z[0], 0.2);
+    nh.param<float>("DroneGeoFence/z_max", geo_fence_z[1], 2);
     nh.param<bool> ("CooperativeMode/isMulti",isMulti,false);
     nh.param<int>  ("CooperativeMode/droneID",TargetdroneID,0);
 
@@ -253,7 +249,7 @@ int main(int argc, char **argv) {
     // 位置控制一般选取为50Hz，主要取决于位置状态的更新频率
     ros::Rate rate(50.0);
 
-    // 用于与mavros通讯的类，通过mavros发送控制指令至飞控【本程序->mavros->飞控】
+    // communication with mavros
     command_to_mavros_multidrone _command_to_mavros(ID);
     // cpid is used for basic single UAV position control
     pos_controller_cascade_PID pos_controller_cascade_pid;
@@ -308,9 +304,9 @@ int main(int argc, char **argv) {
             }
         }
     }
-    send_general_info_to_groundstation(clientSendParameter, ParamSrv);
+    SendGeneralInfoToGroundstation(clientSendParameter, ParamSrv);
     /******-------------------print parameters ---------------------******/
-    printf_param();
+    PrintParam();
 
     /* set the parameter field on the ground station */
 
@@ -318,15 +314,13 @@ int main(int argc, char **argv) {
     // check the data output on
     ROS_INFO("Please check the parameter and setting, enter 1 to continue, else for quit: ");
     cin >> check_flag;
-    if(check_flag != 1)
-    {
+    if(check_flag != 1) {
         ROS_WARN("Found something wrong? terminating node ...");
         return -1;
     }
     ROS_INFO("Parameter ok. Ready to start controller ...");
     // waiting for the
-    for(int i=0;i<50;i++)
-    {
+    for(int i = 0; i < 50; i++) {
         ros::spinOnce();
         rate.sleep();
     }
@@ -339,44 +333,42 @@ int main(int argc, char **argv) {
     ROS_INFO("Takeoff Position X: %f [s]",Takeoff_position[0]);
     ROS_INFO("Takeoff Position Y: %f [s]",Takeoff_position[1]);
     ROS_INFO("Takeoff Position Z: %f [s]",Takeoff_position[2]);
-    // Initialize command:  默认设置：Idle模式 电机怠速旋转 等待来自上层的控制指令
+    // Initialize command:  the initial state is idle
     Command_Now.Mode = command_to_mavros_multidrone::Idle;
     Command_Now.Command_ID = 0;
     Command_Now.Reference_State.Sub_mode  = command_to_mavros_multidrone::XYZ_POS;
-    Command_Now.Reference_State.position_ref[0] = 0;
-    Command_Now.Reference_State.position_ref[1] = 0;
-    Command_Now.Reference_State.position_ref[2] = 0;
-    Command_Now.Reference_State.velocity_ref[0] = 0;
-    Command_Now.Reference_State.velocity_ref[1] = 0;
-    Command_Now.Reference_State.velocity_ref[2] = 0;
-    Command_Now.Reference_State.acceleration_ref[0] = 0;
-    Command_Now.Reference_State.acceleration_ref[1] = 0;
-    Command_Now.Reference_State.acceleration_ref[2] = 0;
-    Command_Now.Reference_State.yaw_ref = 0;
+    Command_Now.Reference_State.position_ref[math_utils::Vector_X] = 0.0;
+    Command_Now.Reference_State.position_ref[math_utils::Vector_Y] = 0.0;
+    Command_Now.Reference_State.position_ref[math_utils::Vector_Z] = 0.0;
+    Command_Now.Reference_State.velocity_ref[math_utils::Vector_X] = 0.0;
+    Command_Now.Reference_State.velocity_ref[math_utils::Vector_Y] = 0.0;
+    Command_Now.Reference_State.velocity_ref[math_utils::Vector_Z] = 0.0;
+    Command_Now.Reference_State.acceleration_ref[math_utils::Vector_X] = 0.0;
+    Command_Now.Reference_State.acceleration_ref[math_utils::Vector_Y] = 0.0;
+    Command_Now.Reference_State.acceleration_ref[math_utils::Vector_Z] = 0.0;
+    Command_Now.Reference_State.yaw_ref = 0.0;
 
-    // 记录启控时间
+    // record the time
     ros::Time begin_time = ros::Time::now();
     float last_time = px4_command_utils::get_time_in_sec(begin_time);
     float dt = 0;
 
-    while(ros::ok())
-    {
-        // 当前时间
+    while(ros::ok()) {
+        // get the current time and time stamp
         cur_time = px4_command_utils::get_time_in_sec(begin_time);
         dt = cur_time  - last_time;
         dt = constrain_function2(dt, 0.01, 0.03);
         last_time = cur_time;
 
-        //执行回调函数
         ros::spinOnce();
 
         switch (Command_Now.Mode) {
-        // 【Idle】 怠速旋转，此时可以切入offboard模式，但不会起飞。
+        // idle mode: waiting for the command from ground station
         case command_to_mavros_multidrone::Idle:
             _command_to_mavros.idle();
             break;
 
-        // 【Takeoff】 从摆放初始位置原地起飞至指定高度，偏航角也保持当前角度
+        // take off mode 从摆放初始位置原地起飞至指定高度，偏航角也保持当前角度
         case command_to_mavros_multidrone::Takeoff:
             Command_to_gs.Mode = Command_Now.Mode;
             Command_to_gs.Command_ID = Command_Now.Command_ID;
@@ -400,18 +392,10 @@ int main(int argc, char **argv) {
             throttle_sp[2] = _ControlOutput.Throttle[2];
 
             _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
-
-            if(Use_accel > 0.5)
-            {
-                _command_to_mavros.send_accel_setpoint(throttle_sp,Command_to_gs.Reference_State.yaw_ref);
-            }else
-            {
-                _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
-            }
-
+            _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
             break;
 
-        // 【Move_ENU】 ENU系移动。只有PID算法中才有追踪速度的选项，其他控制只能追踪位置
+        //  move ENU mode
         case command_to_mavros_multidrone::Move_ENU:
             Command_to_gs = Command_Now;
             _ControlOutput = pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
@@ -421,21 +405,14 @@ int main(int argc, char **argv) {
             throttle_sp[2] = _ControlOutput.Throttle[2];
 
             _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
+            _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
 
-            if(Use_accel > 0.5)
-            {
-                _command_to_mavros.send_accel_setpoint(throttle_sp,Command_to_gs.Reference_State.yaw_ref);
-            }else
-            {
-                _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
-            }
             break;
-        // 【Land】 降落。当前位置原地降落，降落后会自动上锁，且切换为mannual模式
+        // land 降落。当前位置原地降落，降落后会自动上锁，且切换为mannual模式
         case command_to_mavros_multidrone::Land:
             Command_to_gs.Mode = Command_Now.Mode;
             Command_to_gs.Command_ID = Command_Now.Command_ID;
-            if (Command_Last.Mode != command_to_mavros_multidrone::Land)
-            {
+            if (Command_Last.Mode != command_to_mavros_multidrone::Land) {
                 Command_to_gs.Reference_State.Sub_mode  = command_to_mavros_multidrone::XYZ_POS;
                 Command_to_gs.Reference_State.position_ref[0] = _DroneState.position[0];
                 Command_to_gs.Reference_State.position_ref[1] = _DroneState.position[1];
@@ -456,25 +433,13 @@ int main(int argc, char **argv) {
             throttle_sp[2] = _ControlOutput.Throttle[2];
 
             _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
-
-            if(Use_accel > 0.5) {
-                _command_to_mavros.send_accel_setpoint(throttle_sp,Command_to_gs.Reference_State.yaw_ref);
-            }else
-            {
-                _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
-            }
+            _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
 
             //如果距离起飞高度小于15厘米，则直接上锁并切换为手动模式；
             if(_DroneState.position[2] - Takeoff_position[2] < Disarm_height)
             {
 
                 ROS_INFO("Below landing height, disarming.");
-
-              /*  if(_DroneState.mode == "OFFBOARD") {
-                    _command_to_mavros.mode_cmd.request.custom_mode = "MANUAL";
-                    _command_to_mavros.set_mode_client.call(_command_to_mavros.mode_cmd);
-                }*/
-
                 if(_DroneState.armed) {
                     _command_to_mavros.arm_cmd.request.value = false;
                     _command_to_mavros.arming_client.call(_command_to_mavros.arm_cmd);
@@ -485,104 +450,90 @@ int main(int argc, char **argv) {
                     ROS_INFO("Disarm successfully!");
                 }
             }
-
-
             break;
+        // Payload stabilization mode, single drone mode.
         case command_to_mavros_multidrone::Payload_Stabilization_SingleUAV: {
-            // stabilize payload with single UAV
-            Command_to_gs = Command_Now;
-            _ControlOutput = pos_controller_tie.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                Command_to_gs = Command_Now;
+                _ControlOutput = pos_controller_tie.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
 
-            if( pos_controller_tie.emergency_switch()){ 
-                // true means not in normal flight
-                Command_Now.Mode = command_to_mavros_multidrone::Payload_Land;
-            } else {
-              // false means ok
-                throttle_sp[math_utils::Vector_X] = _ControlOutput.Throttle[math_utils::Vector_X];
-                throttle_sp[math_utils::Vector_Y] = _ControlOutput.Throttle[math_utils::Vector_Y];
-                throttle_sp[math_utils::Vector_Z] = _ControlOutput.Throttle[math_utils::Vector_Z];
-
-                _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, 0);
-
-                if (Use_accel > 0.5) {
-                    _command_to_mavros.send_accel_setpoint(throttle_sp,0);
+                if( pos_controller_tie.emergency_switch()){ 
+                    // true means not in normal flight
+                    Command_Now.Mode = command_to_mavros_multidrone::Payload_Land;
                 } else {
+                // false means ok
+                    throttle_sp[math_utils::Vector_X] = _ControlOutput.Throttle[math_utils::Vector_X];
+                    throttle_sp[math_utils::Vector_Y] = _ControlOutput.Throttle[math_utils::Vector_Y];
+                    throttle_sp[math_utils::Vector_Z] = _ControlOutput.Throttle[math_utils::Vector_Z];
+
+                    _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, 0);
                     _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
+
                 }
-            }
                 break;
             }
-        case command_to_mavros_multidrone::Payload_Stabilization: {
-            Command_to_gs = Command_Now;
-            bool emergencyflag = false;
-            switch (CooperativePayload) {
-                case 0: {
-                    _ControlOutput = pos_controller_GNC.payload_controller(_DroneState, Command_to_gs.Reference_State, dt);
-                    emergencyflag = pos_controller_GNC.emergency_switch();
+        // payload stabilization mode, multi drone mode
+        case command_to_mavros_multidrone::Payload_Stabilization: { 
+                Command_to_gs = Command_Now;
+                bool emergencyflag = false;
+                switch (CooperativePayload) {
+                    case 0: {
+                        _ControlOutput = pos_controller_GNC.payload_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                        emergencyflag = pos_controller_GNC.emergency_switch();
+                        break;
+                    }
+                    case 1: {
+                        _ControlOutput = pos_controller_JGCD.payload_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                        emergencyflag = pos_controller_JGCD.emergency_switch();
+                        break;
+                    }
+                    default: {
+                        _ControlOutput = pos_controller_GNC.payload_controller(_DroneState, Command_to_gs.Reference_State, dt);
+                        emergencyflag = pos_controller_GNC.emergency_switch();
                     break;
+                    }
                 }
-                case 1: {
-                    _ControlOutput = pos_controller_JGCD.payload_controller(_DroneState, Command_to_gs.Reference_State, dt);
-                    emergencyflag = pos_controller_JGCD.emergency_switch();
-                    break;
-                }
-                default: {
-                    _ControlOutput = pos_controller_GNC.payload_controller(_DroneState, Command_to_gs.Reference_State, dt);
-                    emergencyflag = pos_controller_GNC.emergency_switch();
-                break;
-                }
-            }
 
-            if(emergencyflag) {  
-                // true means not in normal flight
-                Command_Now.Mode = command_to_mavros_multidrone::Payload_Land;
-            } else {
-                // false means
-                throttle_sp[math_utils::Vector_X] = _ControlOutput.Throttle[math_utils::Vector_X];
-                throttle_sp[math_utils::Vector_Y] = _ControlOutput.Throttle[math_utils::Vector_Y];
-                throttle_sp[math_utils::Vector_Z] = _ControlOutput.Throttle[math_utils::Vector_Z];
-
-                _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, 0);
-
-                if (Use_accel > 0.5) {
-                    _command_to_mavros.send_accel_setpoint(throttle_sp,0);
+                if(emergencyflag) {  
+                    // true means not in normal flight
+                    Command_Now.Mode = command_to_mavros_multidrone::Payload_Land;
                 } else {
+                    // false means
+                    throttle_sp[math_utils::Vector_X] = _ControlOutput.Throttle[math_utils::Vector_X];
+                    throttle_sp[math_utils::Vector_Y] = _ControlOutput.Throttle[math_utils::Vector_Y];
+                    throttle_sp[math_utils::Vector_Z] = _ControlOutput.Throttle[math_utils::Vector_Z];
+                    _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, 0.0); // set the yaw angle command to zero
                     _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
                 }
-            }
-            break;
+                break;
         }
-        case command_to_mavros_multidrone::Payload_Land :{
+        case command_to_mavros_multidrone::Payload_Land :{ 
+            // end the payload stabilization mode and command the drone to hover at the same spot with an altitude of 0.7m
             Command_to_gs.Mode = Command_Now.Mode;
             Command_to_gs.Command_ID = Command_Now.Command_ID;
             if (Command_Last.Mode != command_to_mavros_multidrone::Payload_Land)
             {
                 Command_to_gs.Reference_State.Sub_mode  = command_to_mavros_multidrone::XYZ_POS;
-                Command_to_gs.Reference_State.position_ref[0] = _DroneState.position[0];
-                Command_to_gs.Reference_State.position_ref[1] = _DroneState.position[1];
-                Command_to_gs.Reference_State.position_ref[2] = 0.7; // set 0.7 for quadrotor hovering height
-                Command_to_gs.Reference_State.velocity_ref[0] = 0;
-                Command_to_gs.Reference_State.velocity_ref[1] = 0;
-                Command_to_gs.Reference_State.velocity_ref[2] = 0;
-                Command_to_gs.Reference_State.acceleration_ref[0] = 0;
-                Command_to_gs.Reference_State.acceleration_ref[1] = 0;
-                Command_to_gs.Reference_State.acceleration_ref[2] = 0;
+                Command_to_gs.Reference_State.position_ref[math_utils::Vector_X] = _DroneState.position[math_utils::Vector_X];
+                Command_to_gs.Reference_State.position_ref[math_utils::Vector_Y] = _DroneState.position[math_utils::Vector_Y];
+                Command_to_gs.Reference_State.position_ref[math_utils::Vector_Z] = 0.7; // set 0.7 for quadrotor hovering height
+                Command_to_gs.Reference_State.velocity_ref[math_utils::Vector_X] = 0.0;
+                Command_to_gs.Reference_State.velocity_ref[math_utils::Vector_Y] = 0.0;
+                Command_to_gs.Reference_State.velocity_ref[math_utils::Vector_Z] = 0.0;
+                Command_to_gs.Reference_State.acceleration_ref[math_utils::Vector_X] = 0.0;
+                Command_to_gs.Reference_State.acceleration_ref[math_utils::Vector_Y] = 0.0;
+                Command_to_gs.Reference_State.acceleration_ref[math_utils::Vector_Z] = 0.0;
                 Command_to_gs.Reference_State.yaw_ref = _DroneState.attitude[2]; //rad
             }
 
             _ControlOutput = pos_controller_cascade_pid.pos_controller(_DroneState, Command_to_gs.Reference_State, dt);
 
-            throttle_sp[0] = _ControlOutput.Throttle[0];
-            throttle_sp[1] = _ControlOutput.Throttle[1];
-            throttle_sp[2] = _ControlOutput.Throttle[2];
+            throttle_sp[math_utils::Vector_X] = _ControlOutput.Throttle[math_utils::Vector_X];
+            throttle_sp[math_utils::Vector_Y] = _ControlOutput.Throttle[math_utils::Vector_Y];
+            throttle_sp[math_utils::Vector_Z] = _ControlOutput.Throttle[math_utils::Vector_Z];
 
             _AttitudeReference = px4_command_utils::ThrottleToAttitude(throttle_sp, Command_to_gs.Reference_State.yaw_ref);
+            _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
 
-            if(Use_accel > 0.5) {
-                _command_to_mavros.send_accel_setpoint(throttle_sp,Command_to_gs.Reference_State.yaw_ref);
-            }else {
-                _command_to_mavros.send_attitude_setpoint(_AttitudeReference);
-            }
             break;
         }
         // 【Disarm】 紧急上锁。直接上锁，不建议使用，危险。
@@ -611,7 +562,7 @@ int main(int argc, char **argv) {
             break;
         }
 
-        if( Flag_printf == 1) {
+        if(PrintState) {
             px4_command_utils::prinft_drone_state(_DroneState);
             px4_command_utils::printf_command_control(Command_to_gs);
             // print out cooperative payload control result

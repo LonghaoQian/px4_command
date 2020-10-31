@@ -5,21 +5,21 @@ Disarm_height : 0.3
 ## 1 for use the accel command
 Use_accel : 0.0
 ## 1 for printf the state, 0 for block
-Flag_printf : 1.0
+PrintState : true 
 
-ppn_kx : 0.2
-ppn_ky : 0.2
-ppn_kz : 0.2
+##ppn_kx : 0.2
+##ppn_ky : 0.2
+##ppn_kz : 0.2
 
-noise_a_xy : 0.0
-noise_b_xy : 0.00
+##noise_a_xy : 0.0
+##noise_b_xy : 0.00
 
-noise_a_z : 0.0
-noise_b_z : 0.00
-noise_T : 1.0
+##noise_a_z : 0.0
+##noise_b_z : 0.00
+##noise_T : 1.0
 
-noise_start_time : 100.0
-noise_end_time : 30.0
+##noise_start_time : 100.0
+##noise_end_time : 30.0
 
 ## parameter for px4_pos_estimator.cpp
 pos_estimator:

@@ -2,10 +2,6 @@
 ## 起飞高度
 Takeoff_height : 0.3
 Disarm_height : 0.3
-## 1 for use the accel command
-Use_accel : 0.0
-## 1 for printf the state, 0 for block
-PrintState : true
 
 ## parameter for px4_pos_estimator.cpp
 pos_estimator: 
@@ -28,23 +24,6 @@ Payload:
 ## cable length
 Cable:
   length: 0.9
-
-## single or multi-UAV mode
-CooperativeMode:
-  isMulti: true
-  droneID: 2              # single UAV payload mode is activated in drone 2
-
-ActionMode:
-  type: 1                  # 0 for circle path, 1 for rectangular path
-
-##geo fence for fsc
-geo_fence:
-  x_min: -1.6
-  x_max:  1.5
-  y_min: -1.3
-  y_max:  1.3
-  z_min: -0.05
-  z_max:  2.5
 
 ## 限制参数
 Limit:

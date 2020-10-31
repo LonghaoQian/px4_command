@@ -11,8 +11,10 @@ string mode
 float32 time_from_start             ## [s]
 
 ## drone position and attitude
-float32[3] position                 ## [m]
-float32[3] velocity                 ## [m/s]
+float32  longitude                  ## global position
+float32  latitude                   ## global position
+float32[3] position                 ## [m] local position if in outdoor mode
+float32[3] velocity                 ## [m/s] inertial velocity in ENU
 float32[3] attitude                 ## [rad]
 geometry_msgs/Quaternion attitude_q ## []
 float32[3] attitude_rate            ## [rad/s]
