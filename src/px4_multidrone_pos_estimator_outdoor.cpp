@@ -115,17 +115,17 @@ void DisplayVisionResults(const Eigen::Vector3f& payloadposition,
     cout.setf(ios::showpoint);
     // 强制显示符号
     cout.setf(ios::showpos);
-
+    cout<<setprecision(2);// number of decimals 
     std::cout<< "----------------------- Payload Info ------------------ \n";
     std::cout<< "Payload inertial position X: " << payloadposition(math_utils::Vector_X) << " (m), Y: " << payloadposition(math_utils::Vector_Y)
     <<" (m), Z: "<< payloadposition(math_utils::Vector_Z) << " (m). \n";
-     std::cout<< "Payload inertial velocity X: " << payloadvelocity(math_utils::Vector_X) << " (m/s), Y: " << payloadvelocity(math_utils::Vector_Y)
-    <<" (m/s), Z: "<< payloadvelocity(math_utils::Vector_Z) << " (m/s). \n";   
+     std::cout<< "Payload inertial velocity X: " << payloadvelocity(math_utils::Vector_X) * 100.0 << " (cm/s), Y: " << payloadvelocity(math_utils::Vector_Y)* 100.0
+    <<" (cm/s), Z: "<< payloadvelocity(math_utils::Vector_Z)* 100.0 << " (cm/s). \n";   
     std::cout<< "The sample time is: " << sampletime << " (s) \n";
     std::cout<< "Payload body position X: " << payloadpositionbody(math_utils::Vector_X) << " (m), Y: " << payloadpositionbody(math_utils::Vector_Y)
     <<" (m), Z: "<< payloadpositionbody(math_utils::Vector_Z) << " (m). \n";
-     std::cout<< "Payload body velocity X: " << payloadvelocitybody(math_utils::Vector_X) << " (m/s), Y: " << payloadvelocitybody(math_utils::Vector_Y)
-    <<" (m/s), Z: "<< payloadvelocitybody(math_utils::Vector_Z) << " (m/s). \n";   
+     std::cout<< "Payload body velocity X: " << payloadvelocitybody(math_utils::Vector_X)* 100.0<< " (cm/s), Y: " << payloadvelocitybody(math_utils::Vector_Y)* 100.0
+    <<" (cm/s), Z: "<< payloadvelocitybody(math_utils::Vector_Z)* 100.0 << " (cm/s). \n";   
     std::cout<< "The sample time is: " << sampletime << " (s) \n";
     std::cout<< "------------------End of Payload Info ------------------ \n";
 }
