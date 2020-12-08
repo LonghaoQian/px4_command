@@ -98,12 +98,12 @@ class pos_controller_TIE
             main_handle.param<float>("Limit/int_start_error"  , int_start_error, 0.3);
 
             // read the geo geo_fence
-            main_handle.param<float>("geo_fence/x_min", geo_fence_x[0], -1.2);
-            main_handle.param<float>("geo_fence/x_max", geo_fence_x[1], 1.2);
-            main_handle.param<float>("geo_fence/y_min", geo_fence_y[0], -0.9);
-            main_handle.param<float>("geo_fence/y_max", geo_fence_y[1], 0.9);
-            main_handle.param<float>("geo_fence/z_min", geo_fence_z[0], 0.2);
-            main_handle.param<float>("geo_fence/z_max", geo_fence_z[1], 2);
+            main_handle.param<float>("DroneGeoFence/x_min", geo_fence_x[0], -1.2);
+            main_handle.param<float>("DroneGeoFence/x_max", geo_fence_x[1], 1.2);
+            main_handle.param<float>("DroneGeoFence/y_min", geo_fence_y[0], -0.9);
+            main_handle.param<float>("DroneGeoFence/y_max", geo_fence_y[1], 0.9);
+            main_handle.param<float>("DroneGeoFence/z_min", geo_fence_z[0], 0.2);
+            main_handle.param<float>("DroneGeoFence/z_max", geo_fence_z[1], 2);
             // read the trajectory information
             main_handle.param<int>("ActionMode/type", type, 0);
 
@@ -444,7 +444,7 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
     u_p.setZero();
     u_p = Kpv * u_p;
     u_s = Kp * pos_error + Kv * vel_error;
-    u_s = constrain_vector(u_s, 1.0);// constraint the error
+    u_s = constrain_vector(u_s, 0.5);// constraint the error
 
     // calculate the integral term:
     if((_DroneState.mode == "OFFBOARD") && isIntegrationOn) {
@@ -471,7 +471,7 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
     accel_sp[1] = u_l[1] - u_d[1];
     accel_sp[2] = u_l[2] - u_d[2] + 9.81; // + 9.81 for counteracting gravity
     fL = TotalLiftingMass * accel_sp.cast <float> ();
-    // thrust = TotalLiftingMass * accel_sp
+    // thrust = TotalLiftingMass * accel_sp TO DO: change this to real thrust model
     thrust_sp   = px4_command_utils::accelToThrust(accel_sp, TotalLiftingMass, tilt_max);
     throttle_sp = px4_command_utils::thrustToThrottleLinear(thrust_sp, motor_slope, motor_intercept);
     // publish auxiliary state
@@ -665,7 +665,8 @@ void pos_controller_TIE::printf_result()
     cout<< "pos measurement error : "  << payload_position_mocap(0) - payload_position_vision(0) << " [m] "
                                        << payload_position_mocap(1) - payload_position_vision(1) << " [m] "
                                        << payload_position_mocap(2) - payload_position_vision(2) << " [m] " <<endl;
-
+    //cout<< "estimated cable length is: "<< L.norm() << " (m), the maximum is: "  ;
+    //cout<< "estimated cable length is: "<< r.norm() << " (m), the maximum is: " <<Cable_Length*sin(50/57.3) << " (m) \n";
      switch (type) {
       case 0:
       {
@@ -735,6 +736,12 @@ void pos_controller_TIE::printf_param()
     } else {
         cout << "No Auxiliary state published! " <<endl;
     }
+
+    cout<<"Geofence for action is: \n";
+    cout<<"DroneGeoFence X min: " <<geo_fence_x[0] << " (m), max: " << geo_fence_x[1] << " (m) \n";
+    cout<<"DroneGeoFence Y min: " <<geo_fence_y[0] << " (m), max: " << geo_fence_y[1] << " (m) \n"; 
+    cout<<"DroneGeoFence Z min: " <<geo_fence_z[0] << " (m), max: " << geo_fence_z[1] << " (m) \n"; 
+
     switch (type) {
       case 0:
       {

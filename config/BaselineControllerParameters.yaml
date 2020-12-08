@@ -20,7 +20,7 @@ Quad:
   mass: 1.541
 ## payload mass
 Payload:
-  mass: 0.95
+  mass: 0.5
 ## cable length
 Cable:
   length: 0.9
@@ -102,12 +102,12 @@ Circle_Trajectory:
   direction: 1.0
 
 Rectangular_Trajectory:
-  a_x: 0.8 # length along x axis
-  a_y: 0.5 # length along y axis
-  h: 0.4 # hight
-  vel_x: 0.05 # velocity along x axis
-  vel_y: 0.05 # velocity along y axis
-  center_x: 0.15
+  a_x: 5.0 # length along x axis
+  a_y: 5.0 # length along y axis
+  h: 2.2 # hight
+  vel_x: 0.5 # velocity along x axis
+  vel_y: 0.5 # velocity along y axis
+  center_x: 0.0
   center_y: 0.0
   center_z: 0.0
 

@@ -35,10 +35,10 @@ pos_estimator:
 
 ## 飞机参数
 Quad:
-  mass: 1.5
+  mass: 1.6
 ## payload mass
 Payload:
-  mass: 0.95
+  mass: 0.5
 ## cable length
 Cable:
   length: 0.91
