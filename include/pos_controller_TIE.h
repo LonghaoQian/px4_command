@@ -536,7 +536,7 @@ void pos_controller_TIE::printf_result()
     cout << "fL [X Y Z] : " << fL(0) << " [N] " << fL(1) << " [N] " << fL(2) << " [N] " <<endl;
     cout << "B matrix is : " << endl;
     cout << B << endl;
-
+    cout << "W_hat [X Y Z] : " << W_hat(math_utils::Vector_X) << " N, " << W_hat(math_utils::Vector_Y) << " N, " << W_hat(math_utils::Vector_Z) << " N. \n"; 
 
     if(isperformAction){
       cout << "---Perfroming Action...--- \n";
