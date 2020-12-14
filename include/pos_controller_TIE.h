@@ -308,7 +308,7 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
     dot_vq = R_Ij * (accel_body) + g_I;// calculate true acc in inertial frame dot_vqj 
 
     // if not, switch back to mocap signal
-    L = - UAV_position + payload_position_mocap;
+    L     = - UAV_position + payload_position_mocap;
     L_dot = - UAV_velocity + payload_velocity_mocap;
 
     r(math_utils::Vector_X) = L(math_utils::Vector_X);
@@ -322,8 +322,7 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
     }
     // calculate quadrotor position and velocity error:
     if(isperformAction){
-      switch (type)
-      {
+      switch (type) {
         case 0:{
           Eigen::Vector3f e1 = Center - UAV_position;
           Eigen::Vector3f n;
@@ -364,7 +363,7 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
     }
 
     float sq_r = r(0)*r(0) + r(1)*r(1);
-    // update b matrix:
+    // update B matrix:
     if (Cable_Length_sq - sq_r>0.01) {
         B(2,0) =  r(0)/sqrt((Cable_Length_sq - sq_r));
         B(2,1) =  r(1)/sqrt((Cable_Length_sq - sq_r));
@@ -376,12 +375,11 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
     u_p.setZero();
     u_p = Kpv * u_p;
     u_s = Kp * pos_error + Kv * vel_error;
-    u_s = constrain_vector(u_s, 0.5);// constraint the error
+    u_s = constrain_vector(u_s, 1.5);// constraint the error
 
-    // calculate the integral term:
+    // calculate the integral term of the UDE 
     if((_DroneState.mode == "OFFBOARD") && isIntegrationOn) {
         if(u_s.norm() < int_start_error) {
-            // integral[i] += ( -Kp[i]*pos_error[i] - Kv[i] * vel_error[i]) * dt
             // check whether if the integral is out of bound
             if(integral.norm() > int_max)  {
                 // if the norm is over limit, stop the integration
@@ -403,7 +401,6 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
     accel_sp[1] = u_l[1] - u_d[1];
     accel_sp[2] = u_l[2] - u_d[2] + 9.81; // + 9.81 for counteracting gravity
     fL = TotalLiftingMass * accel_sp.cast <float> ();
-    // thrust = TotalLiftingMass * accel_sp TO DO: change this to real thrust model
     thrust_sp   = px4_command_utils::accelToThrust(accel_sp, TotalLiftingMass, tilt_max);
     throttle_sp = px4_command_utils::thrustToThrottleLinear(thrust_sp, motor_slope, motor_intercept);
     // publish auxiliary state
@@ -452,27 +449,27 @@ void pos_controller_TIE::SendAuxiliaryState()
     msg.q_2 = UAV_attitude(2);
     msg.q_3 = UAV_attitude(3);
 
-    msg.r_x = r(0);
-    msg.r_y = r(1);
+    msg.r_x = r(math_utils::Vector_X);
+    msg.r_y = r(math_utils::Vector_Y);
 
-    msg.v_x = v_p(0);
-    msg.v_y = v_p(1);
+    msg.v_x = v_p(math_utils::Vector_X);
+    msg.v_y = v_p(math_utils::Vector_Y);
 
-    msg.pos_error_x = pos_error(0);
-    msg.pos_error_y = pos_error(1);
-    msg.pos_error_z = pos_error(2);
+    msg.pos_error_x = pos_error(math_utils::Vector_X);
+    msg.pos_error_y = pos_error(math_utils::Vector_Y);
+    msg.pos_error_z = pos_error(math_utils::Vector_Z);
 
-    msg.vel_error_x = vel_error(0);
-    msg.vel_error_y = vel_error(1);
-    msg.vel_error_z = vel_error(2);
+    msg.vel_error_x = vel_error(math_utils::Vector_X);
+    msg.vel_error_y = vel_error(math_utils::Vector_Y);
+    msg.vel_error_z = vel_error(math_utils::Vector_Z);
 
-    msg.Lm_x = payload_position_mocap(0);
-    msg.Lm_y = payload_position_mocap(1);
-    msg.Lm_z = payload_position_mocap(2);
+    msg.Lm_x = payload_position_mocap(math_utils::Vector_X);
+    msg.Lm_y = payload_position_mocap(math_utils::Vector_Y);
+    msg.Lm_z = payload_position_mocap(math_utils::Vector_Z);
 
-    msg.Vpm_x = payload_velocity_mocap(0);
-    msg.Vpm_y = payload_velocity_mocap(1);
-    msg.Vpm_z = payload_velocity_mocap(2);
+    msg.Vpm_x = payload_velocity_mocap(math_utils::Vector_X);
+    msg.Vpm_y = payload_velocity_mocap(math_utils::Vector_Y);
+    msg.Vpm_z = payload_velocity_mocap(math_utils::Vector_Z);
 
     msg.fL_x = fL(0);
     msg.fL_y = fL(1);
@@ -536,7 +533,7 @@ void pos_controller_TIE::printf_result()
     cout << "fL [X Y Z] : " << fL(0) << " [N] " << fL(1) << " [N] " << fL(2) << " [N] " <<endl;
     cout << "B matrix is : " << endl;
     cout << B << endl;
-    cout << "W_hat [X Y Z] : " << W_hat(math_utils::Vector_X) << " N, " << W_hat(math_utils::Vector_Y) << " N, " << W_hat(math_utils::Vector_Z) << " N. \n"; 
+    cout << "W_hat [X Y Z] : " << W_hat(math_utils::Vector_X) << " [N], " << W_hat(math_utils::Vector_Y) << " [N], " << W_hat(math_utils::Vector_Z) << " [N]. \n"; 
 
     if(isperformAction){
       cout << "---Perfroming Action...--- \n";
@@ -544,24 +541,14 @@ void pos_controller_TIE::printf_result()
       cout << "---Not Performing Action, Normal Flight.--- \n";
     }
 
-    cout<< "payload vel [X Y Z] from mocap is : " << payload_velocity_mocap(0) << " [m/s] "
-                                                  << payload_velocity_mocap(1) << " [m/s] "
-                                                  << payload_velocity_mocap(2) << " [m/s] " << endl;
-    cout<< "payload vel [X Y Z] from vision is :" << payload_velocity_vision(0) << " [m/s] "
-                                                  << payload_velocity_vision(1) << " [m/s] "
-                                                  << payload_velocity_vision(2) << " [m/s] " << endl;
-    cout<< "vel measurement error : "  << payload_velocity_mocap(0) - payload_velocity_vision(0) << " [m/s] "
-                                       << payload_velocity_mocap(1) - payload_velocity_vision(2) << " [m/s] "
-                                       << payload_velocity_mocap(1) - payload_velocity_vision(2) << " [m/s] " <<endl;
-    cout<< "payload pos [X Y Z] from mocap is : " << payload_position_mocap(0) << " [m] "
-                                                  << payload_position_mocap(1) << " [m] "
-                                                  << payload_position_mocap(2) << " [m] " <<endl;
-    cout<< "payload pos [X Y Z] from vision is : " << payload_position_vision(0) << " [m] "
-                                                   << payload_position_vision(1) << " [m] "
-                                                   << payload_position_vision(2) << " [m] " <<endl;
-    cout<< "pos measurement error : "  << payload_position_mocap(0) - payload_position_vision(0) << " [m] "
-                                       << payload_position_mocap(1) - payload_position_vision(1) << " [m] "
-                                       << payload_position_mocap(2) - payload_position_vision(2) << " [m] " <<endl;
+    cout<< "payload velocity from mocap is [X Y Z] : " << payload_velocity_mocap(math_utils::Vector_X) << " [m/s] "
+                                                  << payload_velocity_mocap(math_utils::Vector_Y) << " [m/s] "
+                                                  << payload_velocity_mocap(math_utils::Vector_Z) << " [m/s] " << endl;
+
+    cout<< "payload position from mocap is [X Y Z] : " << payload_position_mocap(math_utils::Vector_X) << " [m] "
+                                                  << payload_position_mocap(math_utils::Vector_Y) << " [m] "
+                                                  << payload_position_mocap(math_utils::Vector_Z) << " [m] " <<endl;
+
 
      switch (type) {
       case 0:

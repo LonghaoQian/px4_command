@@ -102,9 +102,9 @@ Circle_Trajectory:
   direction: 1.0
 
 Rectangular_Trajectory:
-  a_x: 5.0 # length along x axis
-  a_y: 5.0 # length along y axis
-  h: 2.2 # hight
+  a_x: 8.0 # length along x axis
+  a_y: 8.0 # length along y axis
+  h: 2.3 # hight
   vel_x: 0.5 # velocity along x axis
   vel_y: 0.5 # velocity along y axis
   center_x: 0.0
