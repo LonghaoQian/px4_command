@@ -375,7 +375,7 @@ px4_command::ControlOutput pos_controller_TIE::pos_controller(
     u_p.setZero();
     u_p = Kpv * u_p;
     u_s = Kp * pos_error + Kv * vel_error;
-    u_s = constrain_vector(u_s, 1.5);// constraint the error
+    u_s = constrain_vector(u_s, 0.5);// constraint the error
 
     // calculate the integral term of the UDE 
     if((_DroneState.mode == "OFFBOARD") && isIntegrationOn) {
