@@ -112,7 +112,7 @@ void PrintParam() {
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> call back functions <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void Command_cb(const px4_command::ControlCommand::ConstPtr& msg) {
     Command_Now = *msg;
-
+    ROS_INFO("Command revcieved...");
     // if "land"  is received, the drone does not respond to any other commands
     if(Command_Last.Mode == command_to_mavros_multidrone::Land) {
         Command_Now.Mode = command_to_mavros_multidrone::Land;
@@ -124,7 +124,10 @@ void Command_cb(const px4_command::ControlCommand::ConstPtr& msg) {
                 Command_Now = Command_Last;
             }
             /*TO DO, add a fleet status check*/
+            ROS_INFO("Multi drone state ...");
+
         } else {
+            ROS_INFO("Single drone state ...");
             // if the drone is in single-drone mode, the drone should not respond to Payload_Stabilization command
             // the drone will keep executing previous move enu command
             if(isCorrectDrone) {
@@ -150,7 +153,11 @@ void Command_cb(const px4_command::ControlCommand::ConstPtr& msg) {
     if(!CheckReferencePosition(Command_Now)) {
         // if the reference command is out of the safe range,
         Command_Now = Command_Last;
+         ROS_INFO("Geofence failed! ...");
     }
+    std::cout<<"Command mode is: "<<Command_Now.Mode<<"\n";
+    std::cout<<"Command position is X: "<<Command_Now.Reference_State.position_ref[0]<<", Y: "<<
+            Command_Now.Reference_State.position_ref[1]<<", Z: "<<Command_Now.Reference_State.position_ref[2]<<"\n";
 }
 
 void drone_state_cb(const px4_command::DroneState::ConstPtr& msg) {
@@ -563,8 +570,8 @@ int main(int argc, char **argv) {
         }
 
         if(PrintState) {
-            px4_command_utils::prinft_drone_state(_DroneState);
-            px4_command_utils::printf_command_control(Command_to_gs);
+            //px4_command_utils::prinft_drone_state(_DroneState);
+            //px4_command_utils::printf_command_control(Command_to_gs);
             // print out cooperative payload control result
             if (Command_Now.Mode == command_to_mavros_multidrone::Payload_Stabilization ) {
                 switch (CooperativePayload) {
@@ -584,10 +591,10 @@ int main(int argc, char **argv) {
             } else if (Command_Now.Mode == command_to_mavros_multidrone::Payload_Stabilization_SingleUAV) {
                 pos_controller_tie.printf_result();
             } else {
-                cout<<" >>>>>>>> NOT IN PAYLOAD STABILIAZATION MODE! <<<<<<<<<<"<<endl;
+                // cout<<" >>>>>>>> NOT IN PAYLOAD STABILIAZATION MODE! <<<<<<<<<<"<<endl;
             }
             // print the control output to FCU
-            px4_command_utils::prinft_attitude_reference(_AttitudeReference);
+            // px4_command_utils::prinft_attitude_reference(_AttitudeReference);
         }else if(((int)(cur_time*10) % 50) == 0)
         {
             ROS_INFO("Controller running normally. Time stamp: %f [s]",cur_time);

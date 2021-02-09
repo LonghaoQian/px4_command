@@ -5,6 +5,7 @@
    <group ns="$(arg uavID)" >
 	<node pkg="px4_command" type="px4_multidrone_pos_controller" name="px4_multidrone_pos_controller" output="screen" args="$(eval arg('uavID')[-1:])">
 	<rosparam command="load" file="$(find px4_command)/config/$(arg paramfile)" />
+	<rosparam command="load" file="$(find px4_command)/config/indoorgeofence.yaml" />	
 	</node>
    </group>
 </launch>
