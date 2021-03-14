@@ -175,7 +175,7 @@ Pos_tie:
   KL : 0.1
 
 # cooperative method
-CooperativePayload: 1
+CooperativePayload: 0
 IntegrationStartHeight: 0.15
 
 # parameter for payload cooperative control
