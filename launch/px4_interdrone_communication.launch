@@ -2,5 +2,6 @@
 <launch>
 	<node pkg="px4_command" type="px4_interdrone_communication" name="px4_interdrone_communication" output="screen">
 	<rosparam command="load" file="$(find px4_command)/config/Parameter_for_control.yaml" />
+	<rosparam command="load" file="$(find px4_command)/config/indoorgeofence.yaml" />	
 	</node>
 </launch>
