@@ -235,7 +235,7 @@ int main(int argc, char **argv) {
     nh.param<float>("DroneGeoFence/x_max", geo_fence_x[1], 1.2);
     nh.param<float>("DroneGeoFence/y_min", geo_fence_y[0], -0.9);
     nh.param<float>("DroneGeoFence/y_max", geo_fence_y[1], 0.9);
-    nh.param<float>("DroneGeoFence/z_min", geo_fence_z[0], 0.2);
+    nh.param<float>("DroneGeoFence/z_min", geo_fence_z[0], 0.0);
     nh.param<float>("DroneGeoFence/z_max", geo_fence_z[1], 2);
     nh.param<bool> ("CooperativeMode/isMulti",isMulti,false);
     nh.param<int>  ("CooperativeMode/droneID",TargetdroneID,0);
