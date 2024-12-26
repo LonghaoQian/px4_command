@@ -35,13 +35,13 @@ pos_estimator:
 
 ## 飞机参数
 Quad:
-  mass: 1.541
+  mass: 1.7
 ## payload mass
 Payload:
-  mass: 0.95
+  mass: 0.7
 ## cable length
 Cable:
-  length: 0.9
+  length: 0.8
 
 ## single or multi-UAV mode
 CooperativeMode:
@@ -133,6 +133,18 @@ Circle_Trajectory:
   time_total: 50.0
   direction: 1.0
 
+payload_geofence:
+  x_min: -2
+  x_max:  2
+  y_min: -2
+  y_max:  2
+  z_min: -2
+  z_max:  2
+
+# cooperative method
+CooperativePayload: 0
+IntegrationStartHeight: 0.15
+
 # parameter for single UAV payload using method in TIE paper
 Pos_tie:
   issingleUAVused: true   # is single UAV payload used in control
@@ -156,29 +168,29 @@ Pos_tie:
 
 # parameter for payload cooperative control 
 uav0_Pos_GNC:
-  mass : 1.541
-  cablelength : 0.91
-  TetherOffset_x: 0.99
+  mass : 1.7
+  cablelength : 0.9
+  TetherOffset_x: 0.8
   TetherOffset_y: 0
   TetherOffset_z: 0
   PayloadSharingPortion : 0.5
-  motor_slope: 0.09603
-  motor_intercept: 0.13213
+  motor_slope: 0.082
+  motor_intercept: 0.26
 
 uav1_Pos_GNC:
-  mass : 1.541
-  cablelength : 0.91
-  TetherOffset_x: -0.99
+  mass : 1.7
+  cablelength : 0.9
+  TetherOffset_x: -0.8
   TetherOffset_y: 0
   TetherOffset_z: 0
   PayloadSharingPortion: 0.5
-  motor_slope: 0.09603
-  motor_intercept: 0.13213
+  motor_slope: 0.082
+  motor_intercept: 0.26
 
 uav2_Pos_GNC:
   mass : 1.541
-  cablelength : 0.98
-  TetherOffset_x: 0
+  cablelength : 0.8
+  TetherOffset_x: 0.8
   TetherOffset_y: 0
   TetherOffset_z: 0
   PayloadSharingPortion: 0
@@ -199,7 +211,7 @@ Pos_GNC:
   ControllerInfo: -1
   Type: 0              # 0 for TCST method 
   MaxInclination: 50.0 # maximum safty angle
-  CableLengthTolerance: 1.2
+  CableLengthTolerance: 1.5
   # debugging options
   UseAddonForce: true
   UseCrossFeedingTerms: true
@@ -207,7 +219,7 @@ Pos_GNC:
   # controller parametrers: 
   num_drone : 2
   kv_xy : 0.25
-  Kv_z  : 0.7
+  Kv_z  : 0.5
   kR_xy : 0.3
   kR_z  : 0.2
   kL    : 0.15
@@ -216,7 +228,7 @@ Pos_GNC:
   fp_max_x : 5
   fp_max_y : 5
   fp_max_z : 5
-  lambda_j : 0.30
+  lambda_j : 0.5
   lambda_Txy : 0.08
   lambda_Tz  : 0.3
   lambda_Rxy : 0.09
