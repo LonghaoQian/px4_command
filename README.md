@@ -15,7 +15,7 @@ The controller runs on the Nvida Jeston Nano on each quadrotor. The command is s
    
     Please ref to: https://github.com/mavlink/mavros
     
-    If you has install the mavros package by source code. Plaese deleat it firstly.
+    If you has install the mavros package by source code. Plaese read it.
    
 2. Create a new ros space called "px4_ws" in your home folder
   
@@ -45,8 +45,8 @@ The controller runs on the Nvida Jeston Nano on each quadrotor. The command is s
     
     `cd ..`
     
-    `catkin_make`
-    
+    `catkin build`
+
 # Coordinate frames
 
    Here we are using **ENU** frames.
@@ -61,10 +61,11 @@ The controller runs on the Nvida Jeston Nano on each quadrotor. The command is s
 
 <img src="images/formation.PNG">
 
-# Run the code on experiment drones
-
 
 # Run the software-in-the-loop (SITL) simulation
 
-<img src="images/Gazebo.PNG">
+## To use the Gazebo SITL simulation
+- copy the launch files in ``sitlmodel/launch`` to  ``/home/<user name>/PX4-Autopilot/launch``
+- unzip ``sitlmodel/multi_iris/multi_iris.zip`` and put it to ``/home/<user name>/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models``
 
+<img src="images/Gazebo.PNG">
